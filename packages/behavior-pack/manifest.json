@@ -1,0 +1,30 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "World Map Sync",
+    "description": "Syncs world state to external map server for real-time visualization",
+    "uuid": "a1b2c3d4-e5f6-4789-abcd-ef0123456789",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "b2c3d4e5-f6a7-4890-bcde-f01234567890",
+      "entry": "scripts/index.js",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.16.0"
+    },
+    {
+      "module_name": "@minecraft/server-net",
+      "version": "1.0.0-beta"
+    }
+  ],
+  "capabilities": ["script_eval"]
+}

@@ -22,7 +22,7 @@ Format: `[STATUS]` where STATUS is one of the values below.
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Shared Package | `[COMPLETED]` | Types and constants |
-| Behavior Pack | `[NOT_STARTED]` | Minecraft script module |
+| Behavior Pack | `[IN_PROGRESS]` | Minecraft script module (Phase 1 complete) |
 | Web Server | `[IN_PROGRESS]` | Fastify + API (Phase 1 complete) |
 | Web Client | `[NOT_STARTED]` | Leaflet.js map UI |
 | CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions |
@@ -215,12 +215,12 @@ import { http, HttpRequest, HttpRequestMethod } from "@minecraft/server-net";
 
 ### Implementation Phases
 
-#### Phase 1: Basic Setup & Events (Week 1) `[NOT_STARTED]`
-- [ ] Set up behavior pack project structure
-- [ ] Configure TypeScript + esbuild build pipeline
-- [ ] Implement basic event listeners (block place/break)
-- [ ] Create HTTP client wrapper
-- [ ] Basic server connectivity test
+#### Phase 1: Basic Setup & Events (Week 1) `[COMPLETED]`
+- [x] Set up behavior pack project structure
+- [x] Configure TypeScript + esbuild build pipeline
+- [x] Implement basic event listeners (block place/break)
+- [x] Create HTTP client wrapper
+- [x] Basic server connectivity test
 
 #### Phase 2: World State Reading (Week 2) `[NOT_STARTED]`
 - [ ] Implement chunk scanning service

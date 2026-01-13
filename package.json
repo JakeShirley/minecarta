@@ -5,9 +5,14 @@
   "description": "Minecraft World Map - Real-time map visualization for Minecraft worlds",
   "scripts": {
     "build": "pnpm -r build",
+    "build:pack": "pnpm --filter @minecraft-map/behavior-pack build",
+    "build:pack:watch": "pnpm --filter @minecraft-map/behavior-pack build:watch",
+    "pack:deploy": "pnpm --filter @minecraft-map/behavior-pack pack:deploy",
+    "pack:build-deploy": "pnpm --filter @minecraft-map/behavior-pack pack:build-deploy",
     "dev": "pnpm --filter @minecraft-map/server dev",
     "dev:server": "pnpm --filter @minecraft-map/server dev",
     "test": "pnpm -r test",
+    "test:pack": "pnpm --filter @minecraft-map/behavior-pack test",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean"
   },

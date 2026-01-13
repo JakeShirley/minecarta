@@ -1,0 +1,27 @@
+{
+  "name": "@minecraft-map/behavior-pack",
+  "version": "1.0.0",
+  "description": "Minecraft behavior pack that syncs world state to map server",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --outfile=scripts/index.js --format=esm --external:@minecraft/server --external:@minecraft/server-net --platform=neutral --target=es2022",
+    "build:watch": "pnpm build --watch",
+    "pack:deploy": "node scripts/deploy.mjs",
+    "pack:build-deploy": "pnpm build && pnpm pack:deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf scripts dist"
+  },
+  "dependencies": {
+    "@minecraft-map/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@minecraft/server": "^1.16.0",
+    "@minecraft/server-net": "1.0.0-beta.1.21.132-stable",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.24.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}

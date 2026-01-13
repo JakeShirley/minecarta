@@ -1,0 +1,62 @@
+/**
+ * World Map Sync - Minecraft Behavior Pack
+ *
+ * This behavior pack monitors world events and sends data to an external
+ * map server for real-time visualization.
+ */
+
+import { system, world } from '@minecraft/server';
+import { registerAllEventListeners, updatePlayerPositions } from './events';
+import { testConnection } from './network';
+import { config } from './config';
+
+/**
+ * Log a startup message
+ */
+function logStartup(message: string): void {
+  console.log(`[MapSync] ${message}`);
+}
+
+/**
+ * Initialize the behavior pack
+ */
+async function initialize(): Promise<void> {
+  logStartup('World Map Sync initializing...');
+  logStartup(`Server URL: ${config.serverUrl}`);
+  logStartup(`Debug mode: ${config.debug}`);
+
+  // Test connection to the server
+  const connected = await testConnection();
+  if (connected) {
+    logStartup('Successfully connected to map server!');
+  } else {
+    logStartup('Warning: Could not connect to map server. Will retry on events.');
+  }
+
+  // Register event listeners
+  registerAllEventListeners();
+
+  // Set up periodic player position updates
+  let tickCounter = 0;
+  system.runInterval(() => {
+    tickCounter++;
+    if (tickCounter >= config.playerUpdateInterval) {
+      tickCounter = 0;
+      updatePlayerPositions();
+    }
+  }, 100);
+
+  logStartup('Initialization complete!');
+}
+
+/**
+ * Wait for world to be ready before initializing
+ */
+system.runTimeout(() => {
+  initialize().catch((error) => {
+    console.error('[MapSync] Initialization failed:', error);
+  });
+}, 20); // Wait 1 second (20 ticks) for world to stabilize
+
+// Export for testing
+export { initialize };

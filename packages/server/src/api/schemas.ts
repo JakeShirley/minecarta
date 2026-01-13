@@ -33,7 +33,7 @@ export const blockChangeSchema = z.object({
   blockType: z.string().min(1),
   previousType: z.string().optional(),
   player: z.string().optional(),
-  timestamp: z.number().optional(),
+  timestamp: z.number().default(() => Date.now()),
 });
 
 export type BlockChangeRequest = z.infer<typeof blockChangeSchema>;
