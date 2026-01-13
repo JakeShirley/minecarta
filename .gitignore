@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Behavior Pack compiled scripts
+packages/behavior-pack/scripts/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE & Editors
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Playwright
+packages/e2e/test-results/
+packages/e2e/playwright-report/
+e2e/test-results/
+e2e/playwright-report/
+
+# Database & Cache
+*.db
+*.sqlite
+*.sqlite3
+.cache/
+
+# Map tiles cache
+packages/server/tiles-cache/
+tiles-cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
