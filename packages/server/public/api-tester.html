@@ -963,7 +963,11 @@
         return;
       }
       
-      container.innerHTML = chunks.map((chunk, chunkIndex) => `
+      container.innerHTML = chunks.map((chunk, chunkIndex) => {
+        const blockCount = chunk.blocks.length; 
+        const showBlocks = chunk._showBlocks || false; // Store UI state in object (dirty but works)
+        
+        return `
         <div class="item-entry">
           <div class="item-header">
             <span class="item-title">📦 Chunk ${chunkIndex + 1}</span>
@@ -988,13 +992,46 @@
             </div>
           </div>
           
-          <h3>Blocks in Chunk (${chunk.blocks.length})</h3>
+          <div class="chunk-tools" style="background: #0f2444; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px dashed #1f4068;">
+            <h4 style="margin-top: 0; margin-bottom: 10px; color: #b8d4e3; font-size: 13px;">🛠️ Chunk Tools</h4>
+            
+            <div class="form-row">
+                <div class="form-group full-width">
+                    <label>Fill Layer / Range</label>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <input type="number" placeholder="Y Start" id="fillYStart-${chunkIndex}" value="64" style="width: 80px;">
+                        <input type="number" placeholder="Y End" id="fillYEnd-${chunkIndex}" value="64" style="width: 80px;">
+                        <input type="text" placeholder="Block Type" id="fillType-${chunkIndex}" value="minecraft:stone" list="blockTypes" style="flex-grow: 1; min-width: 150px;">
+                        <button class="btn-small btn-success" onclick="fillChunk(${chunkIndex})" style="margin: 0;">Fill Range</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row" style="margin-top: 10px;">
+                <div class="form-group full-width">
+                    <label>Presets (Overwrites existing blocks)</label>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="btn-small btn-secondary" onclick="presetFlat(${chunkIndex})">Flat (Grass)</button>
+                        <button class="btn-small btn-secondary" onclick="presetOcean(${chunkIndex})">Ocean</button>
+                        <button class="btn-small btn-secondary" onclick="presetPlatform(${chunkIndex})">Stone Platform</button>
+                        <button class="btn-small btn-danger" onclick="clearChunkBlocks(${chunkIndex})">Clear All Blocks</button>
+                    </div>
+                </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+             <h3>Blocks in Chunk (${blockCount})</h3>
+             <button class="btn-small btn-secondary" onclick="toggleChunkBlocks(${chunkIndex})">${showBlocks ? 'Hide Blocks' : 'Show Blocks'}</button>
+          </div>
+          
+          ${showBlocks ? `
           <div class="blocks-container">
-            ${chunk.blocks.map((block, blockIndex) => `
+            ${chunk.blocks.slice(0, 100).map((block, blockIndex) => `
               <div class="block-entry">
                 <div class="form-group">
                   <label>X</label>
-                  <input type="number" value="${block.x}" onchange="updateChunkBlock(${chunkIndex}, ${blockIndex}, 'x', parseInt(this.value))">
+                  <input type="number" value="${block.x}" readonly title="X (Absolute)">
                 </div>
                 <div class="form-group">
                   <label>Y</label>
@@ -1002,7 +1039,7 @@
                 </div>
                 <div class="form-group">
                   <label>Z</label>
-                  <input type="number" value="${block.z}" onchange="updateChunkBlock(${chunkIndex}, ${blockIndex}, 'z', parseInt(this.value))">
+                  <input type="number" value="${block.z}" readonly title="Z (Absolute)">
                 </div>
                 <div class="form-group">
                   <label>Type</label>
@@ -1011,13 +1048,153 @@
                 <button class="remove-btn" onclick="removeChunkBlock(${chunkIndex}, ${blockIndex})">×</button>
               </div>
             `).join('')}
-            ${chunk.blocks.length === 0 ? '<div class="empty-list" style="padding: 10px;">No blocks in chunk</div>' : ''}
+            ${blockCount > 100 ? `<div style="text-align: center; padding: 10px; color: #888;">... and ${blockCount - 100} more blocks (display truncated)</div>` : ''}
+            ${blockCount === 0 ? '<div class="empty-list" style="padding: 10px;">No blocks in chunk</div>' : ''}
           </div>
-          <button class="btn-small btn-success" onclick="addChunkBlock(${chunkIndex})" style="margin-top: 8px;">+ Add Block</button>
+          <button class="btn-small btn-success" onclick="addChunkBlock(${chunkIndex})" style="margin-top: 8px;">+ Add Block (Manual)</button>
+          ` : ''}
         </div>
-      `).join('');
+      `}).join('');
       
       document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
+    }
+    
+    function toggleChunkBlocks(index) {
+        chunks[index]._showBlocks = !chunks[index]._showBlocks;
+        renderChunks();
+    }
+    
+    function fillChunk(chunkIndex) {
+        const chunk = chunks[chunkIndex];
+        const yStart = parseInt(document.getElementById(`fillYStart-${chunkIndex}`).value);
+        const yEnd = parseInt(document.getElementById(`fillYEnd-${chunkIndex}`).value);
+        const type = document.getElementById(`fillType-${chunkIndex}`).value;
+        
+        if (isNaN(yStart) || isNaN(yEnd) || !type) {
+            alert("Invalid input parameters");
+            return;
+        }
+        
+        // Calculate absolute offsets
+        const startX = chunk.chunkX * 16;
+        const startZ = chunk.chunkZ * 16;
+        
+        const newBlocks = [];
+        
+        // Loop Y range
+        const minY = Math.min(yStart, yEnd);
+        const maxY = Math.max(yStart, yEnd);
+        
+        for (let y = minY; y <= maxY; y++) {
+            // Full 16x16 horizontal slice
+            for (let x = 0; x < 16; x++) {
+                for (let z = 0; z < 16; z++) {
+                    newBlocks.push({
+                        x: startX + x,
+                        y: y,
+                        z: startZ + z,
+                        type: type
+                    });
+                }
+            }
+        }
+        
+        // Append
+        chunk.blocks.push(...newBlocks);
+        
+        // Force show blocks if count was low, otherwise keep hidden to avoid lag
+        if (chunk.blocks.length < 50) {
+            chunk._showBlocks = true;
+        }
+        
+        renderChunks();
+    }
+    
+    function clearChunkBlocks(index) {
+        if(confirm('Are you sure you want to clear all blocks in this chunk?')) {
+            chunks[index].blocks = [];
+            renderChunks();
+        }
+    }
+    
+    function presetFlat(index) {
+        const chunk = chunks[index];
+        chunk.blocks = []; // Clear first
+        
+        const startX = chunk.chunkX * 16;
+        const startZ = chunk.chunkZ * 16;
+        
+        // 1. Bedrock Layer (-64)
+        for(let x=0; x<16; x++) {
+            for(let z=0; z<16; z++) {
+                chunk.blocks.push({ x: startX+x, y: -64, z: startZ+z, type: "minecraft:bedrock" });
+            }
+        }
+        
+        // 2. Stone Layers (-63 to 60) - sparse? No, let's just do top layers to save data size for testing
+        // Creating ~120 layers of stone is heavily impactful on browser (16*16*120 ~ 30k objects).
+        // Let's just create the surface layers for visualization testing.
+        
+        // Dirt (60-62)
+        for(let y=60; y<=62; y++) {
+            for(let x=0; x<16; x++) {
+                for(let z=0; z<16; z++) {
+                    chunk.blocks.push({ x: startX+x, y: y, z: startZ+z, type: "minecraft:dirt" });
+                }
+            }
+        }
+        
+        // Grass (63)
+        for(let x=0; x<16; x++) {
+            for(let z=0; z<16; z++) {
+                chunk.blocks.push({ x: startX+x, y: 63, z: startZ+z, type: "minecraft:grass_block" });
+            }
+        }
+        
+        alert(`Generated ${chunk.blocks.length} blocks for Flat Preset`);
+        renderChunks();
+    }
+    
+    function presetOcean(index) {
+        const chunk = chunks[index];
+        chunk.blocks = [];
+        
+        const startX = chunk.chunkX * 16;
+        const startZ = chunk.chunkZ * 16;
+        
+        // Sand bottom (45)
+        for(let x=0; x<16; x++) {
+            for(let z=0; z<16; z++) {
+                chunk.blocks.push({ x: startX+x, y: 45, z: startZ+z, type: "minecraft:sand" });
+            }
+        }
+        
+        // Water (46-62)
+        for(let y=46; y<=62; y++) {
+            for(let x=0; x<16; x++) {
+                for(let z=0; z<16; z++) {
+                    chunk.blocks.push({ x: startX+x, y: y, z: startZ+z, type: "minecraft:water" });
+                }
+            }
+        }
+        
+        renderChunks();
+    }
+    
+    function presetPlatform(index) {
+         const chunk = chunks[index];
+        chunk.blocks = [];
+        
+        const startX = chunk.chunkX * 16;
+        const startZ = chunk.chunkZ * 16;
+        
+        // Stone platform at 100
+        for(let x=0; x<16; x++) {
+            for(let z=0; z<16; z++) {
+                chunk.blocks.push({ x: startX+x, y: 100, z: startZ+z, type: "minecraft:stone_bricks" });
+            }
+        }
+        renderChunks();
     }
 
     function addChunk() {

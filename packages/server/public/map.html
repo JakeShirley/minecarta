@@ -136,7 +136,7 @@
       <div class="tile-preview-container">
         <label>Single Tile Inspector</label>
         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom</label><input type="number" id="preview-z" value="0" min="0" max="3"></div>
+            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom (0=High)</label><input type="number" id="preview-z" value="0" min="0" max="3"></div>
             <div style="flex: 1;"><label style="font-size: 0.8em">X</label><input type="number" id="preview-x" value="0"></div>
             <div style="flex: 1;"><label style="font-size: 0.8em">Y</label><input type="number" id="preview-y" value="0"></div>
         </div>
@@ -180,8 +180,10 @@
         
         L.TileLayer.Minecraft = L.TileLayer.extend({
             getTileUrl: function(coords) {
+                // Invert zoom level because server uses 0 for high detail and Leaflet uses 0 for low detail
+                const reversedZoom = 3 - coords.z;
                 // Add timestamp to burst cache
-                return `${API_BASE}/tiles/${dim}/${coords.z}/${coords.x}/${coords.y}.png?t=${Date.now()}`;
+                return `${API_BASE}/tiles/${dim}/${reversedZoom}/${coords.x}/${coords.y}.png?t=${Date.now()}`;
             },
             getAttribution: function() {
                 return 'Minecraft Map';
