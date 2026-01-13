@@ -1,5 +1,35 @@
 # Minecraft World Map Project
 
+---
+
+## Completion Status Tracking
+
+<!-- 
+COPILOT STATUS TRACKING
+Use these status markers to track completion. Update status as work progresses.
+Format: `[STATUS]` where STATUS is one of the values below.
+-->
+
+| Status | Marker | Description |
+|--------|--------|-------------|
+| Not Started | `[NOT_STARTED]` | Work has not begun |
+| In Progress | `[IN_PROGRESS]` | Currently being worked on |
+| Completed | `[COMPLETED]` | Fully implemented and tested |
+| Blocked | `[BLOCKED]` | Cannot proceed due to dependency/issue |
+
+### Overall Project Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Shared Package | `[NOT_STARTED]` | Types and constants |
+| Behavior Pack | `[NOT_STARTED]` | Minecraft script module |
+| Web Server | `[NOT_STARTED]` | Fastify + API |
+| Web Client | `[NOT_STARTED]` | Leaflet.js map UI |
+| CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions |
+| Documentation | `[NOT_STARTED]` | API docs, deployment guide |
+
+---
+
 ## Overview
 
 This project consists of two major components:
@@ -28,8 +58,8 @@ This project consists of two major components:
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │                      Express/Fastify Server                           │  │
 │  │  ┌───────────────┐  ┌───────────────┐  ┌─────────────────────────┐  │  │
-│  │  │  REST API     │  │  World State  │  │  WebSocket Server       │  │  │
-│  │  │  (Ingest)     │──│  Database     │──│  (Real-time Updates)    │  │  │
+│  │  │  REST API     │  │  In-Memory    │  │  WebSocket Server       │  │  │
+│  │  │  (Ingest)     │──│  State        │──│  (Real-time Updates)    │  │  │
 │  │  └───────────────┘  └───────────────┘  └───────────┬─────────────┘  │  │
 │  │                                                    │                  │  │
 │  │  ┌───────────────┐  ┌───────────────┐             │                  │  │
@@ -78,10 +108,12 @@ map/
 │   │   │   ├── index.ts         # Entry point
 │   │   │   ├── api/             # REST API routes
 │   │   │   ├── services/        # Business logic
-│   │   │   ├── database/        # Data persistence
+│   │   │   ├── state/           # In-memory state management
 │   │   │   ├── websocket/       # Real-time updates
 │   │   │   ├── tiles/           # Map tile generation
 │   │   │   └── types/           # Shared types
+│   │   ├── data/                # Tile storage on disk
+│   │   │   └── tiles/           # Rendered tiles: /{dimension}/{zoom}/{x}/{z}.png
 │   │   ├── public/              # Static web assets
 │   │   ├── tsconfig.json
 │   │   ├── package.json
@@ -183,26 +215,26 @@ import { http, HttpRequest, HttpRequestMethod } from "@minecraft/server-net";
 
 ### Implementation Phases
 
-#### Phase 1: Basic Setup & Events (Week 1)
+#### Phase 1: Basic Setup & Events (Week 1) `[NOT_STARTED]`
 - [ ] Set up behavior pack project structure
 - [ ] Configure TypeScript + esbuild build pipeline
 - [ ] Implement basic event listeners (block place/break)
 - [ ] Create HTTP client wrapper
 - [ ] Basic server connectivity test
 
-#### Phase 2: World State Reading (Week 2)
+#### Phase 2: World State Reading (Week 2) `[NOT_STARTED]`
 - [ ] Implement chunk scanning service
 - [ ] Player position tracking
 - [ ] Entity tracking
 - [ ] Efficient data batching/throttling
 
-#### Phase 3: Optimization & Reliability (Week 3)
+#### Phase 3: Optimization & Reliability (Week 3) `[NOT_STARTED]`
 - [ ] Add request queuing and retry logic
 - [ ] Implement delta updates (only send changes)
 - [ ] Add compression for large payloads
 - [ ] Handle server disconnection gracefully
 
-### Testing Strategy for Behavior Pack
+### Testing Strategy for Behavior Pack `[NOT_STARTED]`
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -272,7 +304,7 @@ describe('BlockChangeSerializer', () => {
 | Runtime | Node.js 20+ | Server runtime |
 | Framework | Fastify | Fast, low-overhead HTTP |
 | WebSocket | Socket.io | Real-time browser updates |
-| Database | SQLite + better-sqlite3 | Lightweight persistence |
+| State Storage | In-memory + File system | Players in memory, tiles on disk |
 | Map Library | Leaflet.js | Client-side map rendering |
 | Tile Generation | Sharp | Image processing |
 | Build Tool | Vite | Frontend bundling |
@@ -326,82 +358,86 @@ WS   /ws                           - WebSocket for real-time updates
 
 ### Implementation Phases
 
-#### Phase 1: Core Server (Week 1)
+#### Phase 1: Core Server (Week 1) `[NOT_STARTED]`
 - [ ] Set up Fastify server with TypeScript
 - [ ] Implement REST API for receiving Minecraft data
-- [ ] Set up SQLite database schema
-- [ ] Basic data persistence
+- [ ] Set up in-memory state management for players
+- [ ] Set up file-based tile storage directory structure
 
-#### Phase 2: Map Generation (Week 2)
+#### Phase 2: Map Generation (Week 2) `[NOT_STARTED]`
 - [ ] Implement block-to-color mapping
 - [ ] Create tile generation service
 - [ ] Implement tile caching
 - [ ] Set up tile serving endpoint
 
-#### Phase 3: Web Client (Week 3)
+#### Phase 3: Web Client (Week 3) `[NOT_STARTED]`
 - [ ] Create Leaflet.js map interface
 - [ ] Implement custom tile layer
 - [ ] Add player markers
 - [ ] Add real-time WebSocket updates
 
-#### Phase 4: Polish & Features (Week 4)
+#### Phase 4: Polish & Features (Week 4) `[NOT_STARTED]`
 - [ ] Layer controls (terrain, players, structures)
 - [ ] Search functionality
 - [ ] Coordinate display
 - [ ] Mobile responsiveness
 
-### Database Schema
+### Data Storage
 
-```sql
--- Chunks table (stores block data)
-CREATE TABLE chunks (
-  id INTEGER PRIMARY KEY,
-  dimension TEXT NOT NULL,      -- 'overworld', 'nether', 'the_end'
-  chunk_x INTEGER NOT NULL,
-  chunk_z INTEGER NOT NULL,
-  blocks BLOB NOT NULL,         -- Compressed block data
-  updated_at INTEGER NOT NULL,
-  UNIQUE(dimension, chunk_x, chunk_z)
-);
+#### In-Memory State (Players)
 
--- Players table
-CREATE TABLE players (
-  id INTEGER PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL,
-  x REAL NOT NULL,
-  y REAL NOT NULL,
-  z REAL NOT NULL,
-  dimension TEXT NOT NULL,
-  last_seen INTEGER NOT NULL
-);
+```typescript
+// Players are stored in memory for simplicity
+// No persistence - state resets on server restart
 
--- Block changes log (for history/replay)
-CREATE TABLE block_changes (
-  id INTEGER PRIMARY KEY,
-  dimension TEXT NOT NULL,
-  x INTEGER NOT NULL,
-  y INTEGER NOT NULL,
-  z INTEGER NOT NULL,
-  block_type TEXT NOT NULL,
-  previous_type TEXT,
-  player TEXT,
-  timestamp INTEGER NOT NULL
-);
+interface Player {
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  dimension: 'overworld' | 'nether' | 'the_end';
+  lastSeen: number;  // Unix timestamp
+}
 
--- Cached tiles
-CREATE TABLE tiles (
-  id INTEGER PRIMARY KEY,
-  dimension TEXT NOT NULL,
-  zoom INTEGER NOT NULL,
-  tile_x INTEGER NOT NULL,
-  tile_y INTEGER NOT NULL,
-  image BLOB NOT NULL,
-  generated_at INTEGER NOT NULL,
-  UNIQUE(dimension, zoom, tile_x, tile_y)
-);
+// In-memory store
+const players: Map<string, Player> = new Map();
 ```
 
-### Testing Strategy for Web Server
+#### File-Based Tile Storage
+
+Rendered map tiles are stored on disk using a hierarchical folder structure:
+
+```
+data/tiles/
+├── overworld/
+│   ├── 0/                    # Zoom level 0 (highest detail)
+│   │   ├── 0/
+│   │   │   ├── 0.png         # Tile at x=0, z=0
+│   │   │   ├── 1.png         # Tile at x=0, z=1
+│   │   │   └── ...
+│   │   ├── 1/
+│   │   │   ├── 0.png         # Tile at x=1, z=0
+│   │   │   └── ...
+│   │   └── ...
+│   ├── 1/                    # Zoom level 1
+│   ├── 2/                    # Zoom level 2
+│   └── 3/                    # Zoom level 3 (overview)
+├── nether/
+│   └── {zoom}/{x}/{z}.png
+└── the_end/
+    └── {zoom}/{x}/{z}.png
+```
+
+**Path format:** `data/tiles/{dimension}/{zoom}/{x}/{z}.png`
+
+**Benefits:**
+- Simple to understand and debug
+- Easy to serve directly via static file server
+- Can be cached by CDN/reverse proxy
+- Tiles can be manually inspected or regenerated
+- No database dependencies
+
+### Testing Strategy for Web Server `[NOT_STARTED]`
 
 #### Unit Tests (Vitest)
 ```typescript
@@ -421,7 +457,7 @@ describe('TileGenerator', () => {
 
 describe('WorldStateService', () => {
   it('should update block and invalidate affected tiles', async () => {
-    const service = new WorldStateService(mockDb);
+    const service = new WorldStateService();
     
     await service.updateBlock({
       dimension: 'overworld',
@@ -429,11 +465,28 @@ describe('WorldStateService', () => {
       blockType: 'diamond_ore'
     });
     
-    expect(mockDb.invalidateTile).toHaveBeenCalledWith({
+    // Verify tile file was deleted (will be regenerated on next request)
+    const tilePath = 'data/tiles/overworld/0/6/12.png';
+    expect(fs.existsSync(tilePath)).toBe(false);
+  });
+});
+
+describe('PlayerStateService', () => {
+  it('should store and retrieve player positions in memory', () => {
+    const service = new PlayerStateService();
+    
+    service.updatePlayer({
+      name: 'TestPlayer',
+      x: 100, y: 64, z: 200,
+      dimension: 'overworld'
+    });
+    
+    const player = service.getPlayer('TestPlayer');
+    expect(player).toEqual({
+      name: 'TestPlayer',
+      x: 100, y: 64, z: 200,
       dimension: 'overworld',
-      zoom: 0,
-      tileX: 0,
-      tileY: 0
+      lastSeen: expect.any(Number)
     });
   });
 });
@@ -496,9 +549,9 @@ test('map displays player markers in real-time', async ({ page }) => {
 
 ---
 
-## Testing Automation Summary
+## Testing Automation Summary `[NOT_STARTED]`
 
-### Continuous Integration Pipeline
+### Continuous Integration Pipeline `[NOT_STARTED]`
 
 ```yaml
 # .github/workflows/ci.yml
@@ -584,9 +637,9 @@ pnpm --filter e2e test
 
 ---
 
-## Development Workflow
+## Development Workflow `[NOT_STARTED]`
 
-### Local Development
+### Local Development `[NOT_STARTED]`
 
 ```bash
 # Terminal 1: Start web server in dev mode
@@ -599,7 +652,7 @@ pnpm --filter behavior-pack dev
 pnpm --filter e2e test:watch
 ```
 
-### Deploying Behavior Pack for Testing
+### Deploying Behavior Pack for Testing `[NOT_STARTED]`
 
 ```bash
 # Build and copy to Minecraft
@@ -607,7 +660,7 @@ pnpm --filter behavior-pack build
 pnpm --filter behavior-pack deploy  # Copies to com.mojang folder
 ```
 
-### Mock Minecraft for Development
+### Mock Minecraft for Development `[NOT_STARTED]`
 
 Create a mock Minecraft client for testing server without actual Minecraft:
 
@@ -645,7 +698,7 @@ async function simulateWorld() {
 
 ## Getting Started Checklist
 
-### Week 1 Goals
+### Week 1 Goals `[NOT_STARTED]`
 - [ ] Initialize monorepo with pnpm workspaces
 - [ ] Set up shared types package
 - [ ] Create basic behavior pack that logs events
@@ -653,7 +706,7 @@ async function simulateWorld() {
 - [ ] Establish HTTP communication between pack and server
 - [ ] Set up CI pipeline
 
-### Success Criteria
+### Success Criteria `[NOT_STARTED]`
 - Behavior pack successfully sends block change to server
 - Server persists block change to database
 - Basic map page shows a single tile
