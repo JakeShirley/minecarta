@@ -1,9 +1,15 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import type { FastifyInstance } from 'fastify';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { registerRoutes } from './api/index.js';
 import { setConfig } from './config/index.js';
 import type { ServerConfig } from './types/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Create and configure the Fastify application
@@ -31,6 +37,12 @@ export async function createApp(config: ServerConfig): Promise<FastifyInstance> 
     origin: true, // Allow all origins in development
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-mc-auth-token'],
+  });
+
+  // Serve static files from public directory
+  await app.register(fastifyStatic, {
+    root: join(__dirname, '..', 'public'),
+    prefix: '/',
   });
 
   // Register all routes
