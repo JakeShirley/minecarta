@@ -136,7 +136,7 @@
       <div class="tile-preview-container">
         <label>Single Tile Inspector</label>
         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom (0=High)</label><input type="number" id="preview-z" value="0" min="0" max="3"></div>
+            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom (0=High)</label><input type="number" id="preview-z" value="4" min="0" max="7"></div>
             <div style="flex: 1;"><label style="font-size: 0.8em">X</label><input type="number" id="preview-x" value="0"></div>
             <div style="flex: 1;"><label style="font-size: 0.8em">Y</label><input type="number" id="preview-y" value="0"></div>
         </div>
@@ -159,14 +159,22 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const API_BASE = '/api/v1';
+    
+    // Server zoom levels: 0 (64 blocks/tile) to 7 (8192 blocks/tile)
+    // Leaflet: higher zoom = more zoomed in (bigger tiles visually)
+    // So Leaflet zoom 7 = Server zoom 0 (most detail)
+    const MAX_ZOOM = 7;
 
     // Map Init
     const map = L.map('map', {
         crs: L.CRS.Simple,
         minZoom: 0,
-        maxZoom: 3,
+        maxZoom: MAX_ZOOM,
         center: [0, 0],
-        zoom: 0
+        zoom: 3,
+        zoomControl: true,
+        zoomSnap: 1,
+        zoomDelta: 1
     });
 
     let tileLayer;
@@ -178,12 +186,22 @@
         
         const dim = document.getElementById('tile-dim').value;
         
+        // Use server zoom 4 as the base (middle ground - 1024 blocks per tile)
+        // Leaflet will visually scale the tiles for other zoom levels
+        const BASE_SERVER_ZOOM = 4;
+        
         L.TileLayer.Minecraft = L.TileLayer.extend({
+            options: {
+                minZoom: 0,
+                maxZoom: MAX_ZOOM,
+                minNativeZoom: 3,  // Native tiles available at Leaflet zoom 3
+                maxNativeZoom: 3,  // Server zoom 4
+                tileSize: 256,
+                noWrap: true
+            },
             getTileUrl: function(coords) {
-                // Invert zoom level because server uses 0 for high detail and Leaflet uses 0 for low detail
-                const reversedZoom = 3 - coords.z;
-                // Add timestamp to burst cache
-                return `${API_BASE}/tiles/${dim}/${reversedZoom}/${coords.x}/${coords.y}.png?t=${Date.now()}`;
+                // Always use server zoom 4 tiles, Leaflet will scale them
+                return `${API_BASE}/tiles/${dim}/${BASE_SERVER_ZOOM}/${coords.x}/${coords.y}.png?t=${Date.now()}`;
             },
             getAttribution: function() {
                 return 'Minecraft Map';

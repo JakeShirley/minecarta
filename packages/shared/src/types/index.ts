@@ -4,6 +4,16 @@
 export type Dimension = 'overworld' | 'nether' | 'the_end';
 
 /**
+ * RGBA color for map rendering
+ */
+export interface RGBA {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+  readonly a?: number;
+}
+
+/**
  * 3D position in the Minecraft world
  */
 export interface Position {
@@ -68,6 +78,7 @@ export interface ChunkBlock {
   readonly y: number;
   readonly z: number;
   readonly type: string;
+  readonly mapColor?: RGBA;
 }
 
 /**

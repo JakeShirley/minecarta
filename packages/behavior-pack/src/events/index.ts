@@ -5,9 +5,10 @@
 import { world, Player, Block, BlockPermutation } from '@minecraft/server';
 import type { Dimension } from '@minecraft-map/shared';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
-import { serializeBlockChange, serializePlayer, serializePlayers } from '../serializers';
-import { sendBlockChanges, sendPlayerPositions } from '../network';
+import { serializeBlockChange, serializePlayer, serializePlayers, serializeChunkData } from '../serializers';
+import { sendBlockChanges, sendPlayerPositions, sendChunkData } from '../network';
 import { config } from '../config';
+import type { MinecraftChunkData, MinecraftChunkBlock } from '../types';
 
 /**
  * Convert Minecraft dimension ID to our Dimension type
@@ -108,6 +109,92 @@ export function registerBlockPlaceListener(): void {
 }
 
 /**
+ * Calculate chunk coordinates from world coordinates
+ *
+ * @param x - World X coordinate
+ * @param z - World Z coordinate
+ * @returns Chunk coordinates (chunkX, chunkZ)
+ */
+function getChunkCoordinates(x: number, z: number): { chunkX: number; chunkZ: number } {
+  return {
+    chunkX: Math.floor(x / 16),
+    chunkZ: Math.floor(z / 16),
+  };
+}
+
+/**
+ * Scan a 16x16 chunk and collect top-level block data for map rendering
+ *
+ * @param dimension - The dimension to scan
+ * @param chunkX - Chunk X coordinate
+ * @param chunkZ - Chunk Z coordinate
+ * @returns Chunk data with all surface blocks
+ */
+function scanChunk(
+  dimension: import('@minecraft/server').Dimension,
+  chunkX: number,
+  chunkZ: number
+): MinecraftChunkData {
+  const blocks: MinecraftChunkBlock[] = [];
+  const startX = chunkX * 16;
+  const startZ = chunkZ * 16;
+
+  // Scan each column in the 16x16 chunk
+  for (let dx = 0; dx < 16; dx++) {
+    for (let dz = 0; dz < 16; dz++) {
+      const worldX = startX + dx;
+      const worldZ = startZ + dz;
+
+      // Find the top non-air block by scanning from the top down
+      // Start from max height and work down
+      for (let y = 320; y >= -64; y--) {
+        try {
+          const block = dimension.getBlock({ x: worldX, y, z: worldZ });
+          if (block && block.typeId && block.typeId !== 'minecraft:air') {
+            blocks.push({
+              x: worldX,
+              y,
+              z: worldZ,
+              type: block.typeId,
+            });
+            break; // Found the top block, move to next column
+          }
+        } catch {
+          // Block might be in unloaded chunk, skip
+          continue;
+        }
+      }
+    }
+  }
+
+  return {
+    dimension: toDimension(dimension.id),
+    chunkX,
+    chunkZ,
+    blocks,
+  };
+}
+
+/**
+ * Scan and send chunk data to the server
+ *
+ * @param dimension - The dimension containing the chunk
+ * @param chunkX - Chunk X coordinate
+ * @param chunkZ - Chunk Z coordinate
+ */
+async function scanAndSendChunk(
+  dimension: import('@minecraft/server').Dimension,
+  chunkX: number,
+  chunkZ: number
+): Promise<void> {
+  const chunkData = scanChunk(dimension, chunkX, chunkZ);
+  const serialized = serializeChunkData(chunkData);
+
+  logDebug(`Sending chunk update (${chunkX}, ${chunkZ})`, { blockCount: chunkData.blocks.length });
+  await sendChunkData([serialized]);
+}
+
+/**
  * Register block break event listener
  */
 export function registerBlockBreakListener(): void {
@@ -129,6 +216,12 @@ export function registerBlockBreakListener(): void {
     logDebug('Block broken', blockEvent);
     queueBlockChange(blockEvent);
     flushBlockChanges();
+
+    // Scan and send the entire chunk for the broken block
+    const { chunkX, chunkZ } = getChunkCoordinates(block.location.x, block.location.z);
+    scanAndSendChunk(block.dimension, chunkX, chunkZ).catch((error) => {
+      logDebug('Failed to send chunk update', error);
+    });
   });
 
   logDebug('Block break listener registered');

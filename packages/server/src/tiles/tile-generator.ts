@@ -74,8 +74,8 @@ export class TileGeneratorService {
       const px = Math.floor(relX / scale);
       const py = Math.floor(relZ / scale); // Z maps to Y in image space
       
-      // Get block color
-      const color = colorService.getColor(block.type);
+      // Use mapColor from block data if provided, otherwise fall back to lookup
+      const color = block.mapColor ?? colorService.getColor(block.type);
       
       // Don't draw fully transparent blocks over existing valid pixels
       if (color.a === 0) continue;

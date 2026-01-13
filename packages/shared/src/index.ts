@@ -9,6 +9,7 @@ export type {
   ChunkBlock,
   TileCoordinates,
   WorldState,
+  RGBA,
 } from './types/index.js';
 
 // Constants

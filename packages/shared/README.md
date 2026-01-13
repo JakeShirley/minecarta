@@ -68,18 +68,22 @@ interface Entity {
 | `DEFAULT_PORT` | `3000` | Default server port |
 | `DEFAULT_HOST` | `'0.0.0.0'` | Default server host |
 | `TILE_SIZE` | `256` | Tile size in pixels |
-| `ZOOM_LEVELS` | `[0, 1, 2, 3]` | Available zoom levels |
+| `ZOOM_LEVELS` | `[0, 1, 2, 3, 4, 5, 6, 7]` | Available zoom levels |
 | `DIMENSIONS` | `['overworld', 'nether', 'the_end']` | Minecraft dimensions |
 | `AUTH_HEADER` | `'x-mc-auth-token'` | Authentication header name |
 
 ### Zoom Levels
 
-| Zoom | Blocks per Pixel | Blocks per Tile |
+| Zoom | Pixels per Block | Blocks per Tile |
 |------|------------------|-----------------|
-| 0 | 1 | 256 |
-| 1 | 2 | 512 |
-| 2 | 4 | 1024 |
-| 3 | 8 | 2048 |
+| 0 | 4 | 64 |
+| 1 | 2 | 128 |
+| 2 | 1 | 256 |
+| 3 | 0.5 | 512 |
+| 4 | 0.25 | 1024 |
+| 5 | 0.125 | 2048 |
+| 6 | 0.0625 | 4096 |
+| 7 | 0.03125 | 8192 |
 
 ## WebSocket Events
 

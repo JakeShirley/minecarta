@@ -43,6 +43,12 @@ export async function createApp(config: ServerConfig): Promise<FastifyInstance> 
   await app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),
     prefix: '/',
+    cacheControl: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    },
   });
 
   // Register all routes

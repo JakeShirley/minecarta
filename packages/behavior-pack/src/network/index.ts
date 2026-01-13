@@ -125,7 +125,7 @@ export function queuePost<T>(endpoint: string, data: T): void {
 export async function sendBlockChanges(
   changes: import('../types').BlockChange[]
 ): Promise<ApiResponse> {
-  return postToServer('/api/v1/world/blocks', { changes });
+  return postToServer('/api/v1/world/blocks', { blocks: changes });
 }
 
 /**
@@ -148,6 +148,17 @@ export async function sendEntityUpdates(
   entities: import('../types').Entity[]
 ): Promise<ApiResponse> {
   return postToServer('/api/v1/world/entities', { entities });
+}
+
+/**
+ * Send chunk data to the server
+ *
+ * @param chunks - Array of chunk data to send
+ */
+export async function sendChunkData(
+  chunks: import('@minecraft-map/shared').ChunkData[]
+): Promise<ApiResponse> {
+  return postToServer('/api/v1/world/chunks', { chunks });
 }
 
 /**

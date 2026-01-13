@@ -41,6 +41,26 @@ export interface MinecraftEntity {
 }
 
 /**
+ * Minecraft chunk block data (internal representation)
+ */
+export interface MinecraftChunkBlock {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly type: string;
+}
+
+/**
+ * Minecraft chunk data (internal representation)
+ */
+export interface MinecraftChunkData {
+  readonly dimension: Dimension;
+  readonly chunkX: number;
+  readonly chunkZ: number;
+  readonly blocks: MinecraftChunkBlock[];
+}
+
+/**
  * API request payload types
  */
 export interface BlockChangePayload {

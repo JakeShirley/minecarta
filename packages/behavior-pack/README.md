@@ -13,16 +13,27 @@ Minecraft Behavior Pack that monitors world state and sends data to the map web 
 
 ### For Development
 
-1. Build the pack:
+1. Configure deployment environment:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your settings
+   ```
+
+2. Build the pack:
    ```bash
    pnpm build
    ```
 
-2. Create a symlink or copy the pack to your Minecraft behavior packs folder:
-   - Windows: `%APPDATA%\Minecraft\development_behavior_packs\world-map-sync`
-   - macOS: `~/Library/Application Support/minecraft/development_behavior_packs/world-map-sync`
+3. Deploy to Minecraft:
+   ```bash
+   pnpm deploy
+   ```
+   Or build and deploy in one step:
+   ```bash
+   pnpm build:deploy
+   ```
 
-3. Enable the behavior pack in your world settings
+The deployment uses `@minecraft/core-build-tasks` to automatically copy files to your Minecraft `development_behavior_packs` folder based on your `.env` configuration.
 
 ### Required Experimental Features
 
@@ -32,10 +43,20 @@ This pack requires the following experimental features to be enabled in your wor
 
 ## Configuration
 
-The pack connects to the map server using environment configuration. By default:
-- Server URL: `http://localhost:3000`
+### Build Environment (.env)
 
-To change the server URL, modify the `config/index.ts` file before building.
+Copy `.env.example` to `.env` and configure:
+
+| Variable | Description |
+|----------|-------------|
+| `PROJECT_NAME` | Folder name in development_behavior_packs (default: `world-map-sync`) |
+| `MINECRAFT_PRODUCT` | Target Minecraft version (`BedrockUWP`, `PreviewUWP`, `BedrockGDK`, etc.) |
+| `CUSTOM_DEPLOYMENT_PATH` | Custom path when using `MINECRAFT_PRODUCT=Custom` |
+
+### Runtime Configuration
+
+The pack connects to the map server using settings in `config/index.ts`:
+- Server URL: `http://localhost:3000`
 
 ## API Dependencies
 
@@ -48,6 +69,9 @@ To change the server URL, modify the `config/index.ts` file before building.
 behavior-pack/
 ├── manifest.json          # Behavior pack manifest
 ├── pack_icon.png          # Pack icon (optional)
+├── just.config.cts        # Build task configuration
+├── .env                   # Local deployment settings (gitignored)
+├── .env.example           # Example environment configuration
 ├── scripts/               # Compiled JavaScript (output)
 │   └── index.js
 ├── src/                   # TypeScript source
@@ -72,6 +96,30 @@ pnpm build
 
 ```bash
 pnpm build:watch
+```
+
+### Deploy to Minecraft
+
+```bash
+pnpm deploy
+```
+
+### Build and Deploy
+
+```bash
+pnpm build:deploy
+```
+
+### Clean build outputs
+
+```bash
+pnpm clean
+```
+
+### Clean deployed files from Minecraft
+
+```bash
+pnpm clean:deploy
 ```
 
 ### Run tests

@@ -2,8 +2,15 @@
  * Data serialization utilities for converting Minecraft data to API format
  */
 
-import type { BlockChange, Player, Entity } from '@minecraft-map/shared';
-import type { MinecraftBlockEvent, MinecraftPlayer, MinecraftEntity } from '../types';
+import type { BlockChange, Player, Entity, ChunkData, ChunkBlock } from '@minecraft-map/shared';
+import type {
+  MinecraftBlockEvent,
+  MinecraftPlayer,
+  MinecraftEntity,
+  MinecraftChunkData,
+  MinecraftChunkBlock,
+} from '../types';
+import { getBlockColor } from '../block-colors';
 
 /**
  * Serialize a block event to the API format
@@ -110,4 +117,35 @@ export function serializePlayers(players: MinecraftPlayer[]): Player[] {
  */
 export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
   return entities.map(serializeEntity);
+}
+
+/**
+ * Serialize a chunk block to the API format
+ *
+ * @param block - Minecraft chunk block data
+ * @returns ChunkBlock object for API transmission
+ */
+export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
+  return {
+    x: block.x,
+    y: block.y,
+    z: block.z,
+    type: normalizeBlockType(block.type),
+    mapColor: getBlockColor(block.type),
+  };
+}
+
+/**
+ * Serialize chunk data to the API format
+ *
+ * @param chunk - Minecraft chunk data
+ * @returns ChunkData object for API transmission
+ */
+export function serializeChunkData(chunk: MinecraftChunkData): ChunkData {
+  return {
+    dimension: chunk.dimension,
+    chunkX: chunk.chunkX,
+    chunkZ: chunk.chunkZ,
+    blocks: chunk.blocks.map(serializeChunkBlock),
+  };
 }
