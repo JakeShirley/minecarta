@@ -1,0 +1,18 @@
+{
+  "name": "minecraft-map",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Minecraft World Map - Real-time map visualization for Minecraft worlds",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @minecraft-map/server dev",
+    "dev:server": "pnpm --filter @minecraft-map/server dev",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

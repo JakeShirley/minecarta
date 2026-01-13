@@ -21,9 +21,9 @@ Format: `[STATUS]` where STATUS is one of the values below.
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Shared Package | `[NOT_STARTED]` | Types and constants |
+| Shared Package | `[COMPLETED]` | Types and constants |
 | Behavior Pack | `[NOT_STARTED]` | Minecraft script module |
-| Web Server | `[NOT_STARTED]` | Fastify + API |
+| Web Server | `[IN_PROGRESS]` | Fastify + API (Phase 1 complete) |
 | Web Client | `[NOT_STARTED]` | Leaflet.js map UI |
 | CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions |
 | Documentation | `[NOT_STARTED]` | API docs, deployment guide |
@@ -56,7 +56,7 @@ This project consists of two major components:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           MAP WEB SERVER                                     │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                      Express/Fastify Server                           │  │
+│  │                        Fastify Server                                 │  │
 │  │  ┌───────────────┐  ┌───────────────┐  ┌─────────────────────────┐  │  │
 │  │  │  REST API     │  │  In-Memory    │  │  WebSocket Server       │  │  │
 │  │  │  (Ingest)     │──│  State        │──│  (Real-time Updates)    │  │  │
@@ -358,11 +358,11 @@ WS   /ws                           - WebSocket for real-time updates
 
 ### Implementation Phases
 
-#### Phase 1: Core Server (Week 1) `[NOT_STARTED]`
-- [ ] Set up Fastify server with TypeScript
-- [ ] Implement REST API for receiving Minecraft data
-- [ ] Set up in-memory state management for players
-- [ ] Set up file-based tile storage directory structure
+#### Phase 1: Core Server (Week 1) `[COMPLETED]`
+- [x] Set up Fastify server with TypeScript
+- [x] Implement REST API for receiving Minecraft data
+- [x] Set up in-memory state management for players
+- [x] Set up file-based tile storage directory structure
 
 #### Phase 2: Map Generation (Week 2) `[NOT_STARTED]`
 - [ ] Implement block-to-color mapping

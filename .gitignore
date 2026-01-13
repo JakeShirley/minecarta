@@ -58,6 +58,11 @@ e2e/playwright-report/
 packages/server/tiles-cache/
 tiles-cache/
 
+# Data directories
+data/
+test-data/
+packages/server/data/
+
 # Temporary files
 tmp/
 temp/

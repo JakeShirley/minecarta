@@ -4,6 +4,12 @@
 
 This is a TypeScript project following modern best practices with comprehensive testing.
 
+## Developer Best Practices
+
+### README.md
+
+If the project/directory you are working in contains a README.md file, ensure that any significant changes you make are reflected in the documentation. This includes updating usage instructions, adding new sections for features, and modifying existing content to stay accurate.
+
 ## Code Style & Conventions
 
 ### TypeScript Standards
@@ -46,7 +52,7 @@ src/
 
 ### Test Structure
 
-- Use Jest or Vitest as the test runner
+- Use Vitest as the test runner
 - Colocate tests with source files (`*.test.ts`) or use `__tests__/` directories
 - Follow the AAA pattern: Arrange, Act, Assert
 - Use descriptive test names that explain the expected behavior
@@ -80,7 +86,7 @@ describe('FunctionName', () => {
 ### Mocking Guidelines
 
 - Prefer dependency injection over mocking
-- Use `jest.mock()` or `vi.mock()` sparingly
+- Use `vi.mock()` sparingly
 - Create factory functions for test data
 - Use `faker` or similar for generating test data
 
