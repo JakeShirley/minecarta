@@ -364,11 +364,12 @@ WS   /ws                           - WebSocket for real-time updates
 - [x] Set up in-memory state management for players
 - [x] Set up file-based tile storage directory structure
 
-#### Phase 2: Map Generation (Week 2) `[NOT_STARTED]`
-- [ ] Implement block-to-color mapping
-- [ ] Create tile generation service
-- [ ] Implement tile caching
-- [ ] Set up tile serving endpoint
+#### Phase 2: Map Generation (Week 2) `[COMPLETED]`
+- [x] Implement block-to-color mapping
+- [x] Create tile generation service
+- [x] Implement tile caching
+- [x] Set up tile serving endpoint
+- [x] Update testing webpage to view tiles (both a map control and fetching specific tiles)
 
 #### Phase 3: Web Client (Week 3) `[NOT_STARTED]`
 - [ ] Create Leaflet.js map interface

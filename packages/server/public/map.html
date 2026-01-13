@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Viewer - Minecraft Map API</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #1a1a2e;
+      color: #eee;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #0f3460;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1f4068;
+    }
+    h1 { margin: 0; font-size: 1.2rem; color: #6dd5ed; }
+    .nav-btn {
+      background: #16213e;
+      color: #6dd5ed;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #6dd5ed;
+      font-size: 0.9rem;
+    }
+    .nav-btn:hover { background: #6dd5ed; color: #16213e; }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    
+    .sidebar {
+      width: 300px;
+      background: #16213e;
+      border-right: 1px solid #0f3460;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .map-container {
+      flex: 1;
+      position: relative;
+    }
+    
+    #map { width: 100%; height: 100%; background: #000; }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    label { display: block; margin-bottom: 5px; color: #ccc; font-size: 0.9rem; }
+    input, select {
+      width: 100%;
+      background: #0f3460;
+      border: 1px solid #1f4068;
+      color: white;
+      padding: 6px;
+      border-radius: 4px;
+    }
+    button {
+      background: #e94560;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 5px;
+    }
+    button:hover { background: #ff6b81; }
+
+    /* Tile Preview */
+    .tile-preview-container {
+      margin-top: 20px;
+      border-top: 1px solid #0f3460;
+      padding-top: 20px;
+    }
+    #tile-preview { 
+      width: 100%;
+      aspect-ratio: 1;
+      border: 1px solid #e94560; 
+      background-color: #000;
+      background-image: linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%); 
+      background-size: 20px 20px; 
+      margin-bottom: 5px;
+      display: block;
+    }
+    .tile-info {
+        font-family: monospace;
+        font-size: 0.8rem;
+        color: #888;
+        word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🗺️ Map Viewer</h1>
+    <div style="display: flex; gap: 10px;">
+      <a href="api-tester.html" class="nav-btn">API Tester</a>
+      <a href="index.html" class="nav-btn">Home</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="sidebar">
+      <div class="control-group">
+        <label>Dimension</label>
+        <select id="tile-dim">
+            <option value="overworld">Overworld</option>
+            <option value="nether">Nether</option>
+            <option value="the_end">The End</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <button onclick="updateMapLayer()">Refresh Map Layer</button>
+      </div>
+
+      <div class="tile-preview-container">
+        <label>Single Tile Inspector</label>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom</label><input type="number" id="preview-z" value="0" min="0" max="3"></div>
+            <div style="flex: 1;"><label style="font-size: 0.8em">X</label><input type="number" id="preview-x" value="0"></div>
+            <div style="flex: 1;"><label style="font-size: 0.8em">Y</label><input type="number" id="preview-y" value="0"></div>
+        </div>
+        <button onclick="loadTile()">Preview Tile</button>
+        <img id="tile-preview" alt="Tile Preview" />
+        <div class="tile-info" id="tile-url"></div>
+      </div>
+      
+      <div style="margin-top: auto; font-size: 0.8rem; color: #666;">
+        <p>Pan: Drag</p>
+        <p>Zoom: Scroll</p>
+      </div>
+    </div>
+
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const API_BASE = '/api/v1';
+
+    // Map Init
+    const map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: 0,
+        maxZoom: 3,
+        center: [0, 0],
+        zoom: 0
+    });
+
+    let tileLayer;
+
+    function updateMapLayer() {
+        if (tileLayer) {
+            map.removeLayer(tileLayer);
+        }
+        
+        const dim = document.getElementById('tile-dim').value;
+        
+        L.TileLayer.Minecraft = L.TileLayer.extend({
+            getTileUrl: function(coords) {
+                // Add timestamp to burst cache
+                return `${API_BASE}/tiles/${dim}/${coords.z}/${coords.x}/${coords.y}.png?t=${Date.now()}`;
+            },
+            getAttribution: function() {
+                return 'Minecraft Map';
+            },
+            // Ensure 404s don't look broken
+            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+        });
+
+        tileLayer = new L.TileLayer.Minecraft().addTo(map);
+    }
+
+    function loadTile() {
+        const dim = document.getElementById('tile-dim').value;
+        const z = document.getElementById('preview-z').value;
+        const x = document.getElementById('preview-x').value;
+        const y = document.getElementById('preview-y').value;
+        
+        const url = `${API_BASE}/tiles/${dim}/${z}/${x}/${y}.png?t=${Date.now()}`;
+        const img = document.getElementById('tile-preview');
+        img.src = url;
+        
+        const displayUrl = `${API_BASE}/tiles/${dim}/${z}/${x}/${y}.png`;
+        document.getElementById('tile-url').innerText = displayUrl;
+        
+        img.onerror = () => {
+             document.getElementById('tile-url').innerText = displayUrl + ' (Not Found)';
+        };
+    }
+
+    // Event Listeners
+    document.getElementById('tile-dim').addEventListener('change', () => {
+        updateMapLayer();
+        loadTile();
+    });
+
+    // Initial Load
+    updateMapLayer();
+    loadTile();
+
+    </script>
+</body>
+</html>

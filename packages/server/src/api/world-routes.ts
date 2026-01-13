@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { getPlayerStateService, getEntityStateService } from '../services/index.js';
+import { getPlayerStateService, getEntityStateService, getTileUpdateService } from '../services/index.js';
 import { registerAuth } from './auth.js';
 import {
   playersBatchUpdateSchema,
@@ -61,8 +61,13 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const { blocks } = parseResult.data;
+    const tileUpdateService = getTileUpdateService();
 
-    // TODO: Store block changes and invalidate affected tiles
+    // Process block updates asynchronously to not block the response
+    tileUpdateService.processBlockUpdates(blocks).catch(err => {
+      request.log.error({ err }, 'Error processing block updates');
+    });
+
     request.log.info({ count: blocks.length }, 'Received block changes');
 
     return reply.send({
@@ -113,8 +118,13 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const { chunks } = parseResult.data;
+    const tileUpdateService = getTileUpdateService();
 
-    // TODO: Process chunk data and generate tiles
+    // Process chunk updates asynchronously
+    tileUpdateService.processChunks(chunks).catch(err => {
+      request.log.error({ err }, 'Error processing chunk updates');
+    });
+
     request.log.info({ count: chunks.length }, 'Received chunk data');
 
     return reply.send({
