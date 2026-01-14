@@ -266,4 +266,111 @@ describe('TileGeneratorService', () => {
       expect(data[idxZ3]).toBe(Math.floor(GRASS_COLOR.r * 180 / 255));
     });
   });
+
+  describe('Water depth-based checkerboard shading', () => {
+    it('should apply BRIGHTER shade for shallow water (depth 1-2)', async () => {
+      const service = new TileGeneratorService();
+      
+      // Shallow water at depth 1
+      const blocks: ChunkBlock[] = [
+        { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 1 },
+        { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 2 },
+      ];
+      
+      const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
+      const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      
+      // Both should have BRIGHTER shade (255/255)
+      const idx0 = (0 * 256 + 0) * 4;
+      const idx1 = (0 * 256 + 16) * 4; // x=1 maps to pixel 16
+      
+      expect(data[idx0]).toBe(Math.floor(WATER_COLOR.r * 255 / 255));
+      expect(data[idx1]).toBe(Math.floor(WATER_COLOR.r * 255 / 255));
+    });
+
+    it('should apply checkerboard pattern for depth 3-4 (bright/normal)', async () => {
+      const service = new TileGeneratorService();
+      
+      // Water at depth 3 - checkerboard pattern
+      // (x + z) % 2 == 1 -> BRIGHTER, otherwise NORMAL
+      const blocks: ChunkBlock[] = [
+        { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 3 }, // (0+0)%2=0 -> NORMAL
+        { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 3 }, // (1+0)%2=1 -> BRIGHTER
+        { x: 0, y: 62, z: 1, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 4 }, // (0+1)%2=1 -> BRIGHTER
+        { x: 1, y: 62, z: 1, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 4 }, // (1+1)%2=0 -> NORMAL
+      ];
+      
+      const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
+      const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      
+      // Check the pattern
+      const idx00 = (0 * 256 + 0) * 4;     // x=0, z=0 -> NORMAL
+      const idx10 = (0 * 256 + 16) * 4;    // x=1, z=0 -> BRIGHTER
+      const idx01 = (16 * 256 + 0) * 4;    // x=0, z=1 -> BRIGHTER
+      const idx11 = (16 * 256 + 16) * 4;   // x=1, z=1 -> NORMAL
+      
+      expect(data[idx00]).toBe(Math.floor(WATER_COLOR.r * 220 / 255)); // NORMAL
+      expect(data[idx10]).toBe(Math.floor(WATER_COLOR.r * 255 / 255)); // BRIGHTER
+      expect(data[idx01]).toBe(Math.floor(WATER_COLOR.r * 255 / 255)); // BRIGHTER
+      expect(data[idx11]).toBe(Math.floor(WATER_COLOR.r * 220 / 255)); // NORMAL
+    });
+
+    it('should apply NORMAL shade for medium depth water (depth 5-7)', async () => {
+      const service = new TileGeneratorService();
+      
+      const blocks: ChunkBlock[] = [
+        { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 5 },
+        { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 7 },
+      ];
+      
+      const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
+      const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      
+      // Both should have NORMAL shade (220/255)
+      const idx0 = (0 * 256 + 0) * 4;
+      const idx1 = (0 * 256 + 16) * 4;
+      
+      expect(data[idx0]).toBe(Math.floor(WATER_COLOR.r * 220 / 255));
+      expect(data[idx1]).toBe(Math.floor(WATER_COLOR.r * 220 / 255));
+    });
+
+    it('should apply checkerboard pattern for depth 8-11 (normal/dark)', async () => {
+      const service = new TileGeneratorService();
+      
+      // Water at depth 8 - checkerboard pattern
+      // (x + z) % 2 == 1 -> NORMAL, otherwise DARKER
+      const blocks: ChunkBlock[] = [
+        { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 8 },  // (0+0)%2=0 -> DARKER
+        { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 10 }, // (1+0)%2=1 -> NORMAL
+      ];
+      
+      const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
+      const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      
+      const idx0 = (0 * 256 + 0) * 4;
+      const idx1 = (0 * 256 + 16) * 4;
+      
+      expect(data[idx0]).toBe(Math.floor(WATER_COLOR.r * 180 / 255)); // DARKER
+      expect(data[idx1]).toBe(Math.floor(WATER_COLOR.r * 220 / 255)); // NORMAL
+    });
+
+    it('should apply DARKER shade for deep water (depth 12+)', async () => {
+      const service = new TileGeneratorService();
+      
+      const blocks: ChunkBlock[] = [
+        { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 12 },
+        { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 20 },
+      ];
+      
+      const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
+      const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      
+      // Both should have DARKER shade (180/255)
+      const idx0 = (0 * 256 + 0) * 4;
+      const idx1 = (0 * 256 + 16) * 4;
+      
+      expect(data[idx0]).toBe(Math.floor(WATER_COLOR.r * 180 / 255));
+      expect(data[idx1]).toBe(Math.floor(WATER_COLOR.r * 180 / 255));
+    });
+  });
 });

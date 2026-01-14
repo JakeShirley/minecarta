@@ -19,6 +19,25 @@ const SHADE_MULTIPLIERS = {
 } as const;
 
 /**
+ * Water depth ranges for the 5 shade levels.
+ * From Minecraft wiki: water uses 5 distinct levels - 3 solid shades plus 2 checkerboard patterns.
+ * 
+ * Depth ranges (based on Minecraft's algorithm):
+ * - Level 0 (brightest): depth 1-2 blocks
+ * - Level 1 (checker bright/normal): depth 3-4 blocks  
+ * - Level 2 (normal): depth 5-7 blocks
+ * - Level 3 (checker normal/dark): depth 8-11 blocks
+ * - Level 4 (darkest): depth 12+ blocks
+ */
+const WATER_DEPTH_LEVELS = {
+  LEVEL_0_MAX: 2,   // 1-2 blocks: brightest
+  LEVEL_1_MAX: 4,   // 3-4 blocks: checkerboard bright/normal
+  LEVEL_2_MAX: 7,   // 5-7 blocks: normal
+  LEVEL_3_MAX: 11,  // 8-11 blocks: checkerboard normal/dark
+  // 12+ blocks: darkest
+} as const;
+
+/**
  * Service for generating map tiles from block data
  */
 export class TileGeneratorService {
@@ -73,6 +92,47 @@ export class TileGeneratorService {
     } else {
       return SHADE_MULTIPLIERS.NORMAL;
     }
+  }
+
+  /**
+   * Calculate shade multiplier for water blocks based on depth.
+   * Water uses 5 depth levels with checkerboard patterns for intermediate levels.
+   * 
+   * From Minecraft wiki: "For water, the map conveys the depth to the first non-water 
+   * block beneath it. To represent this, the algorithm uses five distinct levels of 
+   * depth: the 3 shades, plus two intermediate checker patterns that alternate 
+   * between the two adjacent shades."
+   * 
+   * @param block The water block
+   * @returns Shade multiplier based on water depth and position
+   */
+  private calculateWaterShadeMultiplier(block: ChunkBlock): number {
+    const depth = block.waterDepth ?? 1;
+    const isCheckerOdd = (block.x + block.z) % 2 === 1;
+    
+    if (depth <= WATER_DEPTH_LEVELS.LEVEL_0_MAX) {
+      // Shallowest water: brightest shade
+      return SHADE_MULTIPLIERS.BRIGHTER;
+    } else if (depth <= WATER_DEPTH_LEVELS.LEVEL_1_MAX) {
+      // Checkerboard between bright and normal
+      return isCheckerOdd ? SHADE_MULTIPLIERS.BRIGHTER : SHADE_MULTIPLIERS.NORMAL;
+    } else if (depth <= WATER_DEPTH_LEVELS.LEVEL_2_MAX) {
+      // Medium depth: normal shade
+      return SHADE_MULTIPLIERS.NORMAL;
+    } else if (depth <= WATER_DEPTH_LEVELS.LEVEL_3_MAX) {
+      // Checkerboard between normal and dark
+      return isCheckerOdd ? SHADE_MULTIPLIERS.NORMAL : SHADE_MULTIPLIERS.DARKER;
+    } else {
+      // Deepest water: darkest shade
+      return SHADE_MULTIPLIERS.DARKER;
+    }
+  }
+
+  /**
+   * Check if a block type is water
+   */
+  private isWaterBlock(block: ChunkBlock): boolean {
+    return block.waterDepth !== undefined && block.waterDepth > 0;
   }
 
   /**
@@ -168,8 +228,12 @@ export class TileGeneratorService {
         continue;
       }
       
-      // Apply Minecraft map height-based shading
-      const shadeMultiplier = this.calculateShadeMultiplier(block, heightMap);
+      // Apply shading based on block type
+      // Water uses depth-based checkerboard shading
+      // Other blocks use height-based terrain shading
+      const shadeMultiplier = this.isWaterBlock(block)
+        ? this.calculateWaterShadeMultiplier(block)
+        : this.calculateShadeMultiplier(block, heightMap);
       const color = this.applyShade(baseColor, shadeMultiplier);
       
       if (scale >= 1) {

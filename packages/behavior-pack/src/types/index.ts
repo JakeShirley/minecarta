@@ -50,6 +50,12 @@ export interface MinecraftChunkBlock {
   readonly z: number;
   readonly type: string;
   readonly mapColor: RGBA;
+  /**
+   * For water blocks, the depth to the first non-water block below.
+   * Used for Minecraft's water depth shading with checkerboard patterns.
+   * Undefined for non-water blocks.
+   */
+  readonly waterDepth?: number;
 }
 
 /**

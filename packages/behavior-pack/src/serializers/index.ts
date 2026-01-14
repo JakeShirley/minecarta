@@ -126,7 +126,7 @@ export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
  */
 export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
   // Minecraft RGBA values are in 0-1 range, convert to 0-255 for rendering
-  return {
+  const result: ChunkBlock = {
     x: block.x,
     y: block.y,
     z: block.z,
@@ -137,7 +137,9 @@ export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
       b: Math.round(block.mapColor.blue * 255),
       a: Math.round(block.mapColor.alpha * 255),
     },
+    waterDepth: block.waterDepth,
   };
+  return result;
 }
 
 /**

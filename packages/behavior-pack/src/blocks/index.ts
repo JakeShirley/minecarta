@@ -119,6 +119,60 @@ export interface SurfaceBlockResult {
   readonly z: number;
   readonly type: string;
   readonly mapColor: RGBA;
+  /**
+   * For water blocks, the depth to the first non-water block below.
+   * Used for Minecraft's water depth shading with checkerboard patterns.
+   * Undefined for non-water blocks.
+   */
+  readonly waterDepth?: number;
+}
+
+/**
+ * Check if a block type is water
+ */
+function isWaterBlock(typeId: string): boolean {
+  return typeId.includes("water");
+}
+
+/**
+ * Calculate water depth by finding the first non-water block below.
+ * 
+ * @param dimension - The Minecraft dimension
+ * @param startX - X coordinate
+ * @param startY - Y coordinate of water surface
+ * @param startZ - Z coordinate  
+ * @param minHeight - Minimum world height
+ * @returns Depth in blocks to first non-water block, or undefined if not water
+ */
+function calculateWaterDepth(
+  dimension: MinecraftDimension,
+  startX: number,
+  startY: number,
+  startZ: number,
+  minHeight: number
+): number | undefined {
+  let depth = 0;
+  let currentY = startY;
+
+  // Count water blocks downward
+  while (currentY >= minHeight) {
+    try {
+      const block = dimension.getBlock({ x: startX, y: currentY, z: startZ });
+      
+      if (!block?.typeId || !isWaterBlock(block.typeId)) {
+        // Found first non-water block
+        return depth > 0 ? depth : undefined;
+      }
+      
+      depth++;
+      currentY--;
+    } catch {
+      // Block in unloaded chunk
+      break;
+    }
+  }
+
+  return depth > 0 ? depth : undefined;
 }
 
 /**
@@ -168,6 +222,11 @@ export function getSurfaceBlock(
         const mapColor = getBlockMapColor(block);
 
         if (mapColor) {
+          // Calculate water depth if this is a water block
+          const waterDepth = isWaterBlock(block.typeId) 
+            ? calculateWaterDepth(dimension, worldX, currentY, worldZ, minHeight)
+            : undefined;
+
           return {
             block,
             x: worldX,
@@ -175,6 +234,7 @@ export function getSurfaceBlock(
             z: worldZ,
             type: block.typeId,
             mapColor,
+            waterDepth,
           };
         } else {
             console.log(`[SurfaceBlock] Block at (${worldX}, ${currentY}, ${worldZ}) of type ${block.typeId} has no valid map color`);
@@ -196,13 +256,15 @@ export function getSurfaceBlock(
  * Convert a surface block result to chunk block format
  */
 function toChunkBlock(result: SurfaceBlockResult): MinecraftChunkBlock {
-  return {
+  const block: MinecraftChunkBlock = {
     x: result.x,
     y: result.y,
     z: result.z,
     type: result.type,
     mapColor: result.mapColor,
+    waterDepth: result.waterDepth,
   };
+  return block;
 }
 
 /**

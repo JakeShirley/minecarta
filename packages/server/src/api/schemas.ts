@@ -89,6 +89,7 @@ export const chunkBlockSchema = z.object({
   z: z.number().int(),
   type: z.string().min(1),
   mapColor: rgbaSchema,
+  waterDepth: z.number().int().min(1).optional(),
 });
 
 /**

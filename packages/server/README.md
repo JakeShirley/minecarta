@@ -314,6 +314,20 @@ Map tiles use Minecraft's authentic height-based shading algorithm to create a 3
 
 This creates the distinctive "dithered" look of Minecraft maps, making hills and valleys clearly visible on the map.
 
+### Water Depth Shading
+
+Water blocks use a special depth-based checkerboard shading pattern that conveys water depth. Minecraft uses 5 distinct levels:
+
+| Depth (blocks) | Shading | Visual Effect |
+|----------------|---------|---------------|
+| 1-2 | Brightest (255/255) | Shallow water |
+| 3-4 | Checkerboard (bright/normal) | Transitional |
+| 5-7 | Normal (220/255) | Medium depth |
+| 8-11 | Checkerboard (normal/dark) | Transitional |
+| 12+ | Darkest (180/255) | Deep water |
+
+The checkerboard pattern alternates between two shades based on `(x + z) % 2`, creating the distinctive dithered water appearance seen on vanilla Minecraft maps.
+
 ## Testing
 
 ```bash
