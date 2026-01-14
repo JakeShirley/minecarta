@@ -130,6 +130,17 @@ export function registerBlockPlaceListener(): void {
         logDebug('Block placed', blockEvent);
         queueBlockChange(blockEvent);
         flushBlockChanges();
+
+        // Scan and send a 3x3 area around the placed block (radius=1 for 3x3)
+        const chunkData = scanArea(block.dimension, block.location.x, block.location.z, 1);
+        const serialized = serializeChunkData(chunkData);
+
+        logDebug(`Sending 3x3 area update around (${block.location.x}, ${block.location.z})`, {
+            blockCount: chunkData.blocks.length,
+        });
+        sendChunkData([serialized]).catch(error => {
+            logDebug('Failed to send area update', error);
+        });
     });
 
     logDebug('Block place listener registered');
