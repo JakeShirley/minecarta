@@ -47,10 +47,11 @@ export class TileGeneratorService {
     const blockStartX = tileX * BLOCKS_PER_TILE[zoom as ZoomLevel];
     const blockStartZ = tileZ * BLOCKS_PER_TILE[zoom as ZoomLevel];
     
-    // At zoom 0: 1 pixel = 1 block
-    // At zoom 1: 1 pixel = 2 blocks (width) -> 4 blocks area
-    // Scale factor = blocks per pixel
-    const scale = Math.pow(2, zoom);
+    // Scale factor: blocks per pixel
+    // At zoom 0: 64 blocks / 256 pixels = 0.25 blocks per pixel (4 pixels per block)
+    // At zoom 2: 256 blocks / 256 pixels = 1 block per pixel
+    // At zoom 4: 1024 blocks / 256 pixels = 4 blocks per pixel
+    const scale = BLOCKS_PER_TILE[zoom as ZoomLevel] / TILE_SIZE;
     
     const colorService = getBlockColorService();
 

@@ -70,6 +70,47 @@
       image-rendering: crisp-edges;
     }
     
+    /* Coordinate display */
+    .coord-display {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 52, 96, 0.9);
+      color: #6dd5ed;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      z-index: 1000;
+      border: 1px solid #1f4068;
+      pointer-events: none;
+    }
+    .coord-display .label { color: #888; font-size: 11px; }
+    
+    /* Grid line styling */
+    .coord-grid-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 500;
+    }
+    
+    /* Grid labels */
+    .grid-label {
+      position: absolute;
+      background: rgba(15, 52, 96, 0.9);
+      color: #6dd5ed;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 11px;
+      white-space: nowrap;
+      border: 1px solid #1f4068;
+      pointer-events: none;
+      z-index: 501;
+    }
+    
     .control-group {
       margin-bottom: 15px;
     }
@@ -141,6 +182,12 @@
       <div class="control-group">
         <button onclick="updateMapLayer()">Refresh Map Layer</button>
       </div>
+      
+      <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="show-grid" checked style="width: auto;"> Show Coordinate Grid
+        </label>
+      </div>
 
       <div class="tile-preview-container">
         <label>Single Tile Inspector</label>
@@ -162,6 +209,11 @@
 
     <div class="map-container">
       <div id="map"></div>
+      <div class="coord-display" id="coord-display">
+        <div class="label">Minecraft Coordinates</div>
+        <div id="coord-text">X: 0, Z: 0</div>
+        <div id="zoom-text" style="font-size: 11px; color: #888; margin-top: 4px;">Zoom: 3</div>
+      </div>
     </div>
   </main>
 
@@ -173,6 +225,23 @@
     // Leaflet: higher zoom = more zoomed in (bigger tiles visually)
     // So Leaflet zoom 7 = Server zoom 0 (most detail)
     const MAX_ZOOM = 7;
+    
+    // Blocks per tile at each server zoom level
+    const BLOCKS_PER_TILE = {
+      0: 64,
+      1: 128,
+      2: 256,
+      3: 512,
+      4: 1024,
+      5: 2048,
+      6: 4096,
+      7: 8192,
+    };
+    
+    // Base server zoom level used for tiles
+    const BASE_SERVER_ZOOM = 4;
+    // Blocks per tile at base server zoom
+    const BASE_BLOCKS_PER_TILE = BLOCKS_PER_TILE[BASE_SERVER_ZOOM];
 
     // Map Init
     const map = L.map('map', {
@@ -187,6 +256,250 @@
     });
 
     let tileLayer;
+    
+    /**
+     * Convert Leaflet coordinates to Minecraft world coordinates
+     * In Leaflet Simple CRS:
+     * - Y increases upward (in Minecraft, Z decreases northward)
+     * - One tile at native zoom (Leaflet 3 = Server 4) = 1024 blocks
+     * - Each tile is 256 pixels, so at native zoom: 1 pixel = 4 blocks
+     */
+    function leafletToMinecraft(latlng, leafletZoom) {
+      // At native Leaflet zoom 3, we display server zoom 4 tiles (1024 blocks/tile)
+      // Leaflet scales tiles visually, so we need to account for the visual scale
+      const nativeLeafletZoom = 3;
+      const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
+      
+      // At Leaflet zoom 3 (native), 1 pixel = 4 blocks (since 256 pixels = 1024 blocks)
+      // At Leaflet zoom 4, tiles are 2x bigger visually, so 1 pixel = 2 blocks
+      // At Leaflet zoom 5, tiles are 4x bigger, so 1 pixel = 1 block
+      const blocksPerPixel = BASE_BLOCKS_PER_TILE / (256 * scale);
+      
+      // Leaflet CRS.Simple: lat=y, lng=x in pixel coordinates
+      // Convert to Minecraft: X = lng (East), Z = -lat (North is negative lat in Leaflet)
+      const mcX = Math.floor(latlng.lng * blocksPerPixel);
+      const mcZ = Math.floor(-latlng.lat * blocksPerPixel);
+      
+      return { x: mcX, z: mcZ };
+    }
+    
+    /**
+     * Convert Minecraft coordinates to Leaflet coordinates
+     */
+    function minecraftToLeaflet(mcX, mcZ, leafletZoom) {
+      const nativeLeafletZoom = 3;
+      const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
+      const blocksPerPixel = BASE_BLOCKS_PER_TILE / (256 * scale);
+      
+      const lat = -(mcZ / blocksPerPixel);
+      const lng = mcX / blocksPerPixel;
+      
+      return L.latLng(lat, lng);
+    }
+    
+    /**
+     * Update coordinate display with mouse position
+     */
+    function updateCoordDisplay(e) {
+      const coords = leafletToMinecraft(e.latlng, map.getZoom());
+      document.getElementById('coord-text').textContent = `X: ${coords.x}, Z: ${coords.z}`;
+    }
+    
+    /**
+     * Update zoom display
+     */
+    function updateZoomDisplay() {
+      const leafletZoom = map.getZoom();
+      const nativeLeafletZoom = 3;
+      const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
+      const blocksPerTile = Math.round(BASE_BLOCKS_PER_TILE / scale);
+      document.getElementById('zoom-text').textContent = `Zoom: ${leafletZoom} (${blocksPerTile} blocks/tile)`;
+    }
+    
+    map.on('mousemove', updateCoordDisplay);
+    map.on('zoomend', updateZoomDisplay);
+    
+    /**
+     * Canvas-based coordinate grid overlay
+     * Draws clean grid lines at regular Minecraft coordinate intervals
+     */
+    class CoordGridOverlay {
+      constructor(map) {
+        this.map = map;
+        this.canvas = null;
+        this.ctx = null;
+        this.labelContainer = null;
+        this.visible = true;
+        this._onMove = this._onMove.bind(this);
+        this._init();
+      }
+      
+      _init() {
+        // Create canvas for grid lines
+        this.canvas = document.createElement('canvas');
+        this.canvas.className = 'coord-grid-canvas';
+        this.map.getContainer().appendChild(this.canvas);
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Create container for labels
+        this.labelContainer = document.createElement('div');
+        this.labelContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:501;overflow:hidden;';
+        this.map.getContainer().appendChild(this.labelContainer);
+        
+        // Bind events
+        this.map.on('move zoom resize zoomend moveend', this._onMove);
+        
+        // Initial render
+        this._resize();
+        this._render();
+      }
+      
+      _resize() {
+        const container = this.map.getContainer();
+        const rect = container.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+      }
+      
+      _onMove() {
+        this._resize();
+        this._render();
+      }
+      
+      /**
+       * Choose grid spacing based on zoom level
+       * We want roughly 3-6 grid lines visible on screen
+       */
+      _getGridSpacing() {
+        const leafletZoom = this.map.getZoom();
+        const nativeLeafletZoom = 3;
+        const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
+        const blocksPerPixel = BASE_BLOCKS_PER_TILE / (256 * scale);
+        
+        // Approximate pixels per 1000 blocks
+        const pixelsPer1000Blocks = 1000 / blocksPerPixel;
+        
+        // Choose spacing so we get reasonable number of lines
+        // Prefer nice round numbers in Minecraft coords
+        if (pixelsPer1000Blocks > 800) return 256;     // Very zoomed in
+        if (pixelsPer1000Blocks > 400) return 512;
+        if (pixelsPer1000Blocks > 200) return 1024;
+        if (pixelsPer1000Blocks > 100) return 2048;
+        if (pixelsPer1000Blocks > 50) return 4096;
+        if (pixelsPer1000Blocks > 25) return 8192;
+        return 16384;  // Very zoomed out
+      }
+      
+      _render() {
+        if (!this.visible) {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.labelContainer.innerHTML = '';
+          return;
+        }
+        
+        const ctx = this.ctx;
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        
+        ctx.clearRect(0, 0, width, height);
+        this.labelContainer.innerHTML = '';
+        
+        const leafletZoom = this.map.getZoom();
+        const spacing = this._getGridSpacing();
+        
+        // Get bounds in Minecraft coordinates
+        const bounds = this.map.getBounds();
+        const topLeft = leafletToMinecraft(bounds.getNorthWest(), leafletZoom);
+        const bottomRight = leafletToMinecraft(bounds.getSouthEast(), leafletZoom);
+        
+        // Calculate first grid line positions (round to spacing)
+        const startX = Math.floor(topLeft.x / spacing) * spacing;
+        const endX = Math.ceil(bottomRight.x / spacing) * spacing;
+        const startZ = Math.floor(bottomRight.z / spacing) * spacing;
+        const endZ = Math.ceil(topLeft.z / spacing) * spacing;
+        
+        // Draw settings
+        ctx.strokeStyle = 'rgba(109, 213, 237, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        
+        const labels = [];
+        
+        // Draw vertical lines (constant X)
+        for (let mcX = startX; mcX <= endX; mcX += spacing) {
+          const topPoint = minecraftToLeaflet(mcX, topLeft.z, leafletZoom);
+          const bottomPoint = minecraftToLeaflet(mcX, bottomRight.z, leafletZoom);
+          
+          const topScreen = this.map.latLngToContainerPoint(topPoint);
+          const bottomScreen = this.map.latLngToContainerPoint(bottomPoint);
+          
+          ctx.beginPath();
+          ctx.moveTo(Math.round(topScreen.x) + 0.5, 0);
+          ctx.lineTo(Math.round(bottomScreen.x) + 0.5, height);
+          ctx.stroke();
+          
+          // Add X label at top
+          if (topScreen.x > 30 && topScreen.x < width - 30) {
+            labels.push({ x: topScreen.x, y: 10, text: `X: ${mcX}`, type: 'x' });
+          }
+        }
+        
+        // Draw horizontal lines (constant Z)
+        for (let mcZ = startZ; mcZ <= endZ; mcZ += spacing) {
+          const leftPoint = minecraftToLeaflet(topLeft.x, mcZ, leafletZoom);
+          const rightPoint = minecraftToLeaflet(bottomRight.x, mcZ, leafletZoom);
+          
+          const leftScreen = this.map.latLngToContainerPoint(leftPoint);
+          const rightScreen = this.map.latLngToContainerPoint(rightPoint);
+          
+          ctx.beginPath();
+          ctx.moveTo(0, Math.round(leftScreen.y) + 0.5);
+          ctx.lineTo(width, Math.round(rightScreen.y) + 0.5);
+          ctx.stroke();
+          
+          // Add Z label at left
+          if (leftScreen.y > 20 && leftScreen.y < height - 20) {
+            labels.push({ x: 10, y: leftScreen.y, text: `Z: ${mcZ}`, type: 'z' });
+          }
+        }
+        
+        // Render labels
+        labels.forEach(label => {
+          const el = document.createElement('div');
+          el.className = 'grid-label';
+          el.textContent = label.text;
+          el.style.left = label.x + 'px';
+          el.style.top = label.y + 'px';
+          if (label.type === 'x') {
+            el.style.transform = 'translateX(-50%)';
+          }
+          this.labelContainer.appendChild(el);
+        });
+      }
+      
+      setVisible(visible) {
+        this.visible = visible;
+        this.canvas.style.display = visible ? 'block' : 'none';
+        this.labelContainer.style.display = visible ? 'block' : 'none';
+        if (visible) this._render();
+      }
+      
+      remove() {
+        this.map.off('move zoom resize zoomend moveend', this._onMove);
+        this.canvas.remove();
+        this.labelContainer.remove();
+      }
+    }
+    
+    let gridOverlay = null;
+    
+    document.getElementById('show-grid').addEventListener('change', function() {
+      if (gridOverlay) {
+        gridOverlay.setVisible(this.checked);
+      }
+    });
 
     function updateMapLayer() {
         if (tileLayer) {
@@ -194,10 +507,6 @@
         }
         
         const dim = document.getElementById('tile-dim').value;
-        
-        // Use server zoom 4 as the base (middle ground - 1024 blocks per tile)
-        // Leaflet will visually scale the tiles for other zoom levels
-        const BASE_SERVER_ZOOM = 4;
         
         L.TileLayer.Minecraft = L.TileLayer.extend({
             options: {
@@ -249,6 +558,8 @@
     // Initial Load
     updateMapLayer();
     loadTile();
+    gridOverlay = new CoordGridOverlay(map); // Create grid overlay
+    updateZoomDisplay(); // Initial zoom display
 
     </script>
 </body>

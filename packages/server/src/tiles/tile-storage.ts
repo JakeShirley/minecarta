@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { DIMENSIONS, ZOOM_LEVELS } from '@minecraft-map/shared';
+import { DIMENSIONS, ZOOM_LEVELS, BLOCKS_PER_TILE } from '@minecraft-map/shared';
 import type { Dimension, ZoomLevel } from '@minecraft-map/shared';
 import { getConfig } from '../config/index.js';
 
@@ -110,8 +110,7 @@ export class TileStorageService {
    * Convert block coordinates to tile coordinates at a specific zoom level
    */
   blockToTile(blockX: number, blockZ: number, zoom: ZoomLevel): { x: number; z: number } {
-    // Blocks per tile at each zoom level: 256, 512, 1024, 2048
-    const blocksPerTile = 256 * Math.pow(2, zoom);
+    const blocksPerTile = BLOCKS_PER_TILE[zoom];
     return {
       x: Math.floor(blockX / blocksPerTile),
       z: Math.floor(blockZ / blocksPerTile),
