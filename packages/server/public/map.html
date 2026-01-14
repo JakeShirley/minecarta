@@ -762,10 +762,71 @@
             // Proxy through our server to avoid CORS issues with the external API
             const PLAYER_HEAD_API = `${API_BASE}/players`;
             const PLAYER_REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
+            const PLAYER_LERP_DURATION = 1000; // Duration for smooth position transitions (ms)
 
-            let playerMarkers = new Map(); // Map of player name -> Leaflet marker
+            let playerMarkers = new Map(); // Map of player name -> { marker, currentPos, targetPos, startPos, lerpStartTime }
             let playersVisible = true;
             let currentPlayers = []; // Store current player data
+            let playerAnimationFrame = null; // Animation frame ID for player lerping
+
+            /**
+             * Linear interpolation between two values
+             */
+            function lerp(start, end, t) {
+                return start + (end - start) * t;
+            }
+
+            /**
+             * Smooth easing function (ease-out cubic)
+             */
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+
+            /**
+             * Update all player marker positions with smooth lerping
+             */
+            function updatePlayerLerp(timestamp) {
+                let anyAnimating = false;
+
+                for (const [name, data] of playerMarkers) {
+                    if (!data.targetPos || !data.startPos || !data.lerpStartTime) continue;
+
+                    const elapsed = timestamp - data.lerpStartTime;
+                    const progress = Math.min(elapsed / PLAYER_LERP_DURATION, 1);
+                    const easedProgress = easeOutCubic(progress);
+
+                    if (progress < 1) {
+                        anyAnimating = true;
+                        // Interpolate position
+                        const lat = lerp(data.startPos.lat, data.targetPos.lat, easedProgress);
+                        const lng = lerp(data.startPos.lng, data.targetPos.lng, easedProgress);
+                        data.currentPos = { lat, lng };
+                        data.marker.setLatLng([lat, lng]);
+                    } else {
+                        // Animation complete, snap to target
+                        data.currentPos = { ...data.targetPos };
+                        data.marker.setLatLng([data.targetPos.lat, data.targetPos.lng]);
+                        data.startPos = null;
+                        data.lerpStartTime = null;
+                    }
+                }
+
+                if (anyAnimating) {
+                    playerAnimationFrame = requestAnimationFrame(updatePlayerLerp);
+                } else {
+                    playerAnimationFrame = null;
+                }
+            }
+
+            /**
+             * Start the player lerp animation loop if not already running
+             */
+            function startPlayerLerpAnimation() {
+                if (!playerAnimationFrame) {
+                    playerAnimationFrame = requestAnimationFrame(updatePlayerLerp);
+                }
+            }
 
             // Default fallback head SVG
             const DEFAULT_HEAD_SVG =
@@ -815,14 +876,29 @@
 
                     // Convert Minecraft coords to Leaflet coords
                     const latLng = minecraftToLeaflet(player.x, player.z);
+                    const targetPos = { lat: latLng.lat, lng: latLng.lng };
 
                     if (playerMarkers.has(player.name)) {
-                        // Update existing marker position
-                        const marker = playerMarkers.get(player.name);
-                        marker.setLatLng(latLng);
+                        // Update existing marker - set up lerp animation
+                        const data = playerMarkers.get(player.name);
+                        
+                        // Only start a new lerp if the target position has changed
+                        if (!data.targetPos || 
+                            Math.abs(data.targetPos.lat - targetPos.lat) > 0.0001 || 
+                            Math.abs(data.targetPos.lng - targetPos.lng) > 0.0001) {
+                            
+                            // Start lerp from current position (or current target if mid-animation)
+                            data.startPos = data.currentPos ? { ...data.currentPos } : targetPos;
+                            data.targetPos = targetPos;
+                            data.lerpStartTime = performance.now();
+                            
+                            // Start the animation loop
+                            startPlayerLerpAnimation();
+                        }
+                        
                         // Update the popup content if it exists
-                        if (marker.getPopup()) {
-                            marker.setPopupContent(
+                        if (data.marker.getPopup()) {
+                            data.marker.setPopupContent(
                                 `<b>${player.name}</b><br>X: ${Math.floor(player.x)}, Y: ${Math.floor(player.y)}, Z: ${Math.floor(player.z)}`
                             );
                         }
@@ -843,14 +919,21 @@
                             marker.addTo(map);
                         }
 
-                        playerMarkers.set(player.name, marker);
+                        // Store marker data with position tracking for lerping
+                        playerMarkers.set(player.name, {
+                            marker,
+                            currentPos: targetPos,
+                            targetPos: targetPos,
+                            startPos: null,
+                            lerpStartTime: null
+                        });
                     }
                 });
 
                 // Remove markers for players no longer in this dimension or offline
-                for (const [name, marker] of playerMarkers) {
+                for (const [name, data] of playerMarkers) {
                     if (!seenPlayers.has(name)) {
-                        map.removeLayer(marker);
+                        map.removeLayer(data.marker);
                         playerMarkers.delete(name);
                     }
                 }
@@ -920,11 +1003,11 @@
              */
             function setPlayersVisible(visible) {
                 playersVisible = visible;
-                for (const marker of playerMarkers.values()) {
+                for (const data of playerMarkers.values()) {
                     if (visible) {
-                        marker.addTo(map);
+                        data.marker.addTo(map);
                     } else {
-                        map.removeLayer(marker);
+                        map.removeLayer(data.marker);
                     }
                 }
             }
@@ -937,8 +1020,8 @@
             // Refresh markers when dimension changes
             document.getElementById('tile-dim').addEventListener('change', () => {
                 // Clear all current markers and refetch
-                for (const marker of playerMarkers.values()) {
-                    map.removeLayer(marker);
+                for (const data of playerMarkers.values()) {
+                    map.removeLayer(data.marker);
                 }
                 playerMarkers.clear();
                 updatePlayerMarkers(currentPlayers);
@@ -1067,9 +1150,9 @@
                         if (event.playerName) {
                             currentPlayers = currentPlayers.filter(p => p.name !== event.playerName);
                             // Remove marker
-                            const marker = playerMarkers.get(event.playerName);
-                            if (marker) {
-                                map.removeLayer(marker);
+                            const data = playerMarkers.get(event.playerName);
+                            if (data) {
+                                map.removeLayer(data.marker);
                                 playerMarkers.delete(event.playerName);
                             }
                             updatePlayerList(currentPlayers);
