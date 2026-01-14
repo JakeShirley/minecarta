@@ -46,7 +46,24 @@ function logDebug(message: string, data?: unknown): void {
 }
 
 /**
+ * Get the maximum build height for a dimension
+ */
+function getMaxHeight(dimensionId: string): number {
+  switch (dimensionId) {
+    case 'minecraft:nether':
+    case 'nether':
+      return 128;
+    case 'minecraft:the_end':
+    case 'the_end':
+      return 256;
+    default:
+      return 320; // Overworld
+  }
+}
+
+/**
  * Scan a 16x16 chunk and collect top-level block data for map rendering
+ * Uses block ray casting to include water and other liquid blocks
  *
  * @param dimension - The dimension to scan
  * @param chunkX - Chunk X coordinate
@@ -61,6 +78,7 @@ function scanChunk(
   const blocks: MinecraftChunkBlock[] = [];
   const startX = chunkX * 16;
   const startZ = chunkZ * 16;
+  const maxHeight = getMaxHeight(dimension.id);
 
   // Scan each column in the 16x16 chunk
   for (let dx = 0; dx < 16; dx++) {
@@ -69,9 +87,19 @@ function scanChunk(
       const worldZ = startZ + dz;
 
       try {
-        // Use getTopmostBlock to efficiently find the highest non-air block
-        const block = dimension.getTopmostBlock({ x: worldX, z: worldZ });
-        if (block && block.typeId) {
+        // Use block ray cast downward to find the topmost block (including water/liquids)
+        const raycastResult = dimension.getBlockFromRay(
+          { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 }, // Start from max height, center of block
+          { x: 0, y: -1, z: 0 }, // Cast downward
+          {
+            includeLiquidBlocks: true,
+            includePassableBlocks: true,
+            maxDistance: maxHeight + 64, // Account for negative Y in overworld
+          }
+        );
+
+        if (raycastResult && raycastResult.block && raycastResult.block.typeId) {
+          const block = raycastResult.block;
           const mapColor = block.getComponent(BlockMapColorComponent.componentId);
           blocks.push({
             x: worldX,
@@ -182,7 +210,7 @@ export function registerCustomCommands(): void {
       (origin: CustomCommandOrigin, min: { x: number; y: number; z: number }, max: { x: number; y: number; z: number }, dimensionId?: string): CustomCommandResult => {
         const targetDimension = dimensionId ?? origin.sourceEntity?.dimension?.id ?? 'minecraft:overworld';
         // Use the source entity's dimension if not specified, or default to overworld
-        
+
         system.run(() => {
 
             console.log(

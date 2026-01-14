@@ -123,7 +123,24 @@ function getChunkCoordinates(x: number, z: number): { chunkX: number; chunkZ: nu
 }
 
 /**
+ * Get the maximum build height for a dimension
+ */
+function getMaxHeight(dimensionId: string): number {
+  switch (dimensionId) {
+    case 'minecraft:nether':
+    case 'nether':
+      return 128;
+    case 'minecraft:the_end':
+    case 'the_end':
+      return 256;
+    default:
+      return 320; // Overworld
+  }
+}
+
+/**
  * Scan a 16x16 chunk and collect top-level block data for map rendering
+ * Uses block ray casting to include water and other liquid blocks
  *
  * @param dimension - The dimension to scan
  * @param chunkX - Chunk X coordinate
@@ -138,6 +155,7 @@ function scanChunk(
   const blocks: MinecraftChunkBlock[] = [];
   const startX = chunkX * 16;
   const startZ = chunkZ * 16;
+  const maxHeight = getMaxHeight(dimension.id);
 
   // Scan each column in the 16x16 chunk
   for (let dx = 0; dx < 16; dx++) {
@@ -146,9 +164,19 @@ function scanChunk(
       const worldZ = startZ + dz;
 
       try {
-        // Use getTopmostBlock to efficiently find the highest non-air block
-        const block = dimension.getTopmostBlock({ x: worldX, z: worldZ });
-        if (block && block.typeId) {
+        // Use block ray cast downward to find the topmost block (including water/liquids)
+        const raycastResult = dimension.getBlockFromRay(
+          { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 }, // Start from max height, center of block
+          { x: 0, y: -1, z: 0 }, // Cast downward
+          {
+            includeLiquidBlocks: true,
+            includePassableBlocks: true,
+            maxDistance: maxHeight + 64, // Account for negative Y in overworld
+          }
+        );
+
+        if (raycastResult && raycastResult.block && raycastResult.block.typeId) {
+          const block = raycastResult.block;
           const mapColor = block.getComponent(BlockMapColorComponent.componentId);
           blocks.push({
             x: worldX,
@@ -194,6 +222,69 @@ async function scanAndSendChunk(
 }
 
 /**
+ * Scan a 3x3 area around a block and collect top-level block data
+ * Used for localized updates when a block is broken
+ *
+ * @param dimension - The dimension to scan
+ * @param centerX - Center X coordinate
+ * @param centerZ - Center Z coordinate
+ * @returns Chunk data with surface blocks in the 3x3 area
+ */
+function scanArea3x3(
+  dimension: import('@minecraft/server').Dimension,
+  centerX: number,
+  centerZ: number
+): MinecraftChunkData {
+  const blocks: MinecraftChunkBlock[] = [];
+  const maxHeight = getMaxHeight(dimension.id);
+  const { chunkX, chunkZ } = getChunkCoordinates(centerX, centerZ);
+
+  // Scan 3x3 area centered on the broken block
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const worldX = centerX + dx;
+      const worldZ = centerZ + dz;
+
+      try {
+        // Use block ray cast downward to find the topmost block (including water/liquids)
+        const raycastResult = dimension.getBlockFromRay(
+          { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 },
+          { x: 0, y: -1, z: 0 },
+          {
+            includeLiquidBlocks: true,
+            includePassableBlocks: true,
+            maxDistance: maxHeight + 64,
+          }
+        );
+
+        if (raycastResult && raycastResult.block && raycastResult.block.typeId) {
+          const block = raycastResult.block;
+          const mapColor = block.getComponent(BlockMapColorComponent.componentId);
+          blocks.push({
+            x: worldX,
+            y: block.location.y,
+            z: worldZ,
+            type: block.typeId,
+            mapColor: mapColor ? mapColor.tintedColor : { red: 1, green: 1, blue: 1, alpha: 1 },
+          });
+        }
+      } catch {
+        // Block might be in unloaded chunk, skip
+        logDebug(`Failed to get block at (${worldX}, ?, ${worldZ})`);
+        continue;
+      }
+    }
+  }
+
+  return {
+    dimension: toDimension(dimension.id),
+    chunkX,
+    chunkZ,
+    blocks,
+  };
+}
+
+/**
  * Register block break event listener
  */
 export function registerBlockBreakListener(): void {
@@ -216,10 +307,13 @@ export function registerBlockBreakListener(): void {
     queueBlockChange(blockEvent);
     flushBlockChanges();
 
-    // Scan and send the entire chunk for the broken block
-    const { chunkX, chunkZ } = getChunkCoordinates(block.location.x, block.location.z);
-    scanAndSendChunk(block.dimension, chunkX, chunkZ).catch((error) => {
-      logDebug('Failed to send chunk update', error);
+    // Scan and send a 3x3 area around the broken block
+    const chunkData = scanArea3x3(block.dimension, block.location.x, block.location.z);
+    const serialized = serializeChunkData(chunkData);
+    
+    logDebug(`Sending 3x3 area update around (${block.location.x}, ${block.location.z})`, { blockCount: chunkData.blocks.length });
+    sendChunkData([serialized]).catch((error) => {
+      logDebug('Failed to send area update', error);
     });
   });
 
