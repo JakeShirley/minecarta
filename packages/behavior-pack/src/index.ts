@@ -41,14 +41,9 @@ async function initialize(): Promise<void> {
   registerAllEventListeners();
 
   // Set up periodic player position updates
-  let tickCounter = 0;
   system.runInterval(() => {
-    tickCounter++;
-    if (tickCounter >= config.playerUpdateInterval) {
-      tickCounter = 0;
-      updatePlayerPositions();
-    }
-  }, 100);
+    updatePlayerPositions();
+  }, config.playerUpdateInterval);
 
   logStartup('Initialization complete!');
 }

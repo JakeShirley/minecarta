@@ -1,12 +1,15 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getPlayerStateService, getEntityStateService, getTileUpdateService } from '../services/index.js';
+import { getTileStorageService } from '../tiles/tile-storage.js';
 import { registerAuth } from './auth.js';
 import {
   playersBatchUpdateSchema,
   blocksBatchUpdateSchema,
   entitiesBatchUpdateSchema,
   chunksBatchUpdateSchema,
+  chunkExistsQuerySchema,
 } from './schemas.js';
+import type { Dimension, ZoomLevel } from '@minecraft-map/shared';
 
 /**
  * Register world data ingestion routes
@@ -146,6 +149,42 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         players: playerService.getAllPlayers(),
         entities: entityService.getAllEntities(),
         lastUpdated: Date.now(),
+      },
+    });
+  });
+
+  /**
+   * GET /world/chunk/exists - Check if a chunk tile exists at the lowest zoom level (z0)
+   *
+   * Used by the behavior pack to determine if it should send chunk data
+   */
+  app.get('/world/chunk/exists', async (request: FastifyRequest, reply: FastifyReply) => {
+    const parseResult = chunkExistsQuerySchema.safeParse(request.query);
+
+    if (!parseResult.success) {
+      return reply.code(400).send({
+        success: false,
+        error: 'Invalid query parameters',
+        details: parseResult.error.issues,
+      });
+    }
+
+    const { dimension, chunkX, chunkZ } = parseResult.data;
+    const tileStorage = getTileStorageService();
+
+    // Check if the tile exists at zoom level 0 (1 chunk = 1 tile)
+    // At z0, chunk coordinates map directly to tile coordinates
+    const exists = tileStorage.tileExists(dimension as Dimension, 0 as ZoomLevel, chunkX, chunkZ);
+
+    request.log.debug({ dimension, chunkX, chunkZ, exists }, 'Chunk existence check');
+
+    return reply.send({
+      success: true,
+      data: {
+        exists,
+        dimension,
+        chunkX,
+        chunkZ,
       },
     });
   });

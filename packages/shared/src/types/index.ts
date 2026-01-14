@@ -105,3 +105,22 @@ export interface WorldState {
   readonly entities: Entity[];
   readonly lastUpdated: number;
 }
+
+/**
+ * Request to check if a chunk exists on the server
+ */
+export interface ChunkExistsRequest {
+  readonly dimension: Dimension;
+  readonly chunkX: number;
+  readonly chunkZ: number;
+}
+
+/**
+ * Response indicating if a chunk exists
+ */
+export interface ChunkExistsResponse {
+  readonly exists: boolean;
+  readonly dimension: Dimension;
+  readonly chunkX: number;
+  readonly chunkZ: number;
+}

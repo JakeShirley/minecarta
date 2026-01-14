@@ -5,9 +5,9 @@
 import { world, Block, BlockPermutation } from '@minecraft/server';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
-import { sendBlockChanges, sendPlayerPositions, sendChunkData } from '../network';
+import { sendBlockChanges, sendPlayerPositions, sendChunkData, checkChunkExists } from '../network';
 import { config } from '../config';
-import { toDimension, scanArea } from '../blocks';
+import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
 
 /**
  * Extract block type from a Block or BlockPermutation
@@ -155,6 +155,91 @@ export function registerPlayerLeaveListener(): void {
 }
 
 /**
+ * Track chunks that have been recently checked to avoid repeated lookups.
+ * Key format: "dimension:chunkX:chunkZ"
+ */
+const recentlyCheckedChunks: Map<string, number> = new Map();
+
+/**
+ * How long to cache chunk check results (in milliseconds)
+ */
+const CHUNK_CHECK_CACHE_TTL = 60000; // 1 minute
+
+/**
+ * Get a cache key for a chunk
+ */
+function getChunkCacheKey(dimension: string, chunkX: number, chunkZ: number): string {
+  return `${dimension}:${chunkX}:${chunkZ}`;
+}
+
+/**
+ * Check if a chunk was recently checked
+ */
+function wasRecentlyChecked(key: string): boolean {
+  const lastChecked = recentlyCheckedChunks.get(key);
+  if (lastChecked === undefined) return false;
+  return Date.now() - lastChecked < CHUNK_CHECK_CACHE_TTL;
+}
+
+/**
+ * Mark a chunk as recently checked
+ */
+function markChunkChecked(key: string): void {
+  recentlyCheckedChunks.set(key, Date.now());
+  
+  // Clean up old entries periodically
+  if (recentlyCheckedChunks.size > 1000) {
+    const now = Date.now();
+    for (const [k, timestamp] of recentlyCheckedChunks.entries()) {
+      if (now - timestamp > CHUNK_CHECK_CACHE_TTL) {
+        recentlyCheckedChunks.delete(k);
+      }
+    }
+  }
+}
+
+/**
+ * Check if a player's current chunk needs generation and send data if needed
+ */
+async function checkAndGeneratePlayerChunk(player: MinecraftPlayer): Promise<void> {
+  const { chunkX, chunkZ } = getChunkCoordinates(player.x, player.z);
+  const cacheKey = getChunkCacheKey(player.dimension, chunkX, chunkZ);
+  
+  // Skip if we recently checked this chunk
+  if (wasRecentlyChecked(cacheKey)) {
+    return;
+  }
+  
+  // Mark as checked immediately to prevent duplicate checks
+  markChunkChecked(cacheKey);
+  
+  // Ask server if chunk exists
+  const exists = await checkChunkExists(player.dimension, chunkX, chunkZ);
+  
+  if (!exists) {
+    logDebug(`Chunk (${chunkX}, ${chunkZ}) in ${player.dimension} needs generation, scanning...`);
+    
+    // Get the Minecraft dimension object
+    const dimensionId = player.dimension === 'overworld' 
+      ? 'minecraft:overworld' 
+      : player.dimension === 'nether'
+        ? 'minecraft:nether'
+        : 'minecraft:the_end';
+    
+    try {
+      const dimension = world.getDimension(dimensionId);
+      const chunkData = scanChunk(dimension, chunkX, chunkZ);
+      const serialized = serializeChunkData(chunkData);
+      
+      logDebug(`Sending chunk (${chunkX}, ${chunkZ}) with ${chunkData.blocks.length} blocks`);
+      await sendChunkData([serialized]);
+    } catch (error) {
+      logDebug(`Failed to scan chunk (${chunkX}, ${chunkZ})`, error);
+    }
+  }
+}
+
+/**
  * Get all current players and their positions
  */
 function getAllPlayers(): MinecraftPlayer[] {
@@ -195,6 +280,12 @@ export async function updatePlayerPositions(): Promise<void> {
   const serialized = serializePlayers(players);
   logDebug(`Updating ${serialized.length} player positions`);
   await sendPlayerPositions(serialized);
+  
+  // Check if any player's current chunk needs generation
+  // Process one player at a time to avoid overwhelming the server
+  for (const player of players) {
+    await checkAndGeneratePlayerChunk(player);
+  }
 }
 
 /**

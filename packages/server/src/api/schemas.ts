@@ -114,6 +114,17 @@ export const chunksBatchUpdateSchema = z.object({
 export type ChunksBatchUpdateRequest = z.infer<typeof chunksBatchUpdateSchema>;
 
 /**
+ * Chunk existence check request schema
+ */
+export const chunkExistsQuerySchema = z.object({
+  dimension: z.enum(['overworld', 'nether', 'the_end']),
+  chunkX: z.coerce.number().int(),
+  chunkZ: z.coerce.number().int(),
+});
+
+export type ChunkExistsQuery = z.infer<typeof chunkExistsQuerySchema>;
+
+/**
  * Dimension parameter schema
  */
 export const dimensionParamSchema = z.object({

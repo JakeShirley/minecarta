@@ -181,6 +181,34 @@ Get current world state snapshot.
 }
 ```
 
+#### Check Chunk Existence
+
+```
+GET /api/v1/world/chunk/exists?dimension=overworld&chunkX=6&chunkZ=12
+```
+
+Check if a chunk tile exists at the lowest zoom level (z0). Used by the behavior pack to determine if it needs to send chunk data.
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dimension` | string | `overworld`, `nether`, or `the_end` |
+| `chunkX` | integer | Chunk X coordinate |
+| `chunkZ` | integer | Chunk Z coordinate |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "exists": false,
+    "dimension": "overworld",
+    "chunkX": 6,
+    "chunkZ": 12
+  }
+}
+```
+
 ### Player Queries (Public)
 
 These endpoints do not require authentication.

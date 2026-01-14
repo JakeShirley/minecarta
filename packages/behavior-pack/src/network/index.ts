@@ -61,6 +61,42 @@ function createHeaders(): HttpHeader[] {
 }
 
 /**
+ * Send a GET request to the map server
+ *
+ * @param endpoint - API endpoint path with query parameters
+ * @returns Promise resolving to the parsed JSON response or null on error
+ */
+export async function getFromServer<T>(endpoint: string): Promise<T | null> {
+  const url = getApiUrl(endpoint);
+
+  logDebug(`GET ${endpoint}`);
+
+  try {
+    const request = new HttpRequest(url);
+    request.method = HttpRequestMethod.Get;
+    request.headers = createHeaders();
+
+    const response = await http.request(request);
+
+    if (response.status >= 200 && response.status < 300) {
+      logDebug(`Response ${response.status} from ${endpoint}`);
+      try {
+        return JSON.parse(response.body) as T;
+      } catch {
+        logError(`Failed to parse response from ${endpoint}`, response.body);
+        return null;
+      }
+    } else {
+      logError(`HTTP ${response.status} from ${endpoint}`, response.body);
+      return null;
+    }
+  } catch (error) {
+    logError(`Request failed: ${endpoint}`, error);
+    return null;
+  }
+}
+
+/**
  * Send a POST request to the map server
  *
  * @param endpoint - API endpoint path
@@ -159,6 +195,44 @@ export async function sendChunkData(
   chunks: import('@minecraft-map/shared').ChunkData[]
 ): Promise<ApiResponse> {
   return postToServer('/api/v1/world/chunks', { chunks });
+}
+
+/**
+ * Response from chunk existence check
+ */
+interface ChunkExistsApiResponse {
+  success: boolean;
+  data?: {
+    exists: boolean;
+    dimension: string;
+    chunkX: number;
+    chunkZ: number;
+  };
+  error?: string;
+}
+
+/**
+ * Check if a chunk tile exists on the server
+ *
+ * @param dimension - The dimension to check
+ * @param chunkX - Chunk X coordinate
+ * @param chunkZ - Chunk Z coordinate
+ * @returns Promise resolving to true if the chunk exists, false if it doesn't or on error
+ */
+export async function checkChunkExists(
+  dimension: import('@minecraft-map/shared').Dimension,
+  chunkX: number,
+  chunkZ: number
+): Promise<boolean> {
+  const endpoint = `/api/v1/world/chunk/exists?dimension=${dimension}&chunkX=${chunkX}&chunkZ=${chunkZ}`;
+  const response = await getFromServer<ChunkExistsApiResponse>(endpoint);
+  
+  if (response?.success && response.data) {
+    return response.data.exists;
+  }
+  
+  // On error, assume chunk exists to avoid unnecessary rescans
+  return true;
 }
 
 /**

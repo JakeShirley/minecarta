@@ -191,3 +191,14 @@ Minecraft World Events
         ▼
   Map Web Server
 ```
+
+## Automatic Chunk Generation
+
+In addition to the manual `/mapsync:autogen` command, the behavior pack includes **automatic chunk generation** based on player movement:
+
+1. **On each player position update** (every ~1 second by default), the pack checks if the player's current chunk exists on the map server
+2. **The server checks** if a tile exists at zoom level 0 (where 1 chunk = 1 tile) for the chunk coordinates
+3. **If the tile doesn't exist**, the behavior pack automatically scans and sends the chunk data
+4. **A cache** prevents repeated checks for the same chunk (1 minute TTL)
+
+This ensures that as players explore the world, the map is automatically populated without requiring manual commands.

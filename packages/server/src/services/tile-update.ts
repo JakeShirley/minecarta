@@ -3,12 +3,32 @@ import { ZOOM_LEVELS } from '@minecraft-map/shared';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { getTileGeneratorService } from '../tiles/tile-generator.js';
 
+/**
+ * Block update data with partial info (block changes only have type, no color)
+ * For block changes we only need to invalidate the tile, the color will be
+ * obtained from the next chunk scan.
+ */
+interface BlockUpdateData {
+  x: number;
+  y: number;
+  z: number;
+  type: string;
+}
+
 interface TileUpdateTask {
   dimension: Dimension;
   zoom: ZoomLevel;
   x: number;
   z: number;
   blocks: ChunkBlock[];
+}
+
+interface TileInvalidationTask {
+  dimension: Dimension;
+  zoom: ZoomLevel;
+  x: number;
+  z: number;
+  blockUpdates: BlockUpdateData[];
 }
 
 export class TileUpdateService {
@@ -52,10 +72,13 @@ export class TileUpdateService {
 
   /**
    * Process a batch of block updates
+   * 
+   * Block updates don't include map color info, so we just invalidate the affected tiles.
+   * The next chunk scan from the behavior pack will provide the updated data.
    */
   async processBlockUpdates(updates: BlockChange[]): Promise<void> {
     const storage = getTileStorageService();
-    const tasks = new Map<string, TileUpdateTask>();
+    const tasks = new Map<string, TileInvalidationTask>();
 
     for (const update of updates) {
       for (const zoom of ZOOM_LEVELS) {
@@ -70,12 +93,12 @@ export class TileUpdateService {
              zoom,
              x: tileX,
              z: tileZ,
-             blocks: []
+             blockUpdates: []
            };
            tasks.set(key, task);
          }
          
-         task.blocks.push({
+         task.blockUpdates.push({
            x: update.x,
            y: update.y,
            z: update.z,
@@ -84,7 +107,21 @@ export class TileUpdateService {
       }
     }
     
-    await this.processTasks(Array.from(tasks.values()));
+    // For block updates, just invalidate the tiles so they get regenerated on next scan
+    await this.processInvalidationTasks(Array.from(tasks.values()));
+  }
+
+  /**
+   * Invalidate tiles affected by block changes
+   * This just deletes the tiles so they get regenerated on next chunk scan
+   */
+  private async processInvalidationTasks(tasks: TileInvalidationTask[]): Promise<void> {
+    const storage = getTileStorageService();
+
+    for (const task of tasks) {
+      const { dimension, zoom, x, z } = task;
+      storage.deleteTile(dimension, zoom, x, z);
+    }
   }
 
   private async processTasks(tasks: TileUpdateTask[]): Promise<void> {
