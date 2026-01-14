@@ -138,6 +138,42 @@ pnpm test
 | `playerLeave` | When a player leaves the world |
 | `playerSpawn` | When a player spawns |
 
+## Commands
+
+The behavior pack registers custom commands for map operations:
+
+### `/mapsync:scan`
+
+Force scan a block range and submit tiles to the map server.
+
+```
+/mapsync:scan <min> <max> [dimension]
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `min` | Location | Minimum corner coordinates |
+| `max` | Location | Maximum corner coordinates |
+| `dimension` | String (optional) | Dimension ID (defaults to player's dimension) |
+
+### `/mapsync:autogen`
+
+Toggle automatic tile generation around the player. When enabled, the pack will periodically scan and send tiles within the specified radius around the player.
+
+```
+/mapsync:autogen [radius] [interval]
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `radius` | Integer (optional) | Radius in blocks (16-256, default: 64) |
+| `interval` | Integer (optional) | Scan interval in seconds (1-300, default: 10) |
+
+**Usage:**
+- `/mapsync:autogen` - Toggle off or show status
+- `/mapsync:autogen 64 10` - Enable with 64-block radius, scanning every 10 seconds
+- `/mapsync:autogen 128 30` - Enable with 128-block radius, scanning every 30 seconds
+
 ## Data Flow
 
 ```
