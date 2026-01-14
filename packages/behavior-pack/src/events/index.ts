@@ -6,7 +6,14 @@ import { world, Block, BlockPermutation, Player } from '@minecraft/server';
 import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
-import { sendBlockChanges, sendPlayerPositions, sendPlayerJoin, sendPlayerLeave, sendChunkData, checkChunkExists } from '../network';
+import {
+    sendBlockChanges,
+    sendPlayerPositions,
+    sendPlayerJoin,
+    sendPlayerLeave,
+    sendChunkData,
+    checkChunkExists,
+} from '../network';
 import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
 
