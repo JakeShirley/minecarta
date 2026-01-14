@@ -46,6 +46,7 @@ export function serializePlayer(player: MinecraftPlayer): Player {
     z: Math.floor(player.z),
     dimension: player.dimension,
     lastSeen: Date.now(),
+    playfabId: player.playfabId,
   };
 }
 

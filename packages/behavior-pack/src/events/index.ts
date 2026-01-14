@@ -3,11 +3,18 @@
  */
 
 import { world, Block, BlockPermutation } from '@minecraft/server';
+import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
 import { sendBlockChanges, sendPlayerPositions, sendChunkData, checkChunkExists } from '../network';
 import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
+
+/**
+ * Map of player names to their PlayFab IDs.
+ * Populated when players join via the async player join event.
+ */
+const playerPlayfabIds: Map<string, string> = new Map();
 
 /**
  * Extract block type from a Block or BlockPermutation
@@ -125,6 +132,22 @@ export function registerBlockBreakListener(): void {
 }
 
 /**
+ * Register async player join event listener to capture persistent IDs.
+ * This uses the @minecraft/server-admin module to get the player's PlayFab ID.
+ */
+export function registerAsyncPlayerJoinListener(): void {
+  beforeEvents.asyncPlayerJoin.subscribe(async (event) => {
+    const { name, persistentId } = event;
+    logDebug(`Async player join: ${name} with playfabId: ${persistentId}`);
+    
+    // Store the PlayFab ID for this player
+    playerPlayfabIds.set(name, persistentId);
+  });
+
+  logDebug('Async player join listener registered');
+}
+
+/**
  * Register player join event listener
  */
 export function registerPlayerJoinListener(): void {
@@ -146,6 +169,9 @@ export function registerPlayerLeaveListener(): void {
   world.afterEvents.playerLeave.subscribe((event) => {
     const { playerName } = event;
     logDebug(`Player left: ${playerName}`);
+    
+    // Clean up the PlayFab ID mapping
+    playerPlayfabIds.delete(playerName);
     
     // Send updated player list
     updatePlayerPositions();
@@ -256,6 +282,7 @@ function getAllPlayers(): MinecraftPlayer[] {
         y: location.y,
         z: location.z,
         dimension: toDimension(dimension.id),
+        playfabId: playerPlayfabIds.get(player.name),
       });
     } catch (error) {
       // Player may be in an invalid state, skip
@@ -292,6 +319,7 @@ export async function updatePlayerPositions(): Promise<void> {
  * Register all event listeners
  */
 export function registerAllEventListeners(): void {
+  registerAsyncPlayerJoinListener();
   registerBlockPlaceListener();
   registerBlockBreakListener();
   registerPlayerJoinListener();

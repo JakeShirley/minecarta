@@ -27,6 +27,11 @@ export interface MinecraftPlayer {
   readonly y: number;
   readonly z: number;
   readonly dimension: Dimension;
+  /**
+   * The player's PlayFab ID (persistent identifier across sessions).
+   * Captured from the async player join event.
+   */
+  readonly playfabId?: string;
 }
 
 /**

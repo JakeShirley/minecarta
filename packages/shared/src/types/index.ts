@@ -32,6 +32,11 @@ export interface Player {
   readonly z: number;
   readonly dimension: Dimension;
   readonly lastSeen: number;
+  /**
+   * The player's PlayFab ID (persistent identifier across sessions).
+   * Available when the player joined through the async join event.
+   */
+  readonly playfabId?: string;
 }
 
 /**

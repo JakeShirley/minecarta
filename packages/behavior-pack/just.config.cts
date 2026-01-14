@@ -21,7 +21,7 @@ setupEnvironment(path.resolve(__dirname, '.env'));
 const bundleParams = {
     entryPoint: './src/index.ts',
     outfile: './scripts/index.js',
-    external: ['@minecraft/server', '@minecraft/server-net'],
+    external: ['@minecraft/server', '@minecraft/server-admin', '@minecraft/server-net'],
 };
 
 // Deployment configuration
