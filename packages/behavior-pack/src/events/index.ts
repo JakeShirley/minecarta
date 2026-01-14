@@ -155,7 +155,7 @@ function scanChunk(
             y: block.location.y,
             z: worldZ,
             type: block.typeId,
-            mapColor: mapColor ? mapColor.color : { red: 0, green: 0, blue: 0, alpha: 0 },
+            mapColor: mapColor ? mapColor.tintedColor : { red: 1, green: 1, blue: 1, alpha: 1 },
           });
         }
       } catch {

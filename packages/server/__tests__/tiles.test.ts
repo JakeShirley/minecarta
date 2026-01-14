@@ -42,9 +42,10 @@ describe('BlockColorService', () => {
 describe('TileGeneratorService', () => {
   it('should generate a tile buffer from blocks', async () => {
     const service = new TileGeneratorService();
+    // At zoom 0, tile (0,0) covers blocks 0-15 (one chunk)
     const blocks: ChunkBlock[] = [
       { x: 0, y: 64, z: 0, type: 'minecraft:stone' },
-      { x: 255, y: 64, z: 255, type: 'minecraft:grass_block' },
+      { x: 15, y: 64, z: 15, type: 'minecraft:grass_block' },
     ];
     
     const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
@@ -71,9 +72,9 @@ describe('TileGeneratorService', () => {
       raw: { width: 256, height: 256, channels: 4 }
     }).png().toBuffer();
 
-    // Add blue pixel at block position (1, 1)
-    // At zoom 0: 256 blocks per 256 pixels = 1 block per pixel (1:1)
-    // So block (1, 1) renders to pixel (1, 1)
+    // Add water block at position (1, 1)
+    // At zoom 0: 16 blocks per 256 pixels = 16 pixels per block
+    // So block (1, 1) renders to pixels (16, 16) through (31, 31)
     const blocks: ChunkBlock[] = [
       { x: 1, y: 64, z: 1, type: 'minecraft:water' } 
     ];
@@ -87,8 +88,8 @@ describe('TileGeneratorService', () => {
     expect(data[1]).toBe(0);
     expect(data[2]).toBe(0);
     
-    // Check pixel (1, 1) is blue (added) - block (1,1) maps to pixel (1,1) at zoom 0 (1:1)
-    const idx = (1 * 256 + 1) * 4;
+    // Check pixel (16, 16) is water blue (added) - block (1,1) maps to pixels starting at (16,16)
+    const idx = (16 * 256 + 16) * 4;
     expect(data[idx]).toBe(63); // Water R
     expect(data[idx + 1]).toBe(118); // Water G
     expect(data[idx + 2]).toBe(228); // Water B

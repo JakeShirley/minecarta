@@ -31,24 +31,24 @@ export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
 
 /**
  * Blocks per tile at each zoom level
- * - z0: 1 block = 1 pixel, 256 blocks per tile (highest detail)
- * - z1: 2 blocks = 1 pixel, 512 blocks per tile
- * - z2: 4 blocks = 1 pixel, 1024 blocks per tile
- * - z3: 8 blocks = 1 pixel, 2048 blocks per tile
- * - z4: 16 blocks = 1 pixel, 4096 blocks per tile
- * - z5: 32 blocks = 1 pixel, 8192 blocks per tile
- * - z6: 64 blocks = 1 pixel, 16384 blocks per tile
- * - z7: 128 blocks = 1 pixel, 32768 blocks per tile
+ * - z0: 1 chunk = 1 tile, 16 blocks per tile (16x16 pixels per block)
+ * - z1: 2x2 chunks = 1 tile, 32 blocks per tile (8x8 pixels per block)
+ * - z2: 4x4 chunks = 1 tile, 64 blocks per tile (4x4 pixels per block)
+ * - z3: 8x8 chunks = 1 tile, 128 blocks per tile (2x2 pixels per block)
+ * - z4: 16x16 chunks = 1 tile, 256 blocks per tile (1 pixel per block)
+ * - z5: 32x32 chunks = 1 tile, 512 blocks per tile (2 blocks per pixel)
+ * - z6: 64x64 chunks = 1 tile, 1024 blocks per tile (4 blocks per pixel)
+ * - z7: 128x128 chunks = 1 tile, 2048 blocks per tile (8 blocks per pixel)
  */
 export const BLOCKS_PER_TILE: Record<ZoomLevel, number> = {
-  0: 256,
-  1: 512,
-  2: 1024,
-  3: 2048,
-  4: 4096,
-  5: 8192,
-  6: 16384,
-  7: 32768,
+  0: 16,
+  1: 32,
+  2: 64,
+  3: 128,
+  4: 256,
+  5: 512,
+  6: 1024,
+  7: 2048,
 };
 
 /**

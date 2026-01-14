@@ -7,8 +7,12 @@
 
 import { system, world } from '@minecraft/server';
 import { registerAllEventListeners, updatePlayerPositions } from './events';
+import { registerCustomCommands } from './commands';
 import { testConnection } from './network';
 import { config } from './config';
+
+// Register custom commands during startup (must be done in early-execution mode)
+registerCustomCommands();
 
 /**
  * Log a startup message

@@ -48,10 +48,13 @@ export class TileGeneratorService {
     const blockStartZ = tileZ * BLOCKS_PER_TILE[zoom as ZoomLevel];
     
     // Scale factor: blocks per pixel
-    // At zoom 0: 64 blocks / 256 pixels = 0.25 blocks per pixel (4 pixels per block)
-    // At zoom 2: 256 blocks / 256 pixels = 1 block per pixel
-    // At zoom 4: 1024 blocks / 256 pixels = 4 blocks per pixel
+    // At zoom 0: 16 blocks / 256 pixels = 0.0625 blocks per pixel (16x16 pixels per block)
+    // At zoom 4: 256 blocks / 256 pixels = 1 block per pixel
+    // At zoom 7: 2048 blocks / 256 pixels = 8 blocks per pixel
     const scale = BLOCKS_PER_TILE[zoom as ZoomLevel] / TILE_SIZE;
+    
+    // Pixels per block (inverse of scale, used when scale < 1)
+    const pixelsPerBlock = Math.floor(1 / scale);
     
     const colorService = getBlockColorService();
 
@@ -71,24 +74,48 @@ export class TileGeneratorService {
         continue;
       }
       
-      // Calculate pixel coordinates
-      const px = Math.floor(relX / scale);
-      const py = Math.floor(relZ / scale); // Z maps to Y in image space
-      
       // Use mapColor from block data if provided, otherwise fall back to lookup
       const color = block.mapColor ?? colorService.getColor(block.type);
       
       // Don't draw fully transparent blocks over existing valid pixels
       if (color.a === 0) continue;
       
-      // Calculate buffer index
-      const idx = (py * TILE_SIZE + px) * 4;
-      
-      // Simple overwrite (no blending yet)
-      pixelData[idx] = color.r;
-      pixelData[idx + 1] = color.g;
-      pixelData[idx + 2] = color.b;
-      pixelData[idx + 3] = color.a ?? 255;
+      if (scale >= 1) {
+        // Multiple blocks per pixel - draw single pixel
+        const px = Math.floor(relX / scale);
+        const py = Math.floor(relZ / scale); // Z maps to Y in image space
+        
+        // Calculate buffer index
+        const idx = (py * TILE_SIZE + px) * 4;
+        
+        // Simple overwrite (no blending yet)
+        pixelData[idx] = color.r;
+        pixelData[idx + 1] = color.g;
+        pixelData[idx + 2] = color.b;
+        pixelData[idx + 3] = color.a ?? 255;
+      } else {
+        // Each block is multiple pixels - draw a square
+        const startPx = relX * pixelsPerBlock;
+        const startPy = relZ * pixelsPerBlock; // Z maps to Y in image space
+        
+        // Draw a pixelsPerBlock x pixelsPerBlock square for each block
+        for (let dy = 0; dy < pixelsPerBlock; dy++) {
+          for (let dx = 0; dx < pixelsPerBlock; dx++) {
+            const px = startPx + dx;
+            const py = startPy + dy;
+            
+            // Safety check (should not be needed if math is correct)
+            if (px >= TILE_SIZE || py >= TILE_SIZE) continue;
+            
+            const idx = (py * TILE_SIZE + px) * 4;
+            
+            pixelData[idx] = color.r;
+            pixelData[idx + 1] = color.g;
+            pixelData[idx + 2] = color.b;
+            pixelData[idx + 3] = color.a ?? 255;
+          }
+        }
+      }
     }
 
     // Generate PNG using Sharp
