@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
 /**
+ * Player stats schema (health, hunger, armor)
+ */
+export const playerStatsSchema = z.object({
+    health: z.number().min(0).max(100), // Allow absorption effects
+    maxHealth: z.number().min(0).max(100),
+    hunger: z.number().min(0).max(20),
+    armor: z.number().min(0).max(20),
+});
+
+export type PlayerStatsRequest = z.infer<typeof playerStatsSchema>;
+
+/**
  * Player update request schema
  */
 export const playerUpdateSchema = z.object({
@@ -10,6 +22,7 @@ export const playerUpdateSchema = z.object({
     z: z.number(),
     dimension: z.enum(['overworld', 'nether', 'the_end']),
     playfabId: z.string().optional(),
+    stats: playerStatsSchema.optional(),
 });
 
 export type PlayerUpdateRequest = z.infer<typeof playerUpdateSchema>;
@@ -33,6 +46,7 @@ export const playerJoinSchema = z.object({
     z: z.number(),
     dimension: z.enum(['overworld', 'nether', 'the_end']),
     playfabId: z.string().optional(),
+    stats: playerStatsSchema.optional(),
 });
 
 export type PlayerJoinRequest = z.infer<typeof playerJoinSchema>;

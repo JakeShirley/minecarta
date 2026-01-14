@@ -2,7 +2,7 @@
  * Data serialization utilities for converting Minecraft data to API format
  */
 
-import type { BlockChange, Player, Entity, ChunkData, ChunkBlock } from '@minecraft-map/shared';
+import type { BlockChange, Player, Entity, ChunkData, ChunkBlock, PlayerStats } from '@minecraft-map/shared';
 import type {
     MinecraftBlockEvent,
     MinecraftPlayer,
@@ -31,6 +31,21 @@ export function serializeBlockChange(event: MinecraftBlockEvent): BlockChange {
 }
 
 /**
+ * Serialize player stats to the API format
+ *
+ * @param stats - Player stats data
+ * @returns PlayerStats object for API transmission
+ */
+export function serializePlayerStats(stats: PlayerStats): PlayerStats {
+    return {
+        health: Math.round(stats.health * 10) / 10, // Round to 1 decimal place
+        maxHealth: Math.round(stats.maxHealth * 10) / 10,
+        hunger: Math.round(stats.hunger),
+        armor: Math.round(stats.armor),
+    };
+}
+
+/**
  * Serialize player data to the API format
  *
  * @param player - Minecraft player data
@@ -45,6 +60,7 @@ export function serializePlayer(player: MinecraftPlayer): Player {
         dimension: player.dimension,
         lastSeen: Date.now(),
         playfabId: player.playfabId,
+        stats: player.stats ? serializePlayerStats(player.stats) : undefined,
     };
 }
 

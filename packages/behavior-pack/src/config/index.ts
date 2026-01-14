@@ -10,6 +10,12 @@ export interface Config {
     readonly playerUpdateInterval: number;
     /** Whether to enable debug logging */
     readonly debug: boolean;
+    /**
+     * Whether to send player stats (health, hunger, armor) with position updates.
+     * Set to true to enable displaying player vitals on the web map.
+     * Default: false (for privacy/performance reasons)
+     */
+    readonly sendPlayerStats: boolean;
 }
 
 /**
@@ -20,6 +26,7 @@ export const config: Config = {
     authToken: 'dev-token',
     playerUpdateInterval: 20, // 1 second
     debug: true,
+    sendPlayerStats: true, // Enable player stats by default for development
 };
 
 /**

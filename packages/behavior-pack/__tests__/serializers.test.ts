@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     serializeBlockChange,
     serializePlayer,
+    serializePlayerStats,
     serializeEntity,
     normalizeBlockType,
     normalizeEntityType,
@@ -14,6 +15,7 @@ import {
     serializeEntities,
 } from '../src/serializers';
 import type { MinecraftBlockEvent, MinecraftPlayer, MinecraftEntity } from '../src/types';
+import type { PlayerStats } from '@minecraft-map/shared';
 
 describe('Serializers', () => {
     describe('normalizeBlockType', () => {
@@ -37,6 +39,53 @@ describe('Serializers', () => {
         it('should return unchanged if no prefix', () => {
             expect(normalizeEntityType('zombie')).toBe('zombie');
             expect(normalizeEntityType('custom:mob')).toBe('custom:mob');
+        });
+    });
+
+    describe('serializePlayerStats', () => {
+        it('should round health to 1 decimal place', () => {
+            const stats: PlayerStats = {
+                health: 18.567,
+                maxHealth: 20,
+                hunger: 15,
+                armor: 10,
+            };
+
+            const result = serializePlayerStats(stats);
+
+            expect(result.health).toBe(18.6);
+        });
+
+        it('should round hunger and armor to integers', () => {
+            const stats: PlayerStats = {
+                health: 20,
+                maxHealth: 20,
+                hunger: 17.8,
+                armor: 14.2,
+            };
+
+            const result = serializePlayerStats(stats);
+
+            expect(result.hunger).toBe(18);
+            expect(result.armor).toBe(14);
+        });
+
+        it('should preserve all stats', () => {
+            const stats: PlayerStats = {
+                health: 10,
+                maxHealth: 20,
+                hunger: 20,
+                armor: 0,
+            };
+
+            const result = serializePlayerStats(stats);
+
+            expect(result).toEqual({
+                health: 10,
+                maxHealth: 20,
+                hunger: 20,
+                armor: 0,
+            });
         });
     });
 
@@ -142,6 +191,59 @@ describe('Serializers', () => {
             const result = serializePlayer(player);
 
             expect(result.dimension).toBe('nether');
+        });
+
+        it('should serialize player stats when present', () => {
+            const player: MinecraftPlayer = {
+                name: 'ArmoredPlayer',
+                x: 0,
+                y: 64,
+                z: 0,
+                dimension: 'overworld',
+                stats: {
+                    health: 18.5,
+                    maxHealth: 20,
+                    hunger: 15,
+                    armor: 12,
+                },
+            };
+
+            const result = serializePlayer(player);
+
+            expect(result.stats).toBeDefined();
+            expect(result.stats?.health).toBe(18.5);
+            expect(result.stats?.maxHealth).toBe(20);
+            expect(result.stats?.hunger).toBe(15);
+            expect(result.stats?.armor).toBe(12);
+        });
+
+        it('should handle undefined stats', () => {
+            const player: MinecraftPlayer = {
+                name: 'NoStatsPlayer',
+                x: 0,
+                y: 64,
+                z: 0,
+                dimension: 'overworld',
+            };
+
+            const result = serializePlayer(player);
+
+            expect(result.stats).toBeUndefined();
+        });
+
+        it('should include playfabId when present', () => {
+            const player: MinecraftPlayer = {
+                name: 'PlayerWithId',
+                x: 0,
+                y: 64,
+                z: 0,
+                dimension: 'overworld',
+                playfabId: 'abc123',
+            };
+
+            const result = serializePlayer(player);
+
+            expect(result.playfabId).toBe('abc123');
         });
     });
 

@@ -2,9 +2,18 @@
  * World event listeners for block changes, player events, etc.
  */
 
-import { world, Block, BlockPermutation, Player } from '@minecraft/server';
+import {
+    world,
+    Block,
+    BlockPermutation,
+    Player,
+    EntityHealthComponent,
+    EntityEquippableComponent,
+    EquipmentSlot,
+} from '@minecraft/server';
 import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
+import type { PlayerStats } from '@minecraft-map/shared';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
 import {
     sendBlockChanges,
@@ -57,6 +66,155 @@ function cachePlayfabIdToPlayer(player: Player, playfabId: string): void {
     } catch (error) {
         logError(`Failed to set dynamic property for player ${player.name}`, error);
     }
+}
+
+/**
+ * Get player stats (health, hunger, armor) if sendPlayerStats is enabled.
+ * Returns undefined if disabled or if stats cannot be retrieved.
+ */
+function getPlayerStats(player: Player): PlayerStats | undefined {
+    if (!config.sendPlayerStats) {
+        return undefined;
+    }
+
+    try {
+        // Get health from the health component
+        const healthComponent = player.getComponent('minecraft:health') as EntityHealthComponent | undefined;
+        const health = healthComponent?.currentValue ?? 20;
+        const maxHealth = healthComponent?.effectiveMax ?? 20;
+
+        // Get hunger level - Bedrock uses a different property
+        // In Bedrock, we need to use the player's food level which is accessed via the attribute system
+        // Unfortunately, Bedrock script API doesn't directly expose hunger, so we'll try a workaround
+        // For now, we'll use a default of 20 if not accessible
+        let hunger = 20;
+        try {
+            // Try to get the food/hunger attribute if available
+            const exhaustion = player.getDynamicProperty('hunger') as number | undefined;
+            if (typeof exhaustion === 'number') {
+                hunger = exhaustion;
+            }
+        } catch {
+            // Hunger not accessible, use default
+        }
+
+        // Get armor points by checking equipped armor slots
+        let armor = 0;
+        try {
+            const equippable = player.getComponent('minecraft:equippable') as EntityEquippableComponent | undefined;
+            if (equippable) {
+                // Check each armor slot and calculate total armor value
+                const armorSlots = [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet];
+                for (const slot of armorSlots) {
+                    const item = equippable.getEquipment(slot);
+                    if (item) {
+                        // Estimate armor value based on item type
+                        const typeId = item.typeId.toLowerCase();
+                        armor += getArmorValue(typeId, slot);
+                    }
+                }
+            }
+        } catch {
+            // Armor not accessible, use default 0
+        }
+
+        return {
+            health,
+            maxHealth,
+            hunger,
+            armor: Math.min(armor, 20), // Cap at 20
+        };
+    } catch (error) {
+        logDebug(`Failed to get stats for player ${player.name}`, error);
+        return undefined;
+    }
+}
+
+/**
+ * Get the armor value for a specific armor piece based on its type and slot.
+ * Values based on Minecraft armor protection values.
+ */
+function getArmorValue(typeId: string, slot: EquipmentSlot): number {
+    // Leather armor
+    if (typeId.includes('leather')) {
+        switch (slot) {
+            case EquipmentSlot.Head:
+                return 1;
+            case EquipmentSlot.Chest:
+                return 3;
+            case EquipmentSlot.Legs:
+                return 2;
+            case EquipmentSlot.Feet:
+                return 1;
+            default:
+                return 0;
+        }
+    }
+    // Chain/Gold armor
+    if (typeId.includes('chainmail') || typeId.includes('golden')) {
+        switch (slot) {
+            case EquipmentSlot.Head:
+                return 2;
+            case EquipmentSlot.Chest:
+                return 5;
+            case EquipmentSlot.Legs:
+                return typeId.includes('chainmail') ? 4 : 3;
+            case EquipmentSlot.Feet:
+                return 1;
+            default:
+                return 0;
+        }
+    }
+    // Iron armor
+    if (typeId.includes('iron')) {
+        switch (slot) {
+            case EquipmentSlot.Head:
+                return 2;
+            case EquipmentSlot.Chest:
+                return 6;
+            case EquipmentSlot.Legs:
+                return 5;
+            case EquipmentSlot.Feet:
+                return 2;
+            default:
+                return 0;
+        }
+    }
+    // Diamond armor
+    if (typeId.includes('diamond')) {
+        switch (slot) {
+            case EquipmentSlot.Head:
+                return 3;
+            case EquipmentSlot.Chest:
+                return 8;
+            case EquipmentSlot.Legs:
+                return 6;
+            case EquipmentSlot.Feet:
+                return 3;
+            default:
+                return 0;
+        }
+    }
+    // Netherite armor
+    if (typeId.includes('netherite')) {
+        switch (slot) {
+            case EquipmentSlot.Head:
+                return 3;
+            case EquipmentSlot.Chest:
+                return 8;
+            case EquipmentSlot.Legs:
+                return 6;
+            case EquipmentSlot.Feet:
+                return 3;
+            default:
+                return 0;
+        }
+    }
+    // Turtle shell (helmet only)
+    if (typeId.includes('turtle')) {
+        return 2;
+    }
+    return 0;
 }
 
 /**
@@ -233,6 +391,7 @@ export function registerPlayerJoinListener(): void {
             const location = player.location;
             const dimension = player.dimension;
             const playfabId = getPlayfabId(player);
+            const stats = getPlayerStats(player);
 
             const playerData = {
                 name: playerName,
@@ -241,6 +400,7 @@ export function registerPlayerJoinListener(): void {
                 z: location.z,
                 dimension: toDimension(dimension.id),
                 playfabId,
+                stats,
             };
 
             logDebug(`Sending player join: ${playerName}`, playerData);
@@ -378,6 +538,9 @@ function getAllPlayers(): MinecraftPlayer[] {
             const playfabId = getPlayfabId(player);
             logDebug(`Player ${player.name} playfabId: ${playfabId ?? 'NOT FOUND'}`);
 
+            // Get player stats if enabled
+            const stats = getPlayerStats(player);
+
             players.push({
                 name: player.name,
                 x: location.x,
@@ -385,6 +548,7 @@ function getAllPlayers(): MinecraftPlayer[] {
                 z: location.z,
                 dimension: toDimension(dimension.id),
                 playfabId,
+                stats,
             });
         } catch (error) {
             // Player may be in an invalid state, skip

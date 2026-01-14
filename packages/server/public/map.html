@@ -167,6 +167,124 @@
                 border: 1px solid #1f4068;
             }
 
+            /* Player stats popup styling */
+            .player-popup {
+                min-width: 320px;
+                background: #1a1a1a;
+                padding: 12px;
+                border-radius: 6px;
+            }
+            /* Remove default Leaflet popup styling */
+            .player-popup-container .leaflet-popup-content-wrapper {
+                background: #1a1a1a;
+                border: none;
+                box-shadow: 0 3px 14px rgba(0, 0, 0, 0.6);
+                border-radius: 6px;
+            }
+            .player-popup-container .leaflet-popup-content {
+                margin: 0;
+            }
+            .player-popup-container .leaflet-popup-tip {
+                background: #1a1a1a;
+            }
+            .player-popup-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #333;
+            }
+            .player-popup-head {
+                width: 32px;
+                height: 32px;
+                border-radius: 4px;
+                image-rendering: pixelated;
+            }
+            .player-popup-name {
+                font-weight: bold;
+                font-size: 14px;
+                color: #6dd5ed;
+            }
+            .player-popup-coords {
+                font-size: 11px;
+                color: #888;
+                font-family: 'Consolas', 'Monaco', monospace;
+            }
+            .player-stats-row {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                margin: 6px 0;
+                min-height: 27px;
+            }
+            .player-stats-label {
+                width: 60px;
+                font-size: 12px;
+                color: #aaa;
+            }
+            .player-stats-icons {
+                display: flex;
+                gap: 0px;
+                flex-wrap: wrap;
+                width: 270px;
+            }
+            .stat-icon {
+                width: 27px;
+                height: 27px;
+                image-rendering: pixelated;
+                background-image: url('/icons.png');
+                background-size: 768px 768px; /* 256x256 original * 3 */
+                background-repeat: no-repeat;
+                display: inline-block;
+            }
+            /* Heart icons - row 0 (y=0 in original, scaled 3x) */
+            /* Icons are 9x9 original = 27x27 scaled. Positions are multiplied by 3 */
+            .stat-icon.heart-empty {
+                background-position: -48px 0;
+            } /* x=16*3=48, y=0 */
+            .stat-icon.heart-full {
+                background-position: -156px 0;
+            } /* x=52*3=156 */
+            .stat-icon.heart-half {
+                background-position: -183px 0;
+            } /* x=61*3=183 */
+            /* Armor icons - row 1 (y=9 in original = 27 scaled) */
+            .stat-icon.armor-empty {
+                background-position: -48px -27px;
+            } /* x=16*3, y=9*3 */
+            .stat-icon.armor-full {
+                background-position: -102px -27px;
+            } /* x=34*3=102 */
+            .stat-icon.armor-half {
+                background-position: -75px -27px;
+            } /* x=25*3=75 */
+            /* Hunger icons - row 3 (y=27 in original = 81 scaled) */
+            .stat-icon.hunger-empty {
+                background-position: -48px -81px;
+            } /* x=16*3, y=27*3 */
+            .stat-icon.hunger-full {
+                background-position: -156px -81px;
+            } /* x=52*3=156 */
+            .stat-icon.hunger-half {
+                background-position: -183px -81px;
+            } /* x=61*3=183 */
+
+            .stat-icon-half {
+                width: 14px;
+                height: 27px;
+                overflow: hidden;
+            }
+            .stat-icon-half .stat-icon {
+                width: 27px;
+            }
+            .player-stats-unavailable {
+                font-size: 11px;
+                color: #666;
+                font-style: italic;
+                margin-top: 8px;
+            }
+
             /* Player list in sidebar */
             .player-list {
                 max-height: 200px;
@@ -835,6 +953,88 @@
                     `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect fill="#8B4513" width="32" height="32"/><rect fill="#F5DEB3" x="8" y="8" width="16" height="16"/></svg>`
                 );
 
+            // Icon class names for the spritesheet
+            const ICON_CLASSES = {
+                heart: { full: 'heart-full', half: 'heart-half', empty: 'heart-empty' },
+                hunger: { full: 'hunger-full', half: 'hunger-half', empty: 'hunger-empty' },
+                armor: { full: 'armor-full', half: 'armor-half', empty: 'armor-empty' },
+            };
+
+            /**
+             * Generate stat icons HTML for a given value (0-20 scale)
+             * @param {number} value - Current value (0-20)
+             * @param {number} maxValue - Maximum value (typically 20)
+             * @param {object} iconClasses - Object with full, half, empty class names
+             * @returns {string} HTML string with icons
+             */
+            function generateStatIcons(value, maxValue, iconClasses) {
+                const totalIcons = Math.ceil(maxValue / 2); // 10 icons for 20 points
+                const fullIcons = Math.floor(value / 2);
+                const hasHalf = value % 2 >= 1;
+                const emptyIcons = totalIcons - fullIcons - (hasHalf ? 1 : 0);
+
+                let html = '';
+                for (let i = 0; i < fullIcons; i++) {
+                    html += `<span class="stat-icon ${iconClasses.full}"></span>`;
+                }
+                if (hasHalf) {
+                    html += `<span class="stat-icon ${iconClasses.half}"></span>`;
+                }
+                for (let i = 0; i < emptyIcons; i++) {
+                    html += `<span class="stat-icon ${iconClasses.empty}"></span>`;
+                }
+                return html;
+            }
+
+            /**
+             * Create the popup content for a player
+             */
+            function createPlayerPopupContent(player) {
+                const headUrl = getPlayerHeadUrl(player.playfabId);
+                const coords = `X: ${Math.floor(player.x)}, Y: ${Math.floor(player.y)}, Z: ${Math.floor(player.z)}`;
+
+                let statsHtml = '';
+                if (player.stats) {
+                    const healthIcons = generateStatIcons(
+                        player.stats.health,
+                        player.stats.maxHealth || 20,
+                        ICON_CLASSES.heart
+                    );
+                    const hungerIcons = generateStatIcons(player.stats.hunger, 20, ICON_CLASSES.hunger);
+                    const armorIcons = generateStatIcons(player.stats.armor, 20, ICON_CLASSES.armor);
+
+                    statsHtml = `
+                        <div class="player-stats-row">
+                            <span class="player-stats-label">Health:</span>
+                            <div class="player-stats-icons">${healthIcons}</div>
+                        </div>
+                        <div class="player-stats-row">
+                            <span class="player-stats-label">Hunger:</span>
+                            <div class="player-stats-icons">${hungerIcons}</div>
+                        </div>
+                        <div class="player-stats-row">
+                            <span class="player-stats-label">Armor:</span>
+                            <div class="player-stats-icons">${armorIcons}</div>
+                        </div>
+                    `;
+                } else {
+                    statsHtml = '<div class="player-stats-unavailable">Stats not available</div>';
+                }
+
+                return `
+                    <div class="player-popup">
+                        <div class="player-popup-header">
+                            <img class="player-popup-head" src="${headUrl}" alt="${player.name}" onerror="this.src='${DEFAULT_HEAD_SVG}'">
+                            <div>
+                                <div class="player-popup-name">${player.name}</div>
+                                <div class="player-popup-coords">${coords}</div>
+                            </div>
+                        </div>
+                        ${statsHtml}
+                    </div>
+                `;
+            }
+
             /**
              * Get the player head image URL using their PlayFab ID
              */
@@ -899,10 +1099,11 @@
 
                         // Update the popup content if it exists
                         if (data.marker.getPopup()) {
-                            data.marker.setPopupContent(
-                                `<b>${player.name}</b><br>X: ${Math.floor(player.x)}, Y: ${Math.floor(player.y)}, Z: ${Math.floor(player.z)}`
-                            );
+                            data.marker.setPopupContent(createPlayerPopupContent(player));
                         }
+
+                        // Store updated player data for popup updates
+                        data.player = player;
                     } else {
                         // Create new marker
                         const icon = L.divIcon({
@@ -913,7 +1114,8 @@
                         });
 
                         const marker = L.marker(latLng, { icon, interactive: true }).bindPopup(
-                            `<b>${player.name}</b><br>X: ${Math.floor(player.x)}, Y: ${Math.floor(player.y)}, Z: ${Math.floor(player.z)}`
+                            createPlayerPopupContent(player),
+                            { className: 'player-popup-container', maxWidth: 360 }
                         );
 
                         if (playersVisible) {
@@ -923,6 +1125,7 @@
                         // Store marker data with position tracking for lerping
                         playerMarkers.set(player.name, {
                             marker,
+                            player,
                             currentPos: targetPos,
                             targetPos: targetPos,
                             startPos: null,

@@ -23,6 +23,32 @@ export interface Position {
 }
 
 /**
+ * Optional player stats (health, hunger, armor).
+ * Only sent if the server owner has enabled sendPlayerStats in the behavior pack config.
+ */
+export interface PlayerStats {
+    /**
+     * Current health points (0-20, where 20 is full health).
+     * Each heart in the HUD represents 2 health points.
+     */
+    readonly health: number;
+    /**
+     * Maximum health points (typically 20, but can be higher with absorption).
+     */
+    readonly maxHealth: number;
+    /**
+     * Current hunger/food level (0-20, where 20 is full).
+     * Each drumstick in the HUD represents 2 hunger points.
+     */
+    readonly hunger: number;
+    /**
+     * Current armor points (0-20).
+     * Displayed as armor icons in the HUD.
+     */
+    readonly armor: number;
+}
+
+/**
  * Player data received from Minecraft
  */
 export interface Player {
@@ -37,6 +63,11 @@ export interface Player {
      * Available when the player joined through the async join event.
      */
     readonly playfabId?: string;
+    /**
+     * Optional player stats (health, hunger, armor).
+     * Only present if the server owner has enabled sendPlayerStats.
+     */
+    readonly stats?: PlayerStats;
 }
 
 /**

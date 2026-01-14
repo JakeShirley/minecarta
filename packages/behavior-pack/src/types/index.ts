@@ -2,7 +2,7 @@
  * Type definitions specific to the behavior pack
  */
 
-import type { Dimension, BlockChange, Player, Entity } from '@minecraft-map/shared';
+import type { Dimension, BlockChange, Player, Entity, PlayerStats } from '@minecraft-map/shared';
 import { RGBA } from '@minecraft/server';
 
 /**
@@ -32,6 +32,11 @@ export interface MinecraftPlayer {
      * Captured from the async player join event.
      */
     readonly playfabId?: string;
+    /**
+     * Optional player stats (health, hunger, armor).
+     * Only present if sendPlayerStats is enabled in config.
+     */
+    readonly stats?: PlayerStats;
 }
 
 /**
