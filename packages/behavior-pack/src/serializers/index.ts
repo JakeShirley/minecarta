@@ -125,12 +125,18 @@ export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
  * @returns ChunkBlock object for API transmission
  */
 export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
+  // Minecraft RGBA values are in 0-1 range, convert to 0-255 for rendering
   return {
     x: block.x,
     y: block.y,
     z: block.z,
     type: normalizeBlockType(block.type),
-    mapColor: { r: block.mapColor.red, g: block.mapColor.green, b: block.mapColor.blue, a: block.mapColor.alpha }
+    mapColor: {
+      r: Math.round(block.mapColor.red * 255),
+      g: Math.round(block.mapColor.green * 255),
+      b: Math.round(block.mapColor.blue * 255),
+      a: Math.round(block.mapColor.alpha * 255),
+    },
   };
 }
 

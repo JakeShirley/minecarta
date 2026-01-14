@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@minecraft/core-build-tasks": "^5.5.0",
-    "@minecraft/server": "^2.4.0",
+    "@minecraft/server": "2.5.0-beta.1.21.132-stable",
     "@minecraft/server-net": "1.0.0-beta.1.21.132-stable",
     "@types/node": "^20.0.0",
     "esbuild": "^0.24.0",

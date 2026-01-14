@@ -1,5 +1,4 @@
 import sharp from 'sharp';
-import { getBlockColorService } from './block-colors.js';
 import { TILE_SIZE, BLOCKS_PER_TILE } from '@minecraft-map/shared';
 import type { ZoomLevel, TileCoordinates, ChunkBlock } from '@minecraft-map/shared';
 
@@ -55,8 +54,6 @@ export class TileGeneratorService {
     
     // Pixels per block (inverse of scale, used when scale < 1)
     const pixelsPerBlock = Math.floor(1 / scale);
-    
-    const colorService = getBlockColorService();
 
     // We process blocks and draw them to the buffer
     for (const block of blocks) {
@@ -75,10 +72,11 @@ export class TileGeneratorService {
       }
       
       // Use mapColor from block data if provided, otherwise fall back to lookup
-      const color = block.mapColor ?? colorService.getColor(block.type);
-      
-      // Don't draw fully transparent blocks over existing valid pixels
-      if (color.a === 0) continue;
+      const color = block.mapColor;
+      if (color == null) {
+        console.error(`[TileGenerator] Missing map color for block at (${block.x}, ${block.z}) of type ${block.type}`);
+        continue;
+      }
       
       if (scale >= 1) {
         // Multiple blocks per pixel - draw single pixel
@@ -92,7 +90,7 @@ export class TileGeneratorService {
         pixelData[idx] = color.r;
         pixelData[idx + 1] = color.g;
         pixelData[idx + 2] = color.b;
-        pixelData[idx + 3] = color.a ?? 255;
+        pixelData[idx + 3] = 255; // Hard code to fully opaque for now
       } else {
         // Each block is multiple pixels - draw a square
         const startPx = relX * pixelsPerBlock;
@@ -112,7 +110,7 @@ export class TileGeneratorService {
             pixelData[idx] = color.r;
             pixelData[idx + 1] = color.g;
             pixelData[idx + 2] = color.b;
-            pixelData[idx + 3] = color.a ?? 255;
+            pixelData[idx + 3] = 255; // Hard code to fully opaque for now
           }
         }
       }

@@ -71,6 +71,16 @@ export const entitiesBatchUpdateSchema = z.object({
 export type EntitiesBatchUpdateRequest = z.infer<typeof entitiesBatchUpdateSchema>;
 
 /**
+ * RGBA color schema
+ */
+export const rgbaSchema = z.object({
+  r: z.number().int().min(0).max(255),
+  g: z.number().int().min(0).max(255),
+  b: z.number().int().min(0).max(255),
+  a: z.number().int().min(0).max(255),
+});
+
+/**
  * Chunk block schema
  */
 export const chunkBlockSchema = z.object({
@@ -78,6 +88,7 @@ export const chunkBlockSchema = z.object({
   y: z.number().int(),
   z: z.number().int(),
   type: z.string().min(1),
+  mapColor: rgbaSchema,
 });
 
 /**

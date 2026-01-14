@@ -10,7 +10,7 @@ export interface RGBA {
   readonly r: number;
   readonly g: number;
   readonly b: number;
-  readonly a?: number;
+  readonly a: number;
 }
 
 /**
@@ -78,7 +78,7 @@ export interface ChunkBlock {
   readonly y: number;
   readonly z: number;
   readonly type: string;
-  readonly mapColor?: RGBA;
+  readonly mapColor: RGBA;
 }
 
 /**

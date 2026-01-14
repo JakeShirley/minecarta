@@ -8,33 +8,12 @@ import {
   CommandPermissionLevel,
   CustomCommandParamType,
   CustomCommandStatus,
-  BlockMapColorComponent,
 } from '@minecraft/server';
 import type { CustomCommandOrigin, CustomCommandResult } from '@minecraft/server';
-import type { Dimension } from '@minecraft-map/shared';
 import { serializeChunkData } from '../serializers';
 import { sendChunkData } from '../network';
 import { config } from '../config';
-import type { MinecraftChunkData, MinecraftChunkBlock } from '../types';
-
-/**
- * Convert Minecraft dimension ID to our Dimension type
- */
-function toDimension(dimensionId: string): Dimension {
-  switch (dimensionId) {
-    case 'minecraft:overworld':
-    case 'overworld':
-      return 'overworld';
-    case 'minecraft:nether':
-    case 'nether':
-      return 'nether';
-    case 'minecraft:the_end':
-    case 'the_end':
-      return 'the_end';
-    default:
-      return 'overworld';
-  }
-}
+import { scanChunk } from '../blocks';
 
 /**
  * Log debug messages
@@ -43,85 +22,6 @@ function logDebug(message: string, data?: unknown): void {
   if (config.debug) {
     console.log(`[MapSync Commands] ${message}`, data ? JSON.stringify(data) : '');
   }
-}
-
-/**
- * Get the maximum build height for a dimension
- */
-function getMaxHeight(dimensionId: string): number {
-  switch (dimensionId) {
-    case 'minecraft:nether':
-    case 'nether':
-      return 128;
-    case 'minecraft:the_end':
-    case 'the_end':
-      return 256;
-    default:
-      return 320; // Overworld
-  }
-}
-
-/**
- * Scan a 16x16 chunk and collect top-level block data for map rendering
- * Uses block ray casting to include water and other liquid blocks
- *
- * @param dimension - The dimension to scan
- * @param chunkX - Chunk X coordinate
- * @param chunkZ - Chunk Z coordinate
- * @returns Chunk data with all surface blocks
- */
-function scanChunk(
-  dimension: import('@minecraft/server').Dimension,
-  chunkX: number,
-  chunkZ: number
-): MinecraftChunkData {
-  const blocks: MinecraftChunkBlock[] = [];
-  const startX = chunkX * 16;
-  const startZ = chunkZ * 16;
-  const maxHeight = getMaxHeight(dimension.id);
-
-  // Scan each column in the 16x16 chunk
-  for (let dx = 0; dx < 16; dx++) {
-    for (let dz = 0; dz < 16; dz++) {
-      const worldX = startX + dx;
-      const worldZ = startZ + dz;
-
-      try {
-        // Use block ray cast downward to find the topmost block (including water/liquids)
-        const raycastResult = dimension.getBlockFromRay(
-          { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 }, // Start from max height, center of block
-          { x: 0, y: -1, z: 0 }, // Cast downward
-          {
-            includeLiquidBlocks: true,
-            includePassableBlocks: true,
-            maxDistance: maxHeight + 64, // Account for negative Y in overworld
-          }
-        );
-
-        if (raycastResult && raycastResult.block && raycastResult.block.typeId) {
-          const block = raycastResult.block;
-          const mapColor = block.getComponent(BlockMapColorComponent.componentId);
-          blocks.push({
-            x: worldX,
-            y: block.location.y,
-            z: worldZ,
-            type: block.typeId,
-            mapColor: mapColor ? mapColor.tintedColor : { red: 0, green: 0, blue: 0, alpha: 0 },
-          });
-        }
-      } catch {
-        // Block might be in unloaded chunk, skip
-        continue;
-      }
-    }
-  }
-
-  return {
-    dimension: toDimension(dimension.id),
-    chunkX,
-    chunkZ,
-    blocks,
-  };
 }
 
 /**
