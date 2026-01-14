@@ -46,5 +46,5 @@ task('build:deploy', series('build', 'deploy'));
 task('watch', bundleTask({ ...bundleParams }));
 
 // Test
-task('vitest', vitestTask({ test: argv().test, update: argv().update }));
+task('vitest', vitestTask({ test: argv().test, update: argv().update, run: true }));
 task('test', series('vitest'));

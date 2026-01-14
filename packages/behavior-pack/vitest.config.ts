@@ -10,5 +10,12 @@ export default defineConfig({
       reporter: ['text', 'html'],
       exclude: ['node_modules', 'scripts', 'dist'],
     },
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
+    teardownTimeout: 1000,
   },
 });
