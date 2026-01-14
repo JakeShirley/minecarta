@@ -4,6 +4,8 @@ import { DIMENSIONS, ZOOM_LEVELS } from '@minecraft-map/shared';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getConfig } from '../config/index.js';
+import { getTileStorageService } from '../tiles/tile-storage.js';
+import { registerAuth } from './auth.js';
 
 interface TileParams {
     dimension: string;
@@ -74,4 +76,23 @@ export async function registerTileRoutes(app: FastifyInstance): Promise<void> {
                 .send(tileBuffer);
         }
     );
+
+    /**
+     * DELETE /tiles - Clear all map tiles (auth required)
+     */
+    await app.register(async clearTilesApp => {
+        registerAuth(clearTilesApp);
+
+        clearTilesApp.delete('/tiles', async (request: FastifyRequest, reply: FastifyReply) => {
+            const tileStorage = getTileStorageService();
+            tileStorage.clearAllTiles();
+
+            request.log.info('Cleared all map tiles');
+
+            return reply.send({
+                success: true,
+                message: 'All tiles have been cleared',
+            });
+        });
+    });
 }

@@ -358,6 +358,7 @@
     <div class="tab" data-tab="entities">🐄 Entities</div>
     <div class="tab" data-tab="blocks">🧱 Blocks</div>
     <div class="tab" data-tab="chunks">📦 Chunks</div>
+    <div class="tab" data-tab="admin">⚙️ Admin</div>
   </div>
 
   <!-- Read Endpoints -->
@@ -566,6 +567,23 @@
     </div>
   </div>
 
+  <!-- Admin Tab -->
+  <div id="admin" class="tab-content">
+    <div class="section">
+      <h2>Tile Management</h2>
+      <div class="endpoint">
+        <div class="endpoint-header">
+          <span class="method post" style="background: #e74c3c;">DELETE</span>
+          <span class="path">/api/v1/tiles</span>
+          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
+        </div>
+        <p style="color: #aaa; font-size: 13px; margin: 10px 0;">Clears all cached map tiles from the server. This will cause tiles to be regenerated on next request.</p>
+        <button class="btn-danger" onclick="clearTiles()">🗑️ Clear All Tiles</button>
+        <div id="clearTilesResponse" class="response"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Data stores
     let players = [];
@@ -655,6 +673,13 @@
         return;
       }
       makeRequest('GET', `/api/v1/players/${encodeURIComponent(name)}`, null, 'playerResponse');
+    }
+
+    function clearTiles() {
+      if (!confirm('Are you sure you want to clear all map tiles? This action cannot be undone.')) {
+        return;
+      }
+      makeRequest('DELETE', '/api/v1/tiles', null, 'clearTilesResponse', true);
     }
 
     function togglePreview(previewId) {
