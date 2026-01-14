@@ -172,7 +172,7 @@ export async function sendBlockChanges(
 export async function sendPlayerPositions(
   players: import('../types').Player[]
 ): Promise<ApiResponse> {
-  return postToServer('/api/v1/players', { players });
+  return postToServer('/api/v1/world/players', { players });
 }
 
 /**
