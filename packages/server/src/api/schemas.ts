@@ -9,6 +9,7 @@ export const playerUpdateSchema = z.object({
     y: z.number(),
     z: z.number(),
     dimension: z.enum(['overworld', 'nether', 'the_end']),
+    playfabId: z.string().optional(),
 });
 
 export type PlayerUpdateRequest = z.infer<typeof playerUpdateSchema>;

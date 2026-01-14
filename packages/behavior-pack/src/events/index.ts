@@ -2,7 +2,7 @@
  * World event listeners for block changes, player events, etc.
  */
 
-import { world, Block, BlockPermutation } from '@minecraft/server';
+import { world, Block, BlockPermutation, Player } from '@minecraft/server';
 import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
@@ -11,10 +11,46 @@ import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
 
 /**
+ * Dynamic property key for storing the player's PlayFab ID (PDIF).
+ * This persists across script reloads (e.g., /reload command).
+ */
+const PLAYFAB_ID_PROPERTY = 'mapsync:playfabId';
+
+/**
  * Map of player names to their PlayFab IDs.
  * Populated when players join via the async player join event.
+ * This is a temporary cache until the player fully joins and we can
+ * set the dynamic property on the player object.
  */
-const playerPlayfabIds: Map<string, string> = new Map();
+const pendingPlayfabIds: Map<string, string> = new Map();
+
+/**
+ * Get the PlayFab ID for a player, checking dynamic property first,
+ * then falling back to the pending cache.
+ */
+function getPlayfabId(player: Player): string | undefined {
+    // First, try to get from dynamic property (survives /reload)
+    const dynamicProperty = player.getDynamicProperty(PLAYFAB_ID_PROPERTY);
+    if (typeof dynamicProperty === 'string') {
+        return dynamicProperty;
+    }
+
+    // Fall back to pending cache (for players still joining)
+    return pendingPlayfabIds.get(player.name);
+}
+
+/**
+ * Set the PlayFab ID as a dynamic property on the player object.
+ * This persists across script reloads.
+ */
+function cachePlayfabIdToPlayer(player: Player, playfabId: string): void {
+    try {
+        player.setDynamicProperty(PLAYFAB_ID_PROPERTY, playfabId);
+        logDebug(`Cached playfabId ${playfabId} to dynamic property for player ${player.name}`);
+    } catch (error) {
+        logError(`Failed to set dynamic property for player ${player.name}`, error);
+    }
+}
 
 /**
  * Extract block type from a Block or BlockPermutation
@@ -34,6 +70,10 @@ function logDebug(message: string, data?: unknown): void {
     if (config.debug) {
         console.log(`[MapSync Events] ${message}`, data ? JSON.stringify(data) : '');
     }
+}
+
+function logError(message: string, data?: unknown): void {
+    console.error(`[MapSync Events] ${message}`, data ? JSON.stringify(data) : '');
 }
 
 /**
@@ -136,14 +176,16 @@ export function registerBlockBreakListener(): void {
 /**
  * Register async player join event listener to capture persistent IDs.
  * This uses the @minecraft/server-admin module to get the player's PlayFab ID.
+ * The ID is stored temporarily until the player fully joins, at which point
+ * it's cached to a dynamic property on the player object.
  */
 export function registerAsyncPlayerJoinListener(): void {
     beforeEvents.asyncPlayerJoin.subscribe(async event => {
         const { name, persistentId } = event;
         logDebug(`Async player join: ${name} with playfabId: ${persistentId}`);
 
-        // Store the PlayFab ID for this player
-        playerPlayfabIds.set(name, persistentId);
+        // Store the PlayFab ID temporarily until player fully joins
+        pendingPlayfabIds.set(name, persistentId);
     });
 
     logDebug('Async player join listener registered');
@@ -153,9 +195,20 @@ export function registerAsyncPlayerJoinListener(): void {
  * Register player join event listener
  */
 export function registerPlayerJoinListener(): void {
-    world.afterEvents.playerJoin.subscribe(event => {
-        const { playerName } = event;
-        logDebug(`Player joined: ${playerName}`);
+    world.afterEvents.playerSpawn.subscribe(event => {
+        if (event.initialSpawn === false) {
+            // Ignore respawns
+            return;
+        }
+
+        const player = event.player;
+        const playerName = event.player.name;
+        const pendingId = pendingPlayfabIds.get(playerName);
+        if (pendingId) {
+            cachePlayfabIdToPlayer(event.player, pendingId);
+            // Clean up the pending cache
+            pendingPlayfabIds.delete(playerName);
+        }
 
         // Send updated player list after a short delay to let player fully load
         updatePlayerPositions();
@@ -172,8 +225,8 @@ export function registerPlayerLeaveListener(): void {
         const { playerName } = event;
         logDebug(`Player left: ${playerName}`);
 
-        // Clean up the PlayFab ID mapping
-        playerPlayfabIds.delete(playerName);
+        // Clean up the pending PlayFab ID mapping (dynamic property persists with the player)
+        pendingPlayfabIds.delete(playerName);
 
         // Send updated player list
         updatePlayerPositions();
@@ -279,13 +332,17 @@ function getAllPlayers(): MinecraftPlayer[] {
             const location = player.location;
             const dimension = player.dimension;
 
+            // Get PlayFab ID from dynamic property (survives /reload) or pending cache
+            const playfabId = getPlayfabId(player);
+            logDebug(`Player ${player.name} playfabId: ${playfabId ?? 'NOT FOUND'}`);
+
             players.push({
                 name: player.name,
                 x: location.x,
                 y: location.y,
                 z: location.z,
                 dimension: toDimension(dimension.id),
-                playfabId: playerPlayfabIds.get(player.name),
+                playfabId,
             });
         } catch (error) {
             // Player may be in an invalid state, skip
@@ -309,6 +366,10 @@ export async function updatePlayerPositions(): Promise<void> {
 
     const serialized = serializePlayers(players);
     logDebug(`Updating ${serialized.length} player positions`);
+    // Debug: Log the serialized player data including playfabId
+    for (const p of serialized) {
+        logDebug(`Serialized player ${p.name} playfabId: ${p.playfabId ?? 'UNDEFINED'}`);
+    }
     await sendPlayerPositions(serialized);
 
     // Check if any player's current chunk needs generation

@@ -6,7 +6,7 @@ interface DimensionQuery {
     dimension?: Dimension;
 }
 
-const MINECRAFT_HEAD_API = 'https://persona-secondary.franchise.minecraft-services.net/api/v1.0/profile/pdif';
+const MINECRAFT_HEAD_API = 'https://persona-secondary.franchise.minecraft-services.net/api/v1.0/profile/pfid';
 
 /**
  * Register player query routes (public, no auth required)
