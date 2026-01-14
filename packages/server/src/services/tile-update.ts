@@ -112,16 +112,22 @@ export class TileUpdateService {
     }
 
     /**
-     * Invalidate tiles affected by block changes
-     * This just deletes the tiles so they get regenerated on next chunk scan
+     * Handle tile invalidation for block changes
+     *
+     * Note: We intentionally do NOT delete tiles here. When blocks change,
+     * the behavior pack sends both:
+     * 1. A block change event (which triggers this method)
+     * 2. A small area scan with the updated block data (which triggers processChunks)
+     *
+     * If we deleted the tile here, the subsequent small area update would only
+     * contain a few blocks (e.g., 3x3 area), resulting in a mostly-black tile.
+     * Instead, we let the area update merge with the existing tile data.
+     *
+     * The tile will be properly updated by processChunks when the area scan arrives.
      */
-    private async processInvalidationTasks(tasks: TileInvalidationTask[]): Promise<void> {
-        const storage = getTileStorageService();
-
-        for (const task of tasks) {
-            const { dimension, zoom, x, z } = task;
-            storage.deleteTile(dimension, zoom, x, z);
-        }
+    private async processInvalidationTasks(_tasks: TileInvalidationTask[]): Promise<void> {
+        // No-op: tiles will be updated by the subsequent chunk/area data
+        // that the behavior pack sends after block changes
     }
 
     private async processTasks(tasks: TileUpdateTask[]): Promise<void> {

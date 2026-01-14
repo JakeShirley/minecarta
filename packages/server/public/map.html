@@ -644,15 +644,15 @@
                         noWrap: true,
                     },
 
-                    initialize: function(options) {
+                    initialize: function (options) {
                         L.TileLayer.prototype.initialize.call(this, '', options);
                         this._currentDim = dim;
-                        
+
                         // Store reference to original _tileOnLoad
                         const originalTileOnLoad = this._tileOnLoad;
-                        
+
                         // Override _tileOnLoad to skip animation for refreshed tiles
-                        this._tileOnLoad = function(done, tile) {
+                        this._tileOnLoad = function (done, tile) {
                             if (tile.hasAttribute('data-dynamic-refresh')) {
                                 // This is a refreshed tile - skip animation, just mark as loaded
                                 tile.removeAttribute('data-dynamic-refresh');
@@ -677,39 +677,39 @@
                     refresh: function (tileCoords) {
                         const layer = this;
                         const tilesToRefresh = new Set(tileCoords.map(t => `${t.x}:${t.z}`));
-                        
+
                         // Temporarily disable map fade animation
                         const wasFadeAnimated = map._fadeAnimated;
                         map._fadeAnimated = false;
-                        
+
                         // Loop through internal _tiles object
                         for (const key in this._tiles) {
                             const tile = this._tiles[key];
                             if (!tile || !tile.el) continue;
-                            
+
                             const coords = tile.coords;
                             const tileKey = `${coords.x}:${coords.y}`;
-                            
+
                             if (tilesToRefresh.has(tileKey)) {
                                 const newUrl = this.getTileUrl(coords) + '?v=' + Date.now();
-                                
+
                                 // Preload the new image
                                 const preloadImg = new Image();
-                                preloadImg.onload = (function(tileEl, url) {
-                                    return function() {
+                                preloadImg.onload = (function (tileEl, url) {
+                                    return function () {
                                         // Mark tile for dynamic refresh (skip animation)
                                         tileEl.setAttribute('data-dynamic-refresh', 'true');
                                         // Swap the src - this will trigger _tileOnLoad
                                         tileEl.src = url;
                                     };
                                 })(tile.el, newUrl);
-                                
+
                                 preloadImg.src = newUrl;
                             }
                         }
-                        
+
                         // Re-enable fade animation after a short delay
-                        setTimeout(function() {
+                        setTimeout(function () {
                             map._fadeAnimated = wasFadeAnimated;
                         }, 1000);
                     },
@@ -881,21 +881,22 @@
                     if (playerMarkers.has(player.name)) {
                         // Update existing marker - set up lerp animation
                         const data = playerMarkers.get(player.name);
-                        
+
                         // Only start a new lerp if the target position has changed
-                        if (!data.targetPos || 
-                            Math.abs(data.targetPos.lat - targetPos.lat) > 0.0001 || 
-                            Math.abs(data.targetPos.lng - targetPos.lng) > 0.0001) {
-                            
+                        if (
+                            !data.targetPos ||
+                            Math.abs(data.targetPos.lat - targetPos.lat) > 0.0001 ||
+                            Math.abs(data.targetPos.lng - targetPos.lng) > 0.0001
+                        ) {
                             // Start lerp from current position (or current target if mid-animation)
                             data.startPos = data.currentPos ? { ...data.currentPos } : targetPos;
                             data.targetPos = targetPos;
                             data.lerpStartTime = performance.now();
-                            
+
                             // Start the animation loop
                             startPlayerLerpAnimation();
                         }
-                        
+
                         // Update the popup content if it exists
                         if (data.marker.getPopup()) {
                             data.marker.setPopupContent(
@@ -925,7 +926,7 @@
                             currentPos: targetPos,
                             targetPos: targetPos,
                             startPos: null,
-                            lerpStartTime: null
+                            lerpStartTime: null,
                         });
                     }
                 });
