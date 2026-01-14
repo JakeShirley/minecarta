@@ -17,5 +17,6 @@ export default defineConfig({
             },
         },
         teardownTimeout: 1000,
+        watch: false,
     },
 });
