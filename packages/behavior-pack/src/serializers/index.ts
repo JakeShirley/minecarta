@@ -10,7 +10,6 @@ import type {
   MinecraftChunkData,
   MinecraftChunkBlock,
 } from '../types';
-import { getBlockColor } from '../block-colors';
 
 /**
  * Serialize a block event to the API format
@@ -131,7 +130,7 @@ export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
     y: block.y,
     z: block.z,
     type: normalizeBlockType(block.type),
-    mapColor: getBlockColor(block.type),
+    mapColor: { r: block.mapColor.red, g: block.mapColor.green, b: block.mapColor.blue, a: block.mapColor.alpha }
   };
 }
 

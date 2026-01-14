@@ -3,6 +3,7 @@
  */
 
 import type { Dimension, BlockChange, Player, Entity } from '@minecraft-map/shared';
+import { RGBA  } from '@minecraft/server';
 
 /**
  * Minecraft block event data (internal representation)
@@ -48,6 +49,7 @@ export interface MinecraftChunkBlock {
   readonly y: number;
   readonly z: number;
   readonly type: string;
+  readonly mapColor: RGBA;
 }
 
 /**

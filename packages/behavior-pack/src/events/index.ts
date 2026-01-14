@@ -2,7 +2,7 @@
  * World event listeners for block changes, player events, etc.
  */
 
-import { world, Player, Block, BlockPermutation } from '@minecraft/server';
+import { world, Player, Block, BlockPermutation, BlockMapColorComponent } from '@minecraft/server';
 import type { Dimension } from '@minecraft-map/shared';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import { serializeBlockChange, serializePlayer, serializePlayers, serializeChunkData } from '../serializers';
@@ -151,11 +151,13 @@ function scanChunk(
         try {
           const block = dimension.getBlock({ x: worldX, y, z: worldZ });
           if (block && block.typeId && block.typeId !== 'minecraft:air') {
+            const mapColor = block.getComponent(BlockMapColorComponent.componentId);
             blocks.push({
               x: worldX,
               y,
               z: worldZ,
               type: block.typeId,
+              mapColor: mapColor ? mapColor.color : { red: 0, green: 0, blue: 0, alpha: 0 }
             });
             break; // Found the top block, move to next column
           }
