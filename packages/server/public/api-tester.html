@@ -1,701 +1,746 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft Map API Tester</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #1a1a2e;
-      color: #eee;
-    }
-    h1 {
-      color: #6dd5ed;
-      border-bottom: 2px solid #6dd5ed;
-      padding-bottom: 10px;
-    }
-    h2 {
-      color: #b8d4e3;
-      margin-top: 30px;
-      margin-bottom: 15px;
-    }
-    h3 {
-      color: #8ab4c9;
-      margin: 15px 0 10px;
-      font-size: 14px;
-    }
-    .section {
-      background: #16213e;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      border: 1px solid #0f3460;
-    }
-    .endpoint {
-      margin-bottom: 15px;
-    }
-    .endpoint-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .method {
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-weight: bold;
-      font-size: 12px;
-    }
-    .method.get { background: #2ecc71; color: #000; }
-    .method.post { background: #3498db; color: #fff; }
-    .path {
-      font-family: monospace;
-      color: #f39c12;
-    }
-    label {
-      display: block;
-      margin: 8px 0 4px;
-      color: #aaa;
-      font-size: 13px;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #0f3460;
-      border-radius: 4px;
-      background: #0d1b2a;
-      color: #eee;
-      font-family: inherit;
-      font-size: 14px;
-    }
-    input[type="number"] {
-      font-family: monospace;
-    }
-    textarea {
-      min-height: 80px;
-      resize: vertical;
-      font-family: monospace;
-    }
-    button {
-      background: #e94560;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    button:hover {
-      background: #ff6b6b;
-    }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-    .btn-secondary {
-      background: #0f3460;
-    }
-    .btn-secondary:hover {
-      background: #1a4a8a;
-    }
-    .btn-success {
-      background: #27ae60;
-    }
-    .btn-success:hover {
-      background: #2ecc71;
-    }
-    .btn-danger {
-      background: #c0392b;
-    }
-    .btn-danger:hover {
-      background: #e74c3c;
-    }
-    .btn-small {
-      padding: 5px 10px;
-      font-size: 12px;
-      margin: 0;
-    }
-    .response {
-      margin-top: 15px;
-      padding: 15px;
-      background: #0d1b2a;
-      border-radius: 4px;
-      border: 1px solid #0f3460;
-      display: none;
-    }
-    .response.show {
-      display: block;
-    }
-    .response pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-all;
-      font-size: 13px;
-    }
-    .response-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 12px;
-    }
-    .status.success { color: #2ecc71; }
-    .status.error { color: #e74c3c; }
-    .config-bar {
-      background: #0f3460;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      display: flex;
-      gap: 20px;
-      align-items: end;
-    }
-    .config-bar label {
-      margin: 0;
-    }
-    .config-bar input {
-      width: auto;
-      min-width: 200px;
-    }
-    .config-bar .field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .tabs {
-      display: flex;
-      gap: 5px;
-      margin-bottom: 20px;
-    }
-    .tab {
-      padding: 10px 20px;
-      background: #16213e;
-      border: 1px solid #0f3460;
-      border-radius: 8px 8px 0 0;
-      cursor: pointer;
-      color: #aaa;
-    }
-    .tab.active {
-      background: #0f3460;
-      color: #6dd5ed;
-      border-bottom-color: #0f3460;
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    
-    /* Form builder styles */
-    .form-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-    .form-group.full-width {
-      grid-column: 1 / -1;
-    }
-    .item-list {
-      border: 1px solid #0f3460;
-      border-radius: 4px;
-      padding: 10px;
-      margin-top: 10px;
-      background: #0d1b2a;
-    }
-    .item-entry {
-      background: #16213e;
-      border: 1px solid #0f3460;
-      border-radius: 4px;
-      padding: 12px;
-      margin-bottom: 10px;
-      position: relative;
-    }
-    .item-entry:last-child {
-      margin-bottom: 0;
-    }
-    .item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #0f3460;
-    }
-    .item-title {
-      font-weight: bold;
-      color: #6dd5ed;
-      font-size: 13px;
-    }
-    .remove-btn {
-      background: #c0392b;
-      color: white;
-      border: none;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      margin: 0;
-    }
-    .remove-btn:hover {
-      background: #e74c3c;
-    }
-    .add-item-btn {
-      width: 100%;
-      background: #27ae60;
-      margin-top: 10px;
-    }
-    .add-item-btn:hover {
-      background: #2ecc71;
-    }
-    .list-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    .preview-section {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #0f3460;
-    }
-    .preview-toggle {
-      font-size: 12px;
-      color: #aaa;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .preview-toggle:hover {
-      color: #6dd5ed;
-    }
-    .json-preview {
-      margin-top: 10px;
-      display: none;
-    }
-    .json-preview.show {
-      display: block;
-    }
-    .empty-list {
-      text-align: center;
-      color: #666;
-      padding: 20px;
-      font-style: italic;
-    }
-    
-    /* Block list in chunks */
-    .blocks-container {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #0d1b2a;
-      border-radius: 4px;
-      padding: 8px;
-    }
-    .block-entry {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 2fr auto;
-      gap: 8px;
-      align-items: end;
-      padding: 8px;
-      background: #16213e;
-      border-radius: 4px;
-      margin-bottom: 6px;
-    }
-    .block-entry:last-child {
-      margin-bottom: 0;
-    }
-    .block-entry input {
-      padding: 6px 8px;
-      font-size: 12px;
-    }
-    .block-entry label {
-      font-size: 11px;
-      margin-bottom: 2px;
-    }
-  </style>
-</head>
-<body>
-  <div style="background: #0f3460; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f4068; margin: -20px -20px 20px -20px;">
-    <span style="color: #ccc; font-weight: bold;">Legacy API Manager</span>
-    <div>
-        <a href="index.html" style="color: #6dd5ed; text-decoration: none; margin-right: 15px; border: 1px solid #6dd5ed; padding: 5px 10px; border-radius: 4px;">Home</a>
-        <a href="map.html" style="color: #6dd5ed; text-decoration: none; border: 1px solid #6dd5ed; padding: 5px 10px; border-radius: 4px;">Map Viewer</a>
-    </div>
-  </div>
-  <h1>🗺️ Minecraft Map API Tester</h1>
-  
-  <div class="config-bar">
-    <div class="field">
-      <label for="authToken">Auth Token</label>
-      <input type="text" id="authToken" value="dev-token" placeholder="Authentication token">
-    </div>
-    <div class="field">
-      <label for="baseUrl">Base URL</label>
-      <input type="text" id="baseUrl" value="" placeholder="http://localhost:3000">
-    </div>
-  </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Minecraft Map API Tester</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #1a1a2e;
+                color: #eee;
+            }
+            h1 {
+                color: #6dd5ed;
+                border-bottom: 2px solid #6dd5ed;
+                padding-bottom: 10px;
+            }
+            h2 {
+                color: #b8d4e3;
+                margin-top: 30px;
+                margin-bottom: 15px;
+            }
+            h3 {
+                color: #8ab4c9;
+                margin: 15px 0 10px;
+                font-size: 14px;
+            }
+            .section {
+                background: #16213e;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+                border: 1px solid #0f3460;
+            }
+            .endpoint {
+                margin-bottom: 15px;
+            }
+            .endpoint-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            .method {
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            .method.get {
+                background: #2ecc71;
+                color: #000;
+            }
+            .method.post {
+                background: #3498db;
+                color: #fff;
+            }
+            .path {
+                font-family: monospace;
+                color: #f39c12;
+            }
+            label {
+                display: block;
+                margin: 8px 0 4px;
+                color: #aaa;
+                font-size: 13px;
+            }
+            input,
+            textarea,
+            select {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid #0f3460;
+                border-radius: 4px;
+                background: #0d1b2a;
+                color: #eee;
+                font-family: inherit;
+                font-size: 14px;
+            }
+            input[type='number'] {
+                font-family: monospace;
+            }
+            textarea {
+                min-height: 80px;
+                resize: vertical;
+                font-family: monospace;
+            }
+            button {
+                background: #e94560;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+                margin-top: 10px;
+            }
+            button:hover {
+                background: #ff6b6b;
+            }
+            button:disabled {
+                background: #555;
+                cursor: not-allowed;
+            }
+            .btn-secondary {
+                background: #0f3460;
+            }
+            .btn-secondary:hover {
+                background: #1a4a8a;
+            }
+            .btn-success {
+                background: #27ae60;
+            }
+            .btn-success:hover {
+                background: #2ecc71;
+            }
+            .btn-danger {
+                background: #c0392b;
+            }
+            .btn-danger:hover {
+                background: #e74c3c;
+            }
+            .btn-small {
+                padding: 5px 10px;
+                font-size: 12px;
+                margin: 0;
+            }
+            .response {
+                margin-top: 15px;
+                padding: 15px;
+                background: #0d1b2a;
+                border-radius: 4px;
+                border: 1px solid #0f3460;
+                display: none;
+            }
+            .response.show {
+                display: block;
+            }
+            .response pre {
+                margin: 0;
+                white-space: pre-wrap;
+                word-break: break-all;
+                font-size: 13px;
+            }
+            .response-header {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                font-size: 12px;
+            }
+            .status.success {
+                color: #2ecc71;
+            }
+            .status.error {
+                color: #e74c3c;
+            }
+            .config-bar {
+                background: #0f3460;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                display: flex;
+                gap: 20px;
+                align-items: end;
+            }
+            .config-bar label {
+                margin: 0;
+            }
+            .config-bar input {
+                width: auto;
+                min-width: 200px;
+            }
+            .config-bar .field {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .tabs {
+                display: flex;
+                gap: 5px;
+                margin-bottom: 20px;
+            }
+            .tab {
+                padding: 10px 20px;
+                background: #16213e;
+                border: 1px solid #0f3460;
+                border-radius: 8px 8px 0 0;
+                cursor: pointer;
+                color: #aaa;
+            }
+            .tab.active {
+                background: #0f3460;
+                color: #6dd5ed;
+                border-bottom-color: #0f3460;
+            }
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
 
-  <div class="tabs">
-    <div class="tab active" data-tab="read">📖 Read Endpoints</div>
-    <div class="tab" data-tab="players">👤 Players</div>
-    <div class="tab" data-tab="entities">🐄 Entities</div>
-    <div class="tab" data-tab="blocks">🧱 Blocks</div>
-    <div class="tab" data-tab="chunks">📦 Chunks</div>
-    <div class="tab" data-tab="admin">⚙️ Admin</div>
-  </div>
+            /* Form builder styles */
+            .form-row {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+            .form-group {
+                display: flex;
+                flex-direction: column;
+            }
+            .form-group.full-width {
+                grid-column: 1 / -1;
+            }
+            .item-list {
+                border: 1px solid #0f3460;
+                border-radius: 4px;
+                padding: 10px;
+                margin-top: 10px;
+                background: #0d1b2a;
+            }
+            .item-entry {
+                background: #16213e;
+                border: 1px solid #0f3460;
+                border-radius: 4px;
+                padding: 12px;
+                margin-bottom: 10px;
+                position: relative;
+            }
+            .item-entry:last-child {
+                margin-bottom: 0;
+            }
+            .item-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #0f3460;
+            }
+            .item-title {
+                font-weight: bold;
+                color: #6dd5ed;
+                font-size: 13px;
+            }
+            .remove-btn {
+                background: #c0392b;
+                color: white;
+                border: none;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                margin: 0;
+            }
+            .remove-btn:hover {
+                background: #e74c3c;
+            }
+            .add-item-btn {
+                width: 100%;
+                background: #27ae60;
+                margin-top: 10px;
+            }
+            .add-item-btn:hover {
+                background: #2ecc71;
+            }
+            .list-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 15px;
+            }
+            .preview-section {
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #0f3460;
+            }
+            .preview-toggle {
+                font-size: 12px;
+                color: #aaa;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .preview-toggle:hover {
+                color: #6dd5ed;
+            }
+            .json-preview {
+                margin-top: 10px;
+                display: none;
+            }
+            .json-preview.show {
+                display: block;
+            }
+            .empty-list {
+                text-align: center;
+                color: #666;
+                padding: 20px;
+                font-style: italic;
+            }
 
-  <!-- Read Endpoints -->
-  <div id="read" class="tab-content active">
-    <div class="section">
-      <h2>Health Check</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method get">GET</span>
-          <span class="path">/health</span>
+            /* Block list in chunks */
+            .blocks-container {
+                max-height: 200px;
+                overflow-y: auto;
+                background: #0d1b2a;
+                border-radius: 4px;
+                padding: 8px;
+            }
+            .block-entry {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr 2fr auto;
+                gap: 8px;
+                align-items: end;
+                padding: 8px;
+                background: #16213e;
+                border-radius: 4px;
+                margin-bottom: 6px;
+            }
+            .block-entry:last-child {
+                margin-bottom: 0;
+            }
+            .block-entry input {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+            .block-entry label {
+                font-size: 11px;
+                margin-bottom: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        <div
+            style="
+                background: #0f3460;
+                padding: 10px 20px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                border-bottom: 1px solid #1f4068;
+                margin: -20px -20px 20px -20px;
+            "
+        >
+            <span style="color: #ccc; font-weight: bold">Legacy API Manager</span>
+            <div>
+                <a
+                    href="index.html"
+                    style="
+                        color: #6dd5ed;
+                        text-decoration: none;
+                        margin-right: 15px;
+                        border: 1px solid #6dd5ed;
+                        padding: 5px 10px;
+                        border-radius: 4px;
+                    "
+                    >Home</a
+                >
+                <a
+                    href="map.html"
+                    style="
+                        color: #6dd5ed;
+                        text-decoration: none;
+                        border: 1px solid #6dd5ed;
+                        padding: 5px 10px;
+                        border-radius: 4px;
+                    "
+                    >Map Viewer</a
+                >
+            </div>
         </div>
-        <button onclick="makeRequest('GET', '/health', null, 'healthResponse')">Send Request</button>
-        <div id="healthResponse" class="response"></div>
-      </div>
-    </div>
+        <h1>🗺️ Minecraft Map API Tester</h1>
 
-    <div class="section">
-      <h2>Players</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method get">GET</span>
-          <span class="path">/api/v1/players</span>
+        <div class="config-bar">
+            <div class="field">
+                <label for="authToken">Auth Token</label>
+                <input type="text" id="authToken" value="dev-token" placeholder="Authentication token" />
+            </div>
+            <div class="field">
+                <label for="baseUrl">Base URL</label>
+                <input type="text" id="baseUrl" value="" placeholder="http://localhost:3000" />
+            </div>
         </div>
-        <label for="playersDimension">Filter by Dimension (optional)</label>
-        <select id="playersDimension">
-          <option value="">All dimensions</option>
-          <option value="overworld">Overworld</option>
-          <option value="nether">Nether</option>
-          <option value="the_end">The End</option>
-        </select>
-        <button onclick="getPlayers()">Send Request</button>
-        <div id="playersResponse" class="response"></div>
-      </div>
 
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method get">GET</span>
-          <span class="path">/api/v1/players/:name</span>
+        <div class="tabs">
+            <div class="tab active" data-tab="read">📖 Read Endpoints</div>
+            <div class="tab" data-tab="players">👤 Players</div>
+            <div class="tab" data-tab="entities">🐄 Entities</div>
+            <div class="tab" data-tab="blocks">🧱 Blocks</div>
+            <div class="tab" data-tab="chunks">📦 Chunks</div>
+            <div class="tab" data-tab="admin">⚙️ Admin</div>
         </div>
-        <label for="playerName">Player Name</label>
-        <input type="text" id="playerName" placeholder="e.g., Steve">
-        <button onclick="getPlayer()">Send Request</button>
-        <div id="playerResponse" class="response"></div>
-      </div>
-    </div>
 
-    <div class="section">
-      <h2>World State</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method get">GET</span>
-          <span class="path">/api/v1/world/state</span>
-          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
-        </div>
-        <button onclick="makeRequest('GET', '/api/v1/world/state', null, 'worldStateResponse', true)">Send Request</button>
-        <div id="worldStateResponse" class="response"></div>
-      </div>
-    </div>
-  </div>
+        <!-- Read Endpoints -->
+        <div id="read" class="tab-content active">
+            <div class="section">
+                <h2>Health Check</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="path">/health</span>
+                    </div>
+                    <button onclick="makeRequest('GET', '/health', null, 'healthResponse')">Send Request</button>
+                    <div id="healthResponse" class="response"></div>
+                </div>
+            </div>
 
-  <!-- Players Tab -->
-  <div id="players" class="tab-content">
-    <div class="section">
-      <h2>Update Players</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method post">POST</span>
-          <span class="path">/api/v1/world/players</span>
-          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
-        </div>
-        
-        <div class="item-list" id="playersList">
-          <div class="empty-list">No players added. Click "Add Player" to get started.</div>
-        </div>
-        
-        <button class="add-item-btn" onclick="addPlayer()">+ Add Player</button>
-        
-        <div class="list-actions">
-          <button onclick="submitPlayers()">Send Request</button>
-          <button class="btn-secondary" onclick="clearPlayers()">Clear All</button>
-          <button class="btn-secondary" onclick="loadSamplePlayers()">Load Sample Data</button>
-        </div>
-        
-        <div class="preview-section">
-          <div class="preview-toggle" onclick="togglePreview('playersPreview')">
-            📋 Show JSON Preview
-          </div>
-          <div id="playersPreview" class="json-preview">
-            <textarea id="playersJson" readonly></textarea>
-          </div>
-        </div>
-        
-        <div id="updatePlayersResponse" class="response"></div>
-      </div>
-    </div>
-  </div>
+            <div class="section">
+                <h2>Players</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="path">/api/v1/players</span>
+                    </div>
+                    <label for="playersDimension">Filter by Dimension (optional)</label>
+                    <select id="playersDimension">
+                        <option value="">All dimensions</option>
+                        <option value="overworld">Overworld</option>
+                        <option value="nether">Nether</option>
+                        <option value="the_end">The End</option>
+                    </select>
+                    <button onclick="getPlayers()">Send Request</button>
+                    <div id="playersResponse" class="response"></div>
+                </div>
 
-  <!-- Entities Tab -->
-  <div id="entities" class="tab-content">
-    <div class="section">
-      <h2>Update Entities</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method post">POST</span>
-          <span class="path">/api/v1/world/entities</span>
-          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="path">/api/v1/players/:name</span>
+                    </div>
+                    <label for="playerName">Player Name</label>
+                    <input type="text" id="playerName" placeholder="e.g., Steve" />
+                    <button onclick="getPlayer()">Send Request</button>
+                    <div id="playerResponse" class="response"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>World State</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method get">GET</span>
+                        <span class="path">/api/v1/world/state</span>
+                        <span style="color: #f39c12; font-size: 12px">🔒 Auth Required</span>
+                    </div>
+                    <button onclick="makeRequest('GET', '/api/v1/world/state', null, 'worldStateResponse', true)">
+                        Send Request
+                    </button>
+                    <div id="worldStateResponse" class="response"></div>
+                </div>
+            </div>
         </div>
-        
-        <div class="item-list" id="entitiesList">
-          <div class="empty-list">No entities added. Click "Add Entity" to get started.</div>
+
+        <!-- Players Tab -->
+        <div id="players" class="tab-content">
+            <div class="section">
+                <h2>Update Players</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="path">/api/v1/world/players</span>
+                        <span style="color: #f39c12; font-size: 12px">🔒 Auth Required</span>
+                    </div>
+
+                    <div class="item-list" id="playersList">
+                        <div class="empty-list">No players added. Click "Add Player" to get started.</div>
+                    </div>
+
+                    <button class="add-item-btn" onclick="addPlayer()">+ Add Player</button>
+
+                    <div class="list-actions">
+                        <button onclick="submitPlayers()">Send Request</button>
+                        <button class="btn-secondary" onclick="clearPlayers()">Clear All</button>
+                        <button class="btn-secondary" onclick="loadSamplePlayers()">Load Sample Data</button>
+                    </div>
+
+                    <div class="preview-section">
+                        <div class="preview-toggle" onclick="togglePreview('playersPreview')">📋 Show JSON Preview</div>
+                        <div id="playersPreview" class="json-preview">
+                            <textarea id="playersJson" readonly></textarea>
+                        </div>
+                    </div>
+
+                    <div id="updatePlayersResponse" class="response"></div>
+                </div>
+            </div>
         </div>
-        
-        <button class="add-item-btn" onclick="addEntity()">+ Add Entity</button>
-        
-        <div class="list-actions">
-          <button onclick="submitEntities()">Send Request</button>
-          <button class="btn-secondary" onclick="clearEntities()">Clear All</button>
-          <button class="btn-secondary" onclick="loadSampleEntities()">Load Sample Data</button>
+
+        <!-- Entities Tab -->
+        <div id="entities" class="tab-content">
+            <div class="section">
+                <h2>Update Entities</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="path">/api/v1/world/entities</span>
+                        <span style="color: #f39c12; font-size: 12px">🔒 Auth Required</span>
+                    </div>
+
+                    <div class="item-list" id="entitiesList">
+                        <div class="empty-list">No entities added. Click "Add Entity" to get started.</div>
+                    </div>
+
+                    <button class="add-item-btn" onclick="addEntity()">+ Add Entity</button>
+
+                    <div class="list-actions">
+                        <button onclick="submitEntities()">Send Request</button>
+                        <button class="btn-secondary" onclick="clearEntities()">Clear All</button>
+                        <button class="btn-secondary" onclick="loadSampleEntities()">Load Sample Data</button>
+                    </div>
+
+                    <div class="preview-section">
+                        <div class="preview-toggle" onclick="togglePreview('entitiesPreview')">
+                            📋 Show JSON Preview
+                        </div>
+                        <div id="entitiesPreview" class="json-preview">
+                            <textarea id="entitiesJson" readonly></textarea>
+                        </div>
+                    </div>
+
+                    <div id="updateEntitiesResponse" class="response"></div>
+                </div>
+            </div>
         </div>
-        
-        <div class="preview-section">
-          <div class="preview-toggle" onclick="togglePreview('entitiesPreview')">
-            📋 Show JSON Preview
-          </div>
-          <div id="entitiesPreview" class="json-preview">
-            <textarea id="entitiesJson" readonly></textarea>
-          </div>
+
+        <!-- Blocks Tab -->
+        <div id="blocks" class="tab-content">
+            <div class="section">
+                <h2>Update Blocks</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="path">/api/v1/world/blocks</span>
+                        <span style="color: #f39c12; font-size: 12px">🔒 Auth Required</span>
+                    </div>
+
+                    <div class="item-list" id="blocksList">
+                        <div class="empty-list">No blocks added. Click "Add Block" to get started.</div>
+                    </div>
+
+                    <button class="add-item-btn" onclick="addBlock()">+ Add Block</button>
+
+                    <div class="list-actions">
+                        <button onclick="submitBlocks()">Send Request</button>
+                        <button class="btn-secondary" onclick="clearBlocks()">Clear All</button>
+                        <button class="btn-secondary" onclick="loadSampleBlocks()">Load Sample Data</button>
+                    </div>
+
+                    <div class="preview-section">
+                        <div class="preview-toggle" onclick="togglePreview('blocksPreview')">📋 Show JSON Preview</div>
+                        <div id="blocksPreview" class="json-preview">
+                            <textarea id="blocksJson" readonly></textarea>
+                        </div>
+                    </div>
+
+                    <div id="updateBlocksResponse" class="response"></div>
+                </div>
+            </div>
         </div>
-        
-        <div id="updateEntitiesResponse" class="response"></div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Blocks Tab -->
-  <div id="blocks" class="tab-content">
-    <div class="section">
-      <h2>Update Blocks</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method post">POST</span>
-          <span class="path">/api/v1/world/blocks</span>
-          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
+        <!-- Chunks Tab -->
+        <div id="chunks" class="tab-content">
+            <div class="section">
+                <h2>Update Chunks</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method post">POST</span>
+                        <span class="path">/api/v1/world/chunks</span>
+                        <span style="color: #f39c12; font-size: 12px">🔒 Auth Required</span>
+                    </div>
+
+                    <div class="item-list" id="chunksList">
+                        <div class="empty-list">No chunks added. Click "Add Chunk" to get started.</div>
+                    </div>
+
+                    <button class="add-item-btn" onclick="addChunk()">+ Add Chunk</button>
+
+                    <div class="list-actions">
+                        <button onclick="submitChunks()">Send Request</button>
+                        <button class="btn-secondary" onclick="clearChunks()">Clear All</button>
+                        <button class="btn-secondary" onclick="loadSampleChunks()">Load Sample Data</button>
+                    </div>
+
+                    <div class="preview-section">
+                        <div class="preview-toggle" onclick="togglePreview('chunksPreview')">📋 Show JSON Preview</div>
+                        <div id="chunksPreview" class="json-preview">
+                            <textarea id="chunksJson" readonly></textarea>
+                        </div>
+                    </div>
+
+                    <div id="updateChunksResponse" class="response"></div>
+                </div>
+            </div>
         </div>
-        
-        <div class="item-list" id="blocksList">
-          <div class="empty-list">No blocks added. Click "Add Block" to get started.</div>
+
+        <!-- Admin Tab -->
+        <div id="admin" class="tab-content">
+            <div class="section">
+                <h2>Tile Management</h2>
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method post" style="background: #e74c3c">DELETE</span>
+                        <span class="path">/api/v1/tiles</span>
+                        <span style="color: #f39c12; font-size: 12px">🔒 Auth Required</span>
+                    </div>
+                    <p style="color: #aaa; font-size: 13px; margin: 10px 0">
+                        Clears all cached map tiles from the server. This will cause tiles to be regenerated on next
+                        request.
+                    </p>
+                    <button class="btn-danger" onclick="clearTiles()">🗑️ Clear All Tiles</button>
+                    <div id="clearTilesResponse" class="response"></div>
+                </div>
+            </div>
         </div>
-        
-        <button class="add-item-btn" onclick="addBlock()">+ Add Block</button>
-        
-        <div class="list-actions">
-          <button onclick="submitBlocks()">Send Request</button>
-          <button class="btn-secondary" onclick="clearBlocks()">Clear All</button>
-          <button class="btn-secondary" onclick="loadSampleBlocks()">Load Sample Data</button>
-        </div>
-        
-        <div class="preview-section">
-          <div class="preview-toggle" onclick="togglePreview('blocksPreview')">
-            📋 Show JSON Preview
-          </div>
-          <div id="blocksPreview" class="json-preview">
-            <textarea id="blocksJson" readonly></textarea>
-          </div>
-        </div>
-        
-        <div id="updateBlocksResponse" class="response"></div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Chunks Tab -->
-  <div id="chunks" class="tab-content">
-    <div class="section">
-      <h2>Update Chunks</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method post">POST</span>
-          <span class="path">/api/v1/world/chunks</span>
-          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
-        </div>
-        
-        <div class="item-list" id="chunksList">
-          <div class="empty-list">No chunks added. Click "Add Chunk" to get started.</div>
-        </div>
-        
-        <button class="add-item-btn" onclick="addChunk()">+ Add Chunk</button>
-        
-        <div class="list-actions">
-          <button onclick="submitChunks()">Send Request</button>
-          <button class="btn-secondary" onclick="clearChunks()">Clear All</button>
-          <button class="btn-secondary" onclick="loadSampleChunks()">Load Sample Data</button>
-        </div>
-        
-        <div class="preview-section">
-          <div class="preview-toggle" onclick="togglePreview('chunksPreview')">
-            📋 Show JSON Preview
-          </div>
-          <div id="chunksPreview" class="json-preview">
-            <textarea id="chunksJson" readonly></textarea>
-          </div>
-        </div>
-        
-        <div id="updateChunksResponse" class="response"></div>
-      </div>
-    </div>
-  </div>
+        <script>
+            // Data stores
+            let players = [];
+            let entities = [];
+            let blocks = [];
+            let chunks = [];
+            let entityCounter = 1;
+            let blockCounter = 1;
 
-  <!-- Admin Tab -->
-  <div id="admin" class="tab-content">
-    <div class="section">
-      <h2>Tile Management</h2>
-      <div class="endpoint">
-        <div class="endpoint-header">
-          <span class="method post" style="background: #e74c3c;">DELETE</span>
-          <span class="path">/api/v1/tiles</span>
-          <span style="color: #f39c12; font-size: 12px;">🔒 Auth Required</span>
-        </div>
-        <p style="color: #aaa; font-size: 13px; margin: 10px 0;">Clears all cached map tiles from the server. This will cause tiles to be regenerated on next request.</p>
-        <button class="btn-danger" onclick="clearTiles()">🗑️ Clear All Tiles</button>
-        <div id="clearTilesResponse" class="response"></div>
-      </div>
-    </div>
-  </div>
+            // Set default base URL to current origin
+            document.getElementById('baseUrl').value = window.location.origin;
 
-  <script>
-    // Data stores
-    let players = [];
-    let entities = [];
-    let blocks = [];
-    let chunks = [];
-    let entityCounter = 1;
-    let blockCounter = 1;
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
 
-    // Set default base URL to current origin
-    document.getElementById('baseUrl').value = window.location.origin;
+            function getBaseUrl() {
+                return document.getElementById('baseUrl').value || window.location.origin;
+            }
 
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab).classList.add('active');
-      });
-    });
+            function getAuthToken() {
+                return document.getElementById('authToken').value;
+            }
 
-    function getBaseUrl() {
-      return document.getElementById('baseUrl').value || window.location.origin;
-    }
+            async function makeRequest(method, path, body, responseId, requiresAuth = false) {
+                const responseEl = document.getElementById(responseId);
+                responseEl.classList.add('show');
+                responseEl.innerHTML = '<pre>Loading...</pre>';
 
-    function getAuthToken() {
-      return document.getElementById('authToken').value;
-    }
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
 
-    async function makeRequest(method, path, body, responseId, requiresAuth = false) {
-      const responseEl = document.getElementById(responseId);
-      responseEl.classList.add('show');
-      responseEl.innerHTML = '<pre>Loading...</pre>';
+                if (requiresAuth) {
+                    headers['x-mc-auth-token'] = getAuthToken();
+                }
 
-      const headers = {
-        'Content-Type': 'application/json',
-      };
+                const options = {
+                    method,
+                    headers,
+                };
 
-      if (requiresAuth) {
-        headers['x-mc-auth-token'] = getAuthToken();
-      }
+                if (body && method !== 'GET') {
+                    options.body = JSON.stringify(body);
+                }
 
-      const options = {
-        method,
-        headers,
-      };
+                try {
+                    const startTime = performance.now();
+                    const response = await fetch(getBaseUrl() + path, options);
+                    const duration = Math.round(performance.now() - startTime);
+                    const data = await response.json();
 
-      if (body && method !== 'GET') {
-        options.body = JSON.stringify(body);
-      }
-
-      try {
-        const startTime = performance.now();
-        const response = await fetch(getBaseUrl() + path, options);
-        const duration = Math.round(performance.now() - startTime);
-        const data = await response.json();
-        
-        const statusClass = response.ok ? 'success' : 'error';
-        responseEl.innerHTML = `
+                    const statusClass = response.ok ? 'success' : 'error';
+                    responseEl.innerHTML = `
           <div class="response-header">
             <span class="status ${statusClass}">Status: ${response.status} ${response.statusText}</span>
             <span>Duration: ${duration}ms</span>
           </div>
           <pre>${JSON.stringify(data, null, 2)}</pre>
         `;
-      } catch (error) {
-        responseEl.innerHTML = `
+                } catch (error) {
+                    responseEl.innerHTML = `
           <div class="response-header">
             <span class="status error">Error</span>
           </div>
           <pre>${error.message}</pre>
         `;
-      }
-    }
+                }
+            }
 
-    function getPlayers() {
-      const dimension = document.getElementById('playersDimension').value;
-      const query = dimension ? `?dimension=${dimension}` : '';
-      makeRequest('GET', '/api/v1/players' + query, null, 'playersResponse');
-    }
+            function getPlayers() {
+                const dimension = document.getElementById('playersDimension').value;
+                const query = dimension ? `?dimension=${dimension}` : '';
+                makeRequest('GET', '/api/v1/players' + query, null, 'playersResponse');
+            }
 
-    function getPlayer() {
-      const name = document.getElementById('playerName').value;
-      if (!name) {
-        alert('Please enter a player name');
-        return;
-      }
-      makeRequest('GET', `/api/v1/players/${encodeURIComponent(name)}`, null, 'playerResponse');
-    }
+            function getPlayer() {
+                const name = document.getElementById('playerName').value;
+                if (!name) {
+                    alert('Please enter a player name');
+                    return;
+                }
+                makeRequest('GET', `/api/v1/players/${encodeURIComponent(name)}`, null, 'playerResponse');
+            }
 
-    function clearTiles() {
-      if (!confirm('Are you sure you want to clear all map tiles? This action cannot be undone.')) {
-        return;
-      }
-      makeRequest('DELETE', '/api/v1/tiles', null, 'clearTilesResponse', true);
-    }
+            function clearTiles() {
+                if (!confirm('Are you sure you want to clear all map tiles? This action cannot be undone.')) {
+                    return;
+                }
+                makeRequest('DELETE', '/api/v1/tiles', null, 'clearTilesResponse', true);
+            }
 
-    function togglePreview(previewId) {
-      const preview = document.getElementById(previewId);
-      preview.classList.toggle('show');
-    }
+            function togglePreview(previewId) {
+                const preview = document.getElementById(previewId);
+                preview.classList.toggle('show');
+            }
 
-    // ============ PLAYERS ============
-    function renderPlayers() {
-      const container = document.getElementById('playersList');
-      if (players.length === 0) {
-        container.innerHTML = '<div class="empty-list">No players added. Click "Add Player" to get started.</div>';
-        return;
-      }
-      
-      container.innerHTML = players.map((player, index) => `
+            // ============ PLAYERS ============
+            function renderPlayers() {
+                const container = document.getElementById('playersList');
+                if (players.length === 0) {
+                    container.innerHTML =
+                        '<div class="empty-list">No players added. Click "Add Player" to get started.</div>';
+                    return;
+                }
+
+                container.innerHTML = players
+                    .map(
+                        (player, index) => `
         <div class="item-entry">
           <div class="item-header">
             <span class="item-title">👤 Player ${index + 1}</span>
@@ -730,63 +775,68 @@
             </div>
           </div>
         </div>
-      `).join('');
-      
-      document.getElementById('playersJson').value = JSON.stringify({ players }, null, 2);
-    }
+      `
+                    )
+                    .join('');
 
-    function addPlayer() {
-      players.push({
-        name: '',
-        x: 0,
-        y: 64,
-        z: 0,
-        dimension: 'overworld'
-      });
-      renderPlayers();
-    }
+                document.getElementById('playersJson').value = JSON.stringify({ players }, null, 2);
+            }
 
-    function removePlayer(index) {
-      players.splice(index, 1);
-      renderPlayers();
-    }
+            function addPlayer() {
+                players.push({
+                    name: '',
+                    x: 0,
+                    y: 64,
+                    z: 0,
+                    dimension: 'overworld',
+                });
+                renderPlayers();
+            }
 
-    function updatePlayer(index, field, value) {
-      players[index][field] = value;
-      document.getElementById('playersJson').value = JSON.stringify({ players }, null, 2);
-    }
+            function removePlayer(index) {
+                players.splice(index, 1);
+                renderPlayers();
+            }
 
-    function clearPlayers() {
-      players = [];
-      renderPlayers();
-    }
+            function updatePlayer(index, field, value) {
+                players[index][field] = value;
+                document.getElementById('playersJson').value = JSON.stringify({ players }, null, 2);
+            }
 
-    function loadSamplePlayers() {
-      players = [
-        { name: "Steve", x: 100, y: 64, z: -50, dimension: "overworld" },
-        { name: "Alex", x: 200, y: 70, z: 150, dimension: "overworld" },
-        { name: "NetherExplorer", x: 50, y: 100, z: 25, dimension: "nether" }
-      ];
-      renderPlayers();
-    }
+            function clearPlayers() {
+                players = [];
+                renderPlayers();
+            }
 
-    function submitPlayers() {
-      if (players.length === 0) {
-        alert('Please add at least one player');
-        return;
-      }
-      makeRequest('POST', '/api/v1/world/players', { players }, 'updatePlayersResponse', true);
-    }
+            function loadSamplePlayers() {
+                players = [
+                    { name: 'Steve', x: 100, y: 64, z: -50, dimension: 'overworld' },
+                    { name: 'Alex', x: 200, y: 70, z: 150, dimension: 'overworld' },
+                    { name: 'NetherExplorer', x: 50, y: 100, z: 25, dimension: 'nether' },
+                ];
+                renderPlayers();
+            }
 
-    // ============ ENTITIES ============
-    function renderEntities() {
-      const container = document.getElementById('entitiesList');
-      if (entities.length === 0) {
-        container.innerHTML = '<div class="empty-list">No entities added. Click "Add Entity" to get started.</div>';
-        return;
-      }
-      
-      container.innerHTML = entities.map((entity, index) => `
+            function submitPlayers() {
+                if (players.length === 0) {
+                    alert('Please add at least one player');
+                    return;
+                }
+                makeRequest('POST', '/api/v1/world/players', { players }, 'updatePlayersResponse', true);
+            }
+
+            // ============ ENTITIES ============
+            function renderEntities() {
+                const container = document.getElementById('entitiesList');
+                if (entities.length === 0) {
+                    container.innerHTML =
+                        '<div class="empty-list">No entities added. Click "Add Entity" to get started.</div>';
+                    return;
+                }
+
+                container.innerHTML = entities
+                    .map(
+                        (entity, index) => `
         <div class="item-entry">
           <div class="item-header">
             <span class="item-title">🐄 Entity ${index + 1}</span>
@@ -825,66 +875,71 @@
             </div>
           </div>
         </div>
-      `).join('');
-      
-      document.getElementById('entitiesJson').value = JSON.stringify({ entities }, null, 2);
-    }
+      `
+                    )
+                    .join('');
 
-    function addEntity() {
-      entities.push({
-        id: `entity-${String(entityCounter++).padStart(3, '0')}`,
-        type: 'minecraft:villager',
-        x: 0,
-        y: 64,
-        z: 0,
-        dimension: 'overworld'
-      });
-      renderEntities();
-    }
+                document.getElementById('entitiesJson').value = JSON.stringify({ entities }, null, 2);
+            }
 
-    function removeEntity(index) {
-      entities.splice(index, 1);
-      renderEntities();
-    }
+            function addEntity() {
+                entities.push({
+                    id: `entity-${String(entityCounter++).padStart(3, '0')}`,
+                    type: 'minecraft:villager',
+                    x: 0,
+                    y: 64,
+                    z: 0,
+                    dimension: 'overworld',
+                });
+                renderEntities();
+            }
 
-    function updateEntity(index, field, value) {
-      entities[index][field] = value;
-      document.getElementById('entitiesJson').value = JSON.stringify({ entities }, null, 2);
-    }
+            function removeEntity(index) {
+                entities.splice(index, 1);
+                renderEntities();
+            }
 
-    function clearEntities() {
-      entities = [];
-      entityCounter = 1;
-      renderEntities();
-    }
+            function updateEntity(index, field, value) {
+                entities[index][field] = value;
+                document.getElementById('entitiesJson').value = JSON.stringify({ entities }, null, 2);
+            }
 
-    function loadSampleEntities() {
-      entities = [
-        { id: "entity-001", type: "minecraft:villager", x: 120, y: 64, z: -30, dimension: "overworld" },
-        { id: "entity-002", type: "minecraft:horse", x: 125, y: 64, z: -35, dimension: "overworld" },
-        { id: "entity-003", type: "minecraft:zombified_piglin", x: 40, y: 80, z: 20, dimension: "nether" }
-      ];
-      entityCounter = 4;
-      renderEntities();
-    }
+            function clearEntities() {
+                entities = [];
+                entityCounter = 1;
+                renderEntities();
+            }
 
-    function submitEntities() {
-      if (entities.length === 0) {
-        alert('Please add at least one entity');
-        return;
-      }
-      makeRequest('POST', '/api/v1/world/entities', { entities }, 'updateEntitiesResponse', true);
-    }
+            function loadSampleEntities() {
+                entities = [
+                    { id: 'entity-001', type: 'minecraft:villager', x: 120, y: 64, z: -30, dimension: 'overworld' },
+                    { id: 'entity-002', type: 'minecraft:horse', x: 125, y: 64, z: -35, dimension: 'overworld' },
+                    { id: 'entity-003', type: 'minecraft:zombified_piglin', x: 40, y: 80, z: 20, dimension: 'nether' },
+                ];
+                entityCounter = 4;
+                renderEntities();
+            }
 
-    // ============ BLOCKS ============
-    function renderBlocks() {
-      const container = document.getElementById('blocksList');
-      if (blocks.length === 0) {
-        container.innerHTML = '<div class="empty-list">No blocks added. Click "Add Block" to get started.</div>';
-        return;
-      }
-      
-      container.innerHTML = blocks.map((block, index) => `
+            function submitEntities() {
+                if (entities.length === 0) {
+                    alert('Please add at least one entity');
+                    return;
+                }
+                makeRequest('POST', '/api/v1/world/entities', { entities }, 'updateEntitiesResponse', true);
+            }
+
+            // ============ BLOCKS ============
+            function renderBlocks() {
+                const container = document.getElementById('blocksList');
+                if (blocks.length === 0) {
+                    container.innerHTML =
+                        '<div class="empty-list">No blocks added. Click "Add Block" to get started.</div>';
+                    return;
+                }
+
+                container.innerHTML = blocks
+                    .map(
+                        (block, index) => `
         <div class="item-entry">
           <div class="item-header">
             <span class="item-title">🧱 Block ${index + 1}</span>
@@ -929,70 +984,82 @@
             </div>
           </div>
         </div>
-      `).join('');
-      
-      document.getElementById('blocksJson').value = JSON.stringify({ blocks }, null, 2);
-    }
+      `
+                    )
+                    .join('');
 
-    function addBlock() {
-      blocks.push({
-        dimension: 'overworld',
-        x: 0,
-        y: 64,
-        z: 0,
-        blockType: 'minecraft:stone'
-      });
-      renderBlocks();
-    }
+                document.getElementById('blocksJson').value = JSON.stringify({ blocks }, null, 2);
+            }
 
-    function removeBlock(index) {
-      blocks.splice(index, 1);
-      renderBlocks();
-    }
+            function addBlock() {
+                blocks.push({
+                    dimension: 'overworld',
+                    x: 0,
+                    y: 64,
+                    z: 0,
+                    blockType: 'minecraft:stone',
+                });
+                renderBlocks();
+            }
 
-    function updateBlock(index, field, value) {
-      if (value === undefined) {
-        delete blocks[index][field];
-      } else {
-        blocks[index][field] = value;
-      }
-      document.getElementById('blocksJson').value = JSON.stringify({ blocks }, null, 2);
-    }
+            function removeBlock(index) {
+                blocks.splice(index, 1);
+                renderBlocks();
+            }
 
-    function clearBlocks() {
-      blocks = [];
-      renderBlocks();
-    }
+            function updateBlock(index, field, value) {
+                if (value === undefined) {
+                    delete blocks[index][field];
+                } else {
+                    blocks[index][field] = value;
+                }
+                document.getElementById('blocksJson').value = JSON.stringify({ blocks }, null, 2);
+            }
 
-    function loadSampleBlocks() {
-      blocks = [
-        { dimension: "overworld", x: 100, y: 64, z: -50, blockType: "minecraft:diamond_block", previousType: "minecraft:stone", player: "Steve" },
-        { dimension: "overworld", x: 101, y: 64, z: -50, blockType: "minecraft:gold_block" }
-      ];
-      renderBlocks();
-    }
+            function clearBlocks() {
+                blocks = [];
+                renderBlocks();
+            }
 
-    function submitBlocks() {
-      if (blocks.length === 0) {
-        alert('Please add at least one block');
-        return;
-      }
-      makeRequest('POST', '/api/v1/world/blocks', { blocks }, 'updateBlocksResponse', true);
-    }
+            function loadSampleBlocks() {
+                blocks = [
+                    {
+                        dimension: 'overworld',
+                        x: 100,
+                        y: 64,
+                        z: -50,
+                        blockType: 'minecraft:diamond_block',
+                        previousType: 'minecraft:stone',
+                        player: 'Steve',
+                    },
+                    { dimension: 'overworld', x: 101, y: 64, z: -50, blockType: 'minecraft:gold_block' },
+                ];
+                renderBlocks();
+            }
 
-    // ============ CHUNKS ============
-    function renderChunks() {
-      const container = document.getElementById('chunksList');
-      if (chunks.length === 0) {
-        container.innerHTML = '<div class="empty-list">No chunks added. Click "Add Chunk" to get started.</div>';
-        return;
-      }
-      
-      container.innerHTML = chunks.map((chunk, chunkIndex) => {
-        const blockCount = chunk.blocks.length; 
-        const showBlocks = chunk._showBlocks || false; // Store UI state in object (dirty but works)
-        
-        return `
+            function submitBlocks() {
+                if (blocks.length === 0) {
+                    alert('Please add at least one block');
+                    return;
+                }
+                makeRequest('POST', '/api/v1/world/blocks', { blocks }, 'updateBlocksResponse', true);
+            }
+
+            // ============ CHUNKS ============
+            function renderChunks() {
+                const container = document.getElementById('chunksList');
+                if (chunks.length === 0) {
+                    container.innerHTML =
+                        '<div class="empty-list">No chunks added. Click "Add Chunk" to get started.</div>';
+                    return;
+                }
+
+                container.innerHTML = chunks
+                    .map((chunk, chunkIndex) => {
+                        const blockCount = chunk.blocks.length;
+                        const showBlocks = chunk._showBlocks || false; // Store UI state in object (dirty but works)
+
+                        return `
         <div class="item-entry">
           <div class="item-header">
             <span class="item-title">📦 Chunk ${chunkIndex + 1}</span>
@@ -1050,9 +1117,14 @@
              <button class="btn-small btn-secondary" onclick="toggleChunkBlocks(${chunkIndex})">${showBlocks ? 'Hide Blocks' : 'Show Blocks'}</button>
           </div>
           
-          ${showBlocks ? `
+          ${
+              showBlocks
+                  ? `
           <div class="blocks-container">
-            ${chunk.blocks.slice(0, 100).map((block, blockIndex) => `
+            ${chunk.blocks
+                .slice(0, 100)
+                .map(
+                    (block, blockIndex) => `
               <div class="block-entry">
                 <div class="form-group">
                   <label>X</label>
@@ -1072,270 +1144,276 @@
                 </div>
                 <button class="remove-btn" onclick="removeChunkBlock(${chunkIndex}, ${blockIndex})">×</button>
               </div>
-            `).join('')}
+            `
+                )
+                .join('')}
             ${blockCount > 100 ? `<div style="text-align: center; padding: 10px; color: #888;">... and ${blockCount - 100} more blocks (display truncated)</div>` : ''}
             ${blockCount === 0 ? '<div class="empty-list" style="padding: 10px;">No blocks in chunk</div>' : ''}
           </div>
           <button class="btn-small btn-success" onclick="addChunkBlock(${chunkIndex})" style="margin-top: 8px;">+ Add Block (Manual)</button>
-          ` : ''}
+          `
+                  : ''
+          }
         </div>
-      `}).join('');
-      
-      document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
-    }
-    
-    function toggleChunkBlocks(index) {
-        chunks[index]._showBlocks = !chunks[index]._showBlocks;
-        renderChunks();
-    }
-    
-    function fillChunk(chunkIndex) {
-        const chunk = chunks[chunkIndex];
-        const yStart = parseInt(document.getElementById(`fillYStart-${chunkIndex}`).value);
-        const yEnd = parseInt(document.getElementById(`fillYEnd-${chunkIndex}`).value);
-        const type = document.getElementById(`fillType-${chunkIndex}`).value;
-        
-        if (isNaN(yStart) || isNaN(yEnd) || !type) {
-            alert("Invalid input parameters");
-            return;
-        }
-        
-        // Calculate absolute offsets
-        const startX = chunk.chunkX * 16;
-        const startZ = chunk.chunkZ * 16;
-        
-        const newBlocks = [];
-        
-        // Loop Y range
-        const minY = Math.min(yStart, yEnd);
-        const maxY = Math.max(yStart, yEnd);
-        
-        for (let y = minY; y <= maxY; y++) {
-            // Full 16x16 horizontal slice
-            for (let x = 0; x < 16; x++) {
-                for (let z = 0; z < 16; z++) {
-                    newBlocks.push({
-                        x: startX + x,
-                        y: y,
-                        z: startZ + z,
-                        type: type
-                    });
+      `;
+                    })
+                    .join('');
+
+                document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
+            }
+
+            function toggleChunkBlocks(index) {
+                chunks[index]._showBlocks = !chunks[index]._showBlocks;
+                renderChunks();
+            }
+
+            function fillChunk(chunkIndex) {
+                const chunk = chunks[chunkIndex];
+                const yStart = parseInt(document.getElementById(`fillYStart-${chunkIndex}`).value);
+                const yEnd = parseInt(document.getElementById(`fillYEnd-${chunkIndex}`).value);
+                const type = document.getElementById(`fillType-${chunkIndex}`).value;
+
+                if (isNaN(yStart) || isNaN(yEnd) || !type) {
+                    alert('Invalid input parameters');
+                    return;
+                }
+
+                // Calculate absolute offsets
+                const startX = chunk.chunkX * 16;
+                const startZ = chunk.chunkZ * 16;
+
+                const newBlocks = [];
+
+                // Loop Y range
+                const minY = Math.min(yStart, yEnd);
+                const maxY = Math.max(yStart, yEnd);
+
+                for (let y = minY; y <= maxY; y++) {
+                    // Full 16x16 horizontal slice
+                    for (let x = 0; x < 16; x++) {
+                        for (let z = 0; z < 16; z++) {
+                            newBlocks.push({
+                                x: startX + x,
+                                y: y,
+                                z: startZ + z,
+                                type: type,
+                            });
+                        }
+                    }
+                }
+
+                // Append
+                chunk.blocks.push(...newBlocks);
+
+                // Force show blocks if count was low, otherwise keep hidden to avoid lag
+                if (chunk.blocks.length < 50) {
+                    chunk._showBlocks = true;
+                }
+
+                renderChunks();
+            }
+
+            function clearChunkBlocks(index) {
+                if (confirm('Are you sure you want to clear all blocks in this chunk?')) {
+                    chunks[index].blocks = [];
+                    renderChunks();
                 }
             }
-        }
-        
-        // Append
-        chunk.blocks.push(...newBlocks);
-        
-        // Force show blocks if count was low, otherwise keep hidden to avoid lag
-        if (chunk.blocks.length < 50) {
-            chunk._showBlocks = true;
-        }
-        
-        renderChunks();
-    }
-    
-    function clearChunkBlocks(index) {
-        if(confirm('Are you sure you want to clear all blocks in this chunk?')) {
-            chunks[index].blocks = [];
+
+            function presetFlat(index) {
+                const chunk = chunks[index];
+                chunk.blocks = []; // Clear first
+
+                const startX = chunk.chunkX * 16;
+                const startZ = chunk.chunkZ * 16;
+
+                // 1. Bedrock Layer (-64)
+                for (let x = 0; x < 16; x++) {
+                    for (let z = 0; z < 16; z++) {
+                        chunk.blocks.push({ x: startX + x, y: -64, z: startZ + z, type: 'minecraft:bedrock' });
+                    }
+                }
+
+                // 2. Stone Layers (-63 to 60) - sparse? No, let's just do top layers to save data size for testing
+                // Creating ~120 layers of stone is heavily impactful on browser (16*16*120 ~ 30k objects).
+                // Let's just create the surface layers for visualization testing.
+
+                // Dirt (60-62)
+                for (let y = 60; y <= 62; y++) {
+                    for (let x = 0; x < 16; x++) {
+                        for (let z = 0; z < 16; z++) {
+                            chunk.blocks.push({ x: startX + x, y: y, z: startZ + z, type: 'minecraft:dirt' });
+                        }
+                    }
+                }
+
+                // Grass (63)
+                for (let x = 0; x < 16; x++) {
+                    for (let z = 0; z < 16; z++) {
+                        chunk.blocks.push({ x: startX + x, y: 63, z: startZ + z, type: 'minecraft:grass_block' });
+                    }
+                }
+
+                alert(`Generated ${chunk.blocks.length} blocks for Flat Preset`);
+                renderChunks();
+            }
+
+            function presetOcean(index) {
+                const chunk = chunks[index];
+                chunk.blocks = [];
+
+                const startX = chunk.chunkX * 16;
+                const startZ = chunk.chunkZ * 16;
+
+                // Sand bottom (45)
+                for (let x = 0; x < 16; x++) {
+                    for (let z = 0; z < 16; z++) {
+                        chunk.blocks.push({ x: startX + x, y: 45, z: startZ + z, type: 'minecraft:sand' });
+                    }
+                }
+
+                // Water (46-62)
+                for (let y = 46; y <= 62; y++) {
+                    for (let x = 0; x < 16; x++) {
+                        for (let z = 0; z < 16; z++) {
+                            chunk.blocks.push({ x: startX + x, y: y, z: startZ + z, type: 'minecraft:water' });
+                        }
+                    }
+                }
+
+                renderChunks();
+            }
+
+            function presetPlatform(index) {
+                const chunk = chunks[index];
+                chunk.blocks = [];
+
+                const startX = chunk.chunkX * 16;
+                const startZ = chunk.chunkZ * 16;
+
+                // Stone platform at 100
+                for (let x = 0; x < 16; x++) {
+                    for (let z = 0; z < 16; z++) {
+                        chunk.blocks.push({ x: startX + x, y: 100, z: startZ + z, type: 'minecraft:stone_bricks' });
+                    }
+                }
+                renderChunks();
+            }
+
+            function addChunk() {
+                chunks.push({
+                    dimension: 'overworld',
+                    chunkX: 0,
+                    chunkZ: 0,
+                    blocks: [],
+                });
+                renderChunks();
+            }
+
+            function removeChunk(index) {
+                chunks.splice(index, 1);
+                renderChunks();
+            }
+
+            function updateChunk(index, field, value) {
+                chunks[index][field] = value;
+                document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
+            }
+
+            function addChunkBlock(chunkIndex) {
+                chunks[chunkIndex].blocks.push({
+                    x: 0,
+                    y: 64,
+                    z: 0,
+                    type: 'minecraft:stone',
+                });
+                renderChunks();
+            }
+
+            function removeChunkBlock(chunkIndex, blockIndex) {
+                chunks[chunkIndex].blocks.splice(blockIndex, 1);
+                renderChunks();
+            }
+
+            function updateChunkBlock(chunkIndex, blockIndex, field, value) {
+                chunks[chunkIndex].blocks[blockIndex][field] = value;
+                document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
+            }
+
+            function clearChunks() {
+                chunks = [];
+                renderChunks();
+            }
+
+            function loadSampleChunks() {
+                chunks = [
+                    {
+                        dimension: 'overworld',
+                        chunkX: 0,
+                        chunkZ: 0,
+                        blocks: [
+                            { x: 0, y: 64, z: 0, type: 'minecraft:grass_block' },
+                            { x: 1, y: 64, z: 0, type: 'minecraft:grass_block' },
+                            { x: 0, y: 63, z: 0, type: 'minecraft:dirt' },
+                            { x: 1, y: 63, z: 0, type: 'minecraft:dirt' },
+                        ],
+                    },
+                ];
+                renderChunks();
+            }
+
+            function submitChunks() {
+                if (chunks.length === 0) {
+                    alert('Please add at least one chunk');
+                    return;
+                }
+                makeRequest('POST', '/api/v1/world/chunks', { chunks }, 'updateChunksResponse', true);
+            }
+
+            // Initialize empty lists
+            renderPlayers();
+            renderEntities();
+            renderBlocks();
             renderChunks();
-        }
-    }
-    
-    function presetFlat(index) {
-        const chunk = chunks[index];
-        chunk.blocks = []; // Clear first
-        
-        const startX = chunk.chunkX * 16;
-        const startZ = chunk.chunkZ * 16;
-        
-        // 1. Bedrock Layer (-64)
-        for(let x=0; x<16; x++) {
-            for(let z=0; z<16; z++) {
-                chunk.blocks.push({ x: startX+x, y: -64, z: startZ+z, type: "minecraft:bedrock" });
-            }
-        }
-        
-        // 2. Stone Layers (-63 to 60) - sparse? No, let's just do top layers to save data size for testing
-        // Creating ~120 layers of stone is heavily impactful on browser (16*16*120 ~ 30k objects).
-        // Let's just create the surface layers for visualization testing.
-        
-        // Dirt (60-62)
-        for(let y=60; y<=62; y++) {
-            for(let x=0; x<16; x++) {
-                for(let z=0; z<16; z++) {
-                    chunk.blocks.push({ x: startX+x, y: y, z: startZ+z, type: "minecraft:dirt" });
-                }
-            }
-        }
-        
-        // Grass (63)
-        for(let x=0; x<16; x++) {
-            for(let z=0; z<16; z++) {
-                chunk.blocks.push({ x: startX+x, y: 63, z: startZ+z, type: "minecraft:grass_block" });
-            }
-        }
-        
-        alert(`Generated ${chunk.blocks.length} blocks for Flat Preset`);
-        renderChunks();
-    }
-    
-    function presetOcean(index) {
-        const chunk = chunks[index];
-        chunk.blocks = [];
-        
-        const startX = chunk.chunkX * 16;
-        const startZ = chunk.chunkZ * 16;
-        
-        // Sand bottom (45)
-        for(let x=0; x<16; x++) {
-            for(let z=0; z<16; z++) {
-                chunk.blocks.push({ x: startX+x, y: 45, z: startZ+z, type: "minecraft:sand" });
-            }
-        }
-        
-        // Water (46-62)
-        for(let y=46; y<=62; y++) {
-            for(let x=0; x<16; x++) {
-                for(let z=0; z<16; z++) {
-                    chunk.blocks.push({ x: startX+x, y: y, z: startZ+z, type: "minecraft:water" });
-                }
-            }
-        }
-        
-        renderChunks();
-    }
-    
-    function presetPlatform(index) {
-         const chunk = chunks[index];
-        chunk.blocks = [];
-        
-        const startX = chunk.chunkX * 16;
-        const startZ = chunk.chunkZ * 16;
-        
-        // Stone platform at 100
-        for(let x=0; x<16; x++) {
-            for(let z=0; z<16; z++) {
-                chunk.blocks.push({ x: startX+x, y: 100, z: startZ+z, type: "minecraft:stone_bricks" });
-            }
-        }
-        renderChunks();
-    }
+        </script>
 
-    function addChunk() {
-      chunks.push({
-        dimension: 'overworld',
-        chunkX: 0,
-        chunkZ: 0,
-        blocks: []
-      });
-      renderChunks();
-    }
+        <!-- Datalists for autocomplete suggestions -->
+        <datalist id="entityTypes">
+            <option value="minecraft:villager"></option>
+            <option value="minecraft:horse"></option>
+            <option value="minecraft:cow"></option>
+            <option value="minecraft:pig"></option>
+            <option value="minecraft:sheep"></option>
+            <option value="minecraft:chicken"></option>
+            <option value="minecraft:wolf"></option>
+            <option value="minecraft:cat"></option>
+            <option value="minecraft:zombie"></option>
+            <option value="minecraft:skeleton"></option>
+            <option value="minecraft:creeper"></option>
+            <option value="minecraft:spider"></option>
+            <option value="minecraft:enderman"></option>
+            <option value="minecraft:zombified_piglin"></option>
+            <option value="minecraft:blaze"></option>
+            <option value="minecraft:ghast"></option>
+        </datalist>
 
-    function removeChunk(index) {
-      chunks.splice(index, 1);
-      renderChunks();
-    }
-
-    function updateChunk(index, field, value) {
-      chunks[index][field] = value;
-      document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
-    }
-
-    function addChunkBlock(chunkIndex) {
-      chunks[chunkIndex].blocks.push({
-        x: 0,
-        y: 64,
-        z: 0,
-        type: 'minecraft:stone'
-      });
-      renderChunks();
-    }
-
-    function removeChunkBlock(chunkIndex, blockIndex) {
-      chunks[chunkIndex].blocks.splice(blockIndex, 1);
-      renderChunks();
-    }
-
-    function updateChunkBlock(chunkIndex, blockIndex, field, value) {
-      chunks[chunkIndex].blocks[blockIndex][field] = value;
-      document.getElementById('chunksJson').value = JSON.stringify({ chunks }, null, 2);
-    }
-
-    function clearChunks() {
-      chunks = [];
-      renderChunks();
-    }
-
-    function loadSampleChunks() {
-      chunks = [
-        {
-          dimension: "overworld",
-          chunkX: 0,
-          chunkZ: 0,
-          blocks: [
-            { x: 0, y: 64, z: 0, type: "minecraft:grass_block" },
-            { x: 1, y: 64, z: 0, type: "minecraft:grass_block" },
-            { x: 0, y: 63, z: 0, type: "minecraft:dirt" },
-            { x: 1, y: 63, z: 0, type: "minecraft:dirt" }
-          ]
-        }
-      ];
-      renderChunks();
-    }
-
-    function submitChunks() {
-      if (chunks.length === 0) {
-        alert('Please add at least one chunk');
-        return;
-      }
-      makeRequest('POST', '/api/v1/world/chunks', { chunks }, 'updateChunksResponse', true);
-    }
-
-    // Initialize empty lists
-    renderPlayers();
-    renderEntities();
-    renderBlocks();
-    renderChunks();
-  </script>
-  
-  <!-- Datalists for autocomplete suggestions -->
-  <datalist id="entityTypes">
-    <option value="minecraft:villager">
-    <option value="minecraft:horse">
-    <option value="minecraft:cow">
-    <option value="minecraft:pig">
-    <option value="minecraft:sheep">
-    <option value="minecraft:chicken">
-    <option value="minecraft:wolf">
-    <option value="minecraft:cat">
-    <option value="minecraft:zombie">
-    <option value="minecraft:skeleton">
-    <option value="minecraft:creeper">
-    <option value="minecraft:spider">
-    <option value="minecraft:enderman">
-    <option value="minecraft:zombified_piglin">
-    <option value="minecraft:blaze">
-    <option value="minecraft:ghast">
-  </datalist>
-  
-  <datalist id="blockTypes">
-    <option value="minecraft:stone">
-    <option value="minecraft:dirt">
-    <option value="minecraft:grass_block">
-    <option value="minecraft:cobblestone">
-    <option value="minecraft:oak_planks">
-    <option value="minecraft:oak_log">
-    <option value="minecraft:diamond_block">
-    <option value="minecraft:gold_block">
-    <option value="minecraft:iron_block">
-    <option value="minecraft:emerald_block">
-    <option value="minecraft:netherrack">
-    <option value="minecraft:end_stone">
-    <option value="minecraft:obsidian">
-    <option value="minecraft:bedrock">
-    <option value="minecraft:water">
-    <option value="minecraft:lava">
-  </datalist>
-</body>
+        <datalist id="blockTypes">
+            <option value="minecraft:stone"></option>
+            <option value="minecraft:dirt"></option>
+            <option value="minecraft:grass_block"></option>
+            <option value="minecraft:cobblestone"></option>
+            <option value="minecraft:oak_planks"></option>
+            <option value="minecraft:oak_log"></option>
+            <option value="minecraft:diamond_block"></option>
+            <option value="minecraft:gold_block"></option>
+            <option value="minecraft:iron_block"></option>
+            <option value="minecraft:emerald_block"></option>
+            <option value="minecraft:netherrack"></option>
+            <option value="minecraft:end_stone"></option>
+            <option value="minecraft:obsidian"></option>
+            <option value="minecraft:bedrock"></option>
+            <option value="minecraft:water"></option>
+            <option value="minecraft:lava"></option>
+        </datalist>
+    </body>
 </html>
