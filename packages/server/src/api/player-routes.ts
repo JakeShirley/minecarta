@@ -6,6 +6,8 @@ interface DimensionQuery {
   dimension?: Dimension;
 }
 
+const MINECRAFT_HEAD_API = 'https://persona-secondary.franchise.minecraft-services.net/api/v1.0/profile/pdif';
+
 /**
  * Register player query routes (public, no auth required)
  */
@@ -29,6 +31,38 @@ export async function registerPlayerRoutes(app: FastifyInstance): Promise<void> 
       },
     });
   });
+
+  /**
+   * GET /players/head/:playfabId - Proxy player head texture to avoid CORS issues
+   */
+  app.get(
+    '/players/head/:playfabId',
+    async (request: FastifyRequest<{ Params: { playfabId: string } }>, reply: FastifyReply) => {
+      const { playfabId } = request.params;
+
+      try {
+        const response = await fetch(`${MINECRAFT_HEAD_API}/${playfabId}/image/head`);
+
+        if (!response.ok) {
+          return reply.code(response.status).send({
+            success: false,
+            error: 'Failed to fetch player head',
+          });
+        }
+
+        const contentType = response.headers.get('content-type') || 'image/png';
+        const buffer = await response.arrayBuffer();
+
+        return reply.type(contentType).send(Buffer.from(buffer));
+      } catch (error) {
+        request.log.error({ error, playfabId }, 'Failed to fetch player head');
+        return reply.code(500).send({
+          success: false,
+          error: 'Failed to fetch player head',
+        });
+      }
+    }
+  );
 
   /**
    * GET /players/:name - Get a specific player

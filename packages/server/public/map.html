@@ -111,6 +111,73 @@
       z-index: 501;
     }
     
+    /* Player markers */
+    .player-marker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: auto;
+    }
+    .player-head {
+      width: 32px;
+      height: 32px;
+      border: 2px solid #6dd5ed;
+      border-radius: 4px;
+      background: #16213e;
+      image-rendering: pixelated;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+    .player-name {
+      margin-top: 4px;
+      background: rgba(15, 52, 96, 0.9);
+      color: #6dd5ed;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 11px;
+      white-space: nowrap;
+      border: 1px solid #1f4068;
+    }
+    
+    /* Player list in sidebar */
+    .player-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .player-list-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      background: #0f3460;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .player-list-item:hover {
+      background: #1f4068;
+    }
+    .player-list-item img {
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      image-rendering: pixelated;
+    }
+    .player-list-item .player-info {
+      flex: 1;
+      font-size: 0.85rem;
+    }
+    .player-list-item .player-coords {
+      font-size: 0.7rem;
+      color: #888;
+    }
+    .player-count {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    
     .control-group {
       margin-bottom: 15px;
     }
@@ -188,6 +255,18 @@
           <input type="checkbox" id="show-grid" checked style="width: auto;"> Show Coordinate Grid
         </label>
       </div>
+      
+      <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="show-players" checked style="width: auto;"> Show Players
+        </label>
+      </div>
+
+      <div class="control-group">
+        <label>Online Players</label>
+        <div class="player-count" id="player-count">0 players</div>
+        <div class="player-list" id="player-list"></div>
+      </div>
 
       <div class="tile-preview-container">
         <label>Single Tile Inspector</label>
@@ -221,26 +300,28 @@
   <script>
     const API_BASE = '/api/v1';
     
-    // Server zoom levels: 0 (256 blocks/tile, 1:1) to 7 (32768 blocks/tile)
+    // Server zoom levels: 0 (16 blocks/tile, highest detail) to 7 (2048 blocks/tile)
     // Leaflet: higher zoom = more zoomed in (bigger tiles visually)
-    // So Leaflet zoom 7 = Server zoom 0 (most detail)
     const MAX_ZOOM = 7;
     
-    // Blocks per tile at each server zoom level
-    // z0: 1 block = 1 pixel (256 blocks/tile)
+    // Blocks per tile at each server zoom level (must match server constants!)
+    // z0: 16 blocks per tile (1 chunk)
+    // z4: 256 blocks per tile (1 pixel = 1 block)
+    // z6: 1024 blocks per tile
+    // z7: 2048 blocks per tile
     const BLOCKS_PER_TILE = {
-      0: 256,
-      1: 512,
-      2: 1024,
-      3: 2048,
-      4: 4096,
-      5: 8192,
-      6: 16384,
-      7: 32768,
+      0: 16,
+      1: 32,
+      2: 64,
+      3: 128,
+      4: 256,
+      5: 512,
+      6: 1024,
+      7: 2048,
     };
     
     // Base server zoom level used for tiles
-    const BASE_SERVER_ZOOM = 2;
+    const BASE_SERVER_ZOOM = 4;
     // Blocks per tile at base server zoom
     const BASE_BLOCKS_PER_TILE = BLOCKS_PER_TILE[BASE_SERVER_ZOOM];
 
@@ -260,40 +341,34 @@
     
     /**
      * Convert Leaflet coordinates to Minecraft world coordinates
-     * In Leaflet Simple CRS:
-     * - Y increases upward (in Minecraft, Z decreases northward)
-     * - One tile at native zoom (Leaflet 3 = Server 4) = 1024 blocks
-     * - Each tile is 256 pixels, so at native zoom: 1 pixel = 4 blocks
+     * 
+     * In Leaflet CRS.Simple at native zoom 3:
+     * - 1 tile = 256 pixels = 32 latlng units (since pixel = latlng * 2^zoom)
+     * - 1 tile = 256 blocks (BASE_BLOCKS_PER_TILE at server zoom 4)
+     * - Therefore: 32 latlng units = 256 blocks, so 1 latlng = 8 blocks
+     * 
+     * This is zoom-independent - Minecraft coords should be the same at any zoom level.
      */
-    function leafletToMinecraft(latlng, leafletZoom) {
-      // At native Leaflet zoom 3, we display server zoom 4 tiles (1024 blocks/tile)
-      // Leaflet scales tiles visually, so we need to account for the visual scale
-      const nativeLeafletZoom = 3;
-      const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
+    function leafletToMinecraft(latlng) {
+      // At native zoom 3: 32 latlng units = 256 blocks
+      // So blocksPerLatlngUnit = 256 / 32 = 8
+      const blocksPerLatlngUnit = BASE_BLOCKS_PER_TILE / 32;
       
-      // At Leaflet zoom 3 (native), 1 pixel = 4 blocks (since 256 pixels = 1024 blocks)
-      // At Leaflet zoom 4, tiles are 2x bigger visually, so 1 pixel = 2 blocks
-      // At Leaflet zoom 5, tiles are 4x bigger, so 1 pixel = 1 block
-      const blocksPerPixel = BASE_BLOCKS_PER_TILE / (256 * scale);
-      
-      // Leaflet CRS.Simple: lat=y, lng=x in pixel coordinates
-      // Convert to Minecraft: X = lng (East), Z = -lat (North is negative lat in Leaflet)
-      const mcX = Math.floor(latlng.lng * blocksPerPixel);
-      const mcZ = Math.floor(-latlng.lat * blocksPerPixel);
+      const mcX = Math.floor(latlng.lng * blocksPerLatlngUnit);
+      const mcZ = Math.floor(-latlng.lat * blocksPerLatlngUnit);
       
       return { x: mcX, z: mcZ };
     }
     
     /**
      * Convert Minecraft coordinates to Leaflet coordinates
+     * This is zoom-independent.
      */
-    function minecraftToLeaflet(mcX, mcZ, leafletZoom) {
-      const nativeLeafletZoom = 3;
-      const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
-      const blocksPerPixel = BASE_BLOCKS_PER_TILE / (256 * scale);
+    function minecraftToLeaflet(mcX, mcZ) {
+      const blocksPerLatlngUnit = BASE_BLOCKS_PER_TILE / 32;
       
-      const lat = -(mcZ / blocksPerPixel);
-      const lng = mcX / blocksPerPixel;
+      const lat = -(mcZ / blocksPerLatlngUnit);
+      const lng = mcX / blocksPerLatlngUnit;
       
       return L.latLng(lat, lng);
     }
@@ -302,7 +377,7 @@
      * Update coordinate display with mouse position
      */
     function updateCoordDisplay(e) {
-      const coords = leafletToMinecraft(e.latlng, map.getZoom());
+      const coords = leafletToMinecraft(e.latlng);
       document.getElementById('coord-text').textContent = `X: ${coords.x}, Z: ${coords.z}`;
     }
     
@@ -407,13 +482,12 @@
         ctx.clearRect(0, 0, width, height);
         this.labelContainer.innerHTML = '';
         
-        const leafletZoom = this.map.getZoom();
         const spacing = this._getGridSpacing();
         
         // Get bounds in Minecraft coordinates
         const bounds = this.map.getBounds();
-        const topLeft = leafletToMinecraft(bounds.getNorthWest(), leafletZoom);
-        const bottomRight = leafletToMinecraft(bounds.getSouthEast(), leafletZoom);
+        const topLeft = leafletToMinecraft(bounds.getNorthWest());
+        const bottomRight = leafletToMinecraft(bounds.getSouthEast());
         
         // Calculate first grid line positions (round to spacing)
         const startX = Math.floor(topLeft.x / spacing) * spacing;
@@ -430,8 +504,8 @@
         
         // Draw vertical lines (constant X)
         for (let mcX = startX; mcX <= endX; mcX += spacing) {
-          const topPoint = minecraftToLeaflet(mcX, topLeft.z, leafletZoom);
-          const bottomPoint = minecraftToLeaflet(mcX, bottomRight.z, leafletZoom);
+          const topPoint = minecraftToLeaflet(mcX, topLeft.z);
+          const bottomPoint = minecraftToLeaflet(mcX, bottomRight.z);
           
           const topScreen = this.map.latLngToContainerPoint(topPoint);
           const bottomScreen = this.map.latLngToContainerPoint(bottomPoint);
@@ -449,8 +523,8 @@
         
         // Draw horizontal lines (constant Z)
         for (let mcZ = startZ; mcZ <= endZ; mcZ += spacing) {
-          const leftPoint = minecraftToLeaflet(topLeft.x, mcZ, leafletZoom);
-          const rightPoint = minecraftToLeaflet(bottomRight.x, mcZ, leafletZoom);
+          const leftPoint = minecraftToLeaflet(topLeft.x, mcZ);
+          const rightPoint = minecraftToLeaflet(bottomRight.x, mcZ);
           
           const leftScreen = this.map.latLngToContainerPoint(leftPoint);
           const rightScreen = this.map.latLngToContainerPoint(rightPoint);
@@ -561,6 +635,191 @@
     loadTile();
     gridOverlay = new CoordGridOverlay(map); // Create grid overlay
     updateZoomDisplay(); // Initial zoom display
+
+    // ==========================================
+    // Player Markers
+    // ==========================================
+    
+    // Proxy through our server to avoid CORS issues with the external API
+    const PLAYER_HEAD_API = `${API_BASE}/players`;
+    const PLAYER_REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
+    
+    let playerMarkers = new Map(); // Map of player name -> Leaflet marker
+    let playersVisible = true;
+    let currentPlayers = []; // Store current player data
+    
+    // Default fallback head SVG
+    const DEFAULT_HEAD_SVG = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect fill="#8B4513" width="32" height="32"/><rect fill="#F5DEB3" x="8" y="8" width="16" height="16"/></svg>`);
+    
+    /**
+     * Get the player head image URL using their PlayFab ID
+     */
+    function getPlayerHeadUrl(playfabId) {
+      if (!playfabId) {
+        return DEFAULT_HEAD_SVG;
+      }
+      // Use our server proxy to fetch the head image
+      return `${PLAYER_HEAD_API}/head/${playfabId}`;
+    }
+    
+    /**
+     * Create a player marker element
+     */
+    function createPlayerMarkerHtml(player) {
+      const headUrl = getPlayerHeadUrl(player.playfabId);
+      return `
+        <div class="player-marker">
+          <img class="player-head" src="${headUrl}" alt="${player.name}" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect fill="#8B4513" width="32" height="32"/><rect fill="#F5DEB3" x="8" y="8" width="16" height="16"/></svg>')}'">
+          <span class="player-name">${player.name}</span>
+        </div>
+      `;
+    }
+    
+    /**
+     * Update player markers on the map
+     */
+    function updatePlayerMarkers(players) {
+      const currentDimension = document.getElementById('tile-dim').value;
+      
+      // Filter players by current dimension
+      const dimensionPlayers = players.filter(p => p.dimension === currentDimension);
+      
+      // Track which players we've seen in this update
+      const seenPlayers = new Set();
+      
+      dimensionPlayers.forEach(player => {
+        seenPlayers.add(player.name);
+        
+        // Convert Minecraft coords to Leaflet coords
+        const latLng = minecraftToLeaflet(player.x, player.z);
+        
+        if (playerMarkers.has(player.name)) {
+          // Update existing marker position
+          const marker = playerMarkers.get(player.name);
+          marker.setLatLng(latLng);
+          // Update the popup content if it exists
+          if (marker.getPopup()) {
+            marker.setPopupContent(`<b>${player.name}</b><br>X: ${Math.floor(player.x)}, Y: ${Math.floor(player.y)}, Z: ${Math.floor(player.z)}`);
+          }
+        } else {
+          // Create new marker
+          const icon = L.divIcon({
+            html: createPlayerMarkerHtml(player),
+            className: '',
+            iconSize: [60, 60],
+            iconAnchor: [30, 30]
+          });
+          
+          const marker = L.marker(latLng, { icon, interactive: true })
+            .bindPopup(`<b>${player.name}</b><br>X: ${Math.floor(player.x)}, Y: ${Math.floor(player.y)}, Z: ${Math.floor(player.z)}`);
+          
+          if (playersVisible) {
+            marker.addTo(map);
+          }
+          
+          playerMarkers.set(player.name, marker);
+        }
+      });
+      
+      // Remove markers for players no longer in this dimension or offline
+      for (const [name, marker] of playerMarkers) {
+        if (!seenPlayers.has(name)) {
+          map.removeLayer(marker);
+          playerMarkers.delete(name);
+        }
+      }
+    }
+    
+    /**
+     * Update the player list in the sidebar
+     */
+    function updatePlayerList(players) {
+      const currentDimension = document.getElementById('tile-dim').value;
+      const listEl = document.getElementById('player-list');
+      const countEl = document.getElementById('player-count');
+      
+      const dimensionPlayers = players.filter(p => p.dimension === currentDimension);
+      const totalPlayers = players.length;
+      
+      countEl.textContent = `${dimensionPlayers.length} in dimension (${totalPlayers} total)`;
+      
+      listEl.innerHTML = dimensionPlayers.map(player => {
+        const headUrl = getPlayerHeadUrl(player.playfabId);
+        return `
+          <div class="player-list-item" onclick="panToPlayer('${player.name}')">
+            <img src="${headUrl}" alt="${player.name}" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect fill="#8B4513" width="24" height="24"/><rect fill="#F5DEB3" x="6" y="6" width="12" height="12"/></svg>')}'">
+            <div class="player-info">
+              <div>${player.name}</div>
+              <div class="player-coords">X: ${Math.floor(player.x)}, Z: ${Math.floor(player.z)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    /**
+     * Pan the map to a specific player
+     */
+    function panToPlayer(name) {
+      const player = currentPlayers.find(p => p.name === name);
+      if (player) {
+        const latLng = minecraftToLeaflet(player.x, player.z);
+        map.setView(latLng, Math.max(map.getZoom(), 4)); // Zoom in a bit when panning to player
+      }
+    }
+    
+    /**
+     * Fetch players from the API
+     */
+    async function fetchPlayers() {
+      try {
+        const response = await fetch(`${API_BASE}/players`);
+        if (!response.ok) throw new Error('Failed to fetch players');
+        
+        const data = await response.json();
+        if (data.success && data.data && data.data.players) {
+          currentPlayers = data.data.players;
+          updatePlayerMarkers(currentPlayers);
+          updatePlayerList(currentPlayers);
+        }
+      } catch (error) {
+        console.error('Error fetching players:', error);
+      }
+    }
+    
+    /**
+     * Toggle player visibility
+     */
+    function setPlayersVisible(visible) {
+      playersVisible = visible;
+      for (const marker of playerMarkers.values()) {
+        if (visible) {
+          marker.addTo(map);
+        } else {
+          map.removeLayer(marker);
+        }
+      }
+    }
+    
+    // Event listeners for player visibility
+    document.getElementById('show-players').addEventListener('change', function() {
+      setPlayersVisible(this.checked);
+    });
+    
+    // Refresh markers when dimension changes
+    document.getElementById('tile-dim').addEventListener('change', () => {
+      // Clear all current markers and refetch
+      for (const marker of playerMarkers.values()) {
+        map.removeLayer(marker);
+      }
+      playerMarkers.clear();
+      updatePlayerMarkers(currentPlayers);
+      updatePlayerList(currentPlayers);
+    });
+    
+    // Initial fetch and start polling
+    fetchPlayers();
+    setInterval(fetchPlayers, PLAYER_REFRESH_INTERVAL);
 
     </script>
 </body>
