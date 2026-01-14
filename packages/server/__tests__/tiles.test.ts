@@ -70,10 +70,10 @@ describe('TileGeneratorService', () => {
     const baseImage = await sharp(basePixelData, {
       raw: { width: 256, height: 256, channels: 4 }
     }).png().toBuffer();
-    
+
     // Add blue pixel at block position (1, 1)
-    // At zoom 0: 64 blocks per 256 pixels = 4 pixels per block
-    // So block (1, 1) renders to pixel (4, 4)
+    // At zoom 0: 256 blocks per 256 pixels = 1 block per pixel (1:1)
+    // So block (1, 1) renders to pixel (1, 1)
     const blocks: ChunkBlock[] = [
       { x: 1, y: 64, z: 1, type: 'minecraft:water' } 
     ];
@@ -87,8 +87,8 @@ describe('TileGeneratorService', () => {
     expect(data[1]).toBe(0);
     expect(data[2]).toBe(0);
     
-    // Check pixel (4, 4) is blue (added) - block (1,1) maps to pixel (4,4) at zoom 0
-    const idx = (4 * 256 + 4) * 4;
+    // Check pixel (1, 1) is blue (added) - block (1,1) maps to pixel (1,1) at zoom 0 (1:1)
+    const idx = (1 * 256 + 1) * 4;
     expect(data[idx]).toBe(63); // Water R
     expect(data[idx + 1]).toBe(118); // Water G
     expect(data[idx + 2]).toBe(228); // Water B

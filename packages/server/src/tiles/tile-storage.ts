@@ -107,6 +107,19 @@ export class TileStorageService {
   }
 
   /**
+   * Clear all tiles from storage
+   * Removes all tile files and recreates the directory structure
+   */
+  clearAllTiles(): void {
+    // Remove entire tiles directory
+    if (fs.existsSync(this.baseDir)) {
+      fs.rmSync(this.baseDir, { recursive: true, force: true });
+    }
+    // Recreate directory structure
+    this.initialize();
+  }
+
+  /**
    * Convert block coordinates to tile coordinates at a specific zoom level
    */
   blockToTile(blockX: number, blockZ: number, zoom: ZoomLevel): { x: number; z: number } {

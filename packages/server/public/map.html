@@ -192,7 +192,7 @@
       <div class="tile-preview-container">
         <label>Single Tile Inspector</label>
         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom (0=High)</label><input type="number" id="preview-z" value="4" min="0" max="7"></div>
+            <div style="flex: 1;"><label style="font-size: 0.8em">Zoom (0=High)</label><input type="number" id="preview-z" value="2" min="0" max="7"></div>
             <div style="flex: 1;"><label style="font-size: 0.8em">X</label><input type="number" id="preview-x" value="0"></div>
             <div style="flex: 1;"><label style="font-size: 0.8em">Y</label><input type="number" id="preview-y" value="0"></div>
         </div>
@@ -221,25 +221,26 @@
   <script>
     const API_BASE = '/api/v1';
     
-    // Server zoom levels: 0 (64 blocks/tile) to 7 (8192 blocks/tile)
+    // Server zoom levels: 0 (256 blocks/tile, 1:1) to 7 (32768 blocks/tile)
     // Leaflet: higher zoom = more zoomed in (bigger tiles visually)
     // So Leaflet zoom 7 = Server zoom 0 (most detail)
     const MAX_ZOOM = 7;
     
     // Blocks per tile at each server zoom level
+    // z0: 1 block = 1 pixel (256 blocks/tile)
     const BLOCKS_PER_TILE = {
-      0: 64,
-      1: 128,
-      2: 256,
-      3: 512,
-      4: 1024,
-      5: 2048,
-      6: 4096,
-      7: 8192,
+      0: 256,
+      1: 512,
+      2: 1024,
+      3: 2048,
+      4: 4096,
+      5: 8192,
+      6: 16384,
+      7: 32768,
     };
     
     // Base server zoom level used for tiles
-    const BASE_SERVER_ZOOM = 4;
+    const BASE_SERVER_ZOOM = 2;
     // Blocks per tile at base server zoom
     const BASE_BLOCKS_PER_TILE = BLOCKS_PER_TILE[BASE_SERVER_ZOOM];
 
