@@ -7,6 +7,7 @@ Fastify-based web server for the Minecraft Map project. Receives world data from
 - **REST API** for receiving Minecraft world data (players, blocks, entities, chunks)
 - **In-memory state management** for real-time player/entity tracking
 - **File-based tile storage** for map tiles
+- **Minecraft-style map shading** - Height-based color shading that replicates the look of vanilla Minecraft maps
 - **Authentication** via shared secret token
 - **CORS support** for cross-origin requests
 
@@ -300,6 +301,18 @@ data/tiles/
 ```
 
 **Path format:** `data/tiles/{dimension}/{zoom}/{x}/{z}.png`
+
+### Height-Based Shading
+
+Map tiles use Minecraft's authentic height-based shading algorithm to create a 3D relief effect. Each block's color is adjusted based on the height difference from the block to its north:
+
+| Height Comparison | Shade Multiplier | Visual Effect |
+|-------------------|------------------|---------------|
+| Higher than north | 255/255 (1.00) | Brightest - highlights rising terrain |
+| Same as north | 220/255 (0.86) | Normal - flat terrain |
+| Lower than north | 180/255 (0.71) | Darker - shadows descending terrain |
+
+This creates the distinctive "dithered" look of Minecraft maps, making hills and valleys clearly visible on the map.
 
 ## Testing
 
