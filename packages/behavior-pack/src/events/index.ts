@@ -6,7 +6,7 @@ import { world, Block, BlockPermutation, Player } from '@minecraft/server';
 import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
-import { sendBlockChanges, sendPlayerPositions, sendChunkData, checkChunkExists } from '../network';
+import { sendBlockChanges, sendPlayerPositions, sendPlayerJoin, sendPlayerLeave, sendChunkData, checkChunkExists } from '../network';
 import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
 
@@ -210,8 +210,30 @@ export function registerPlayerJoinListener(): void {
             pendingPlayfabIds.delete(playerName);
         }
 
-        // Send updated player list after a short delay to let player fully load
-        updatePlayerPositions();
+        // Send player join event to the server
+        try {
+            const location = player.location;
+            const dimension = player.dimension;
+            const playfabId = getPlayfabId(player);
+
+            const playerData = {
+                name: playerName,
+                x: location.x,
+                y: location.y,
+                z: location.z,
+                dimension: toDimension(dimension.id),
+                playfabId,
+            };
+
+            logDebug(`Sending player join: ${playerName}`, playerData);
+            sendPlayerJoin(playerData).catch(error => {
+                logError('Failed to send player join', error);
+            });
+        } catch (error) {
+            logError(`Failed to get player data for join event: ${playerName}`, error);
+            // Fall back to updating all player positions
+            updatePlayerPositions();
+        }
     });
 
     logDebug('Player join listener registered');
@@ -228,8 +250,10 @@ export function registerPlayerLeaveListener(): void {
         // Clean up the pending PlayFab ID mapping (dynamic property persists with the player)
         pendingPlayfabIds.delete(playerName);
 
-        // Send updated player list
-        updatePlayerPositions();
+        // Send player leave event to the server
+        sendPlayerLeave(playerName).catch(error => {
+            logError('Failed to send player leave', error);
+        });
     });
 
     logDebug('Player leave listener registered');

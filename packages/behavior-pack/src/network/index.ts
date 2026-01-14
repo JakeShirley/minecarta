@@ -166,6 +166,24 @@ export async function sendPlayerPositions(players: import('../types').Player[]):
 }
 
 /**
+ * Notify server that a player joined
+ *
+ * @param player - Player data for the joining player
+ */
+export async function sendPlayerJoin(player: import('../types').Player): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/player/join', player);
+}
+
+/**
+ * Notify server that a player left
+ *
+ * @param playerName - Name of the player who left
+ */
+export async function sendPlayerLeave(playerName: string): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/player/leave', { name: playerName });
+}
+
+/**
  * Send entity updates to the server
  *
  * @param entities - Array of entity data to send

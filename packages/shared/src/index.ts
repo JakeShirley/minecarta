@@ -10,6 +10,14 @@ export type {
     TileCoordinates,
     WorldState,
     RGBA,
+    // WebSocket event types
+    WebSocketEventBase,
+    PlayerJoinEvent,
+    PlayerLeaveEvent,
+    PlayerUpdateEvent,
+    TileUpdateEvent,
+    BlockUpdateEvent,
+    WebSocketEvent,
 } from './types/index.js';
 
 // Constants

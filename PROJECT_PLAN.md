@@ -23,8 +23,8 @@ Format: `[STATUS]` where STATUS is one of the values below.
 | -------------- | --------------- | ------------------------------------------ |
 | Shared Package | `[COMPLETED]`   | Types and constants                        |
 | Behavior Pack  | `[IN_PROGRESS]` | Minecraft script module (Phase 1 complete) |
-| Web Server     | `[IN_PROGRESS]` | Fastify + API (Phase 1 complete)           |
-| Web Client     | `[NOT_STARTED]` | Leaflet.js map UI                          |
+| Web Server     | `[IN_PROGRESS]` | Fastify + API + WebSocket (Phase 2 complete) |
+| Web Client     | `[IN_PROGRESS]` | Leaflet.js map UI with real-time updates   |
 | CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions                             |
 | Documentation  | `[NOT_STARTED]` | API docs, deployment guide                 |
 
@@ -381,18 +381,18 @@ WS   /ws                           - WebSocket for real-time updates
 - [x] Set up tile serving endpoint
 - [x] Update testing webpage to view tiles (both a map control and fetching specific tiles)
 
-#### Phase 3: Web Client (Week 3) `[NOT_STARTED]`
+#### Phase 3: Web Client (Week 3) `[IN_PROGRESS]`
 
-- [ ] Create Leaflet.js map interface
-- [ ] Implement custom tile layer
-- [ ] Add player markers
-- [ ] Add real-time WebSocket updates
+- [x] Create Leaflet.js map interface
+- [x] Implement custom tile layer
+- [x] Add player markers
+- [x] Add real-time WebSocket updates
 
 #### Phase 4: Polish & Features (Week 4) `[NOT_STARTED]`
 
-- [ ] Layer controls (terrain, players, structures)
+- [x] Layer controls (terrain, players, structures)
 - [ ] Search functionality
-- [ ] Coordinate display
+- [x] Coordinate display
 - [ ] Mobile responsiveness
 
 ### Data Storage

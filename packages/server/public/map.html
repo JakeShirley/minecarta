@@ -83,6 +83,18 @@
                 image-rendering: crisp-edges;
             }
 
+            /* Disable Leaflet's default tile fade animation to prevent flashing */
+            .leaflet-tile-container {
+                opacity: 1 !important;
+            }
+            .leaflet-tile {
+                opacity: 1 !important;
+                transition: none !important;
+            }
+            .leaflet-fade-anim .leaflet-tile {
+                transition: none !important;
+            }
+
             /* Coordinate display */
             .coord-display {
                 position: absolute;
@@ -620,22 +632,88 @@
 
                 const dim = document.getElementById('tile-dim').value;
 
+                // Custom TileLayer with refresh support that doesn't cause flicker
+                // Based on: https://github.com/Leaflet/Leaflet/issues/6659
                 L.TileLayer.Minecraft = L.TileLayer.extend({
                     options: {
                         minZoom: 0,
                         maxZoom: MAX_ZOOM,
-                        minNativeZoom: 3, // Native tiles available at Leaflet zoom 3
-                        maxNativeZoom: 3, // Server zoom 4
+                        minNativeZoom: 3,
+                        maxNativeZoom: 3,
                         tileSize: 256,
                         noWrap: true,
                     },
-                    getTileUrl: function (coords) {
-                        // Always use server zoom 4 tiles, Leaflet will scale them
-                        return `${API_BASE}/tiles/${dim}/${BASE_SERVER_ZOOM}/${coords.x}/${coords.y}.png?t=${Date.now()}`;
+
+                    initialize: function(options) {
+                        L.TileLayer.prototype.initialize.call(this, '', options);
+                        this._currentDim = dim;
+                        
+                        // Store reference to original _tileOnLoad
+                        const originalTileOnLoad = this._tileOnLoad;
+                        
+                        // Override _tileOnLoad to skip animation for refreshed tiles
+                        this._tileOnLoad = function(done, tile) {
+                            if (tile.hasAttribute('data-dynamic-refresh')) {
+                                // This is a refreshed tile - skip animation, just mark as loaded
+                                tile.removeAttribute('data-dynamic-refresh');
+                                L.DomUtil.addClass(tile, 'leaflet-tile-loaded');
+                                done(null, tile);
+                            } else {
+                                // Normal tile load - use original behavior
+                                originalTileOnLoad.call(this, done, tile);
+                            }
+                        };
                     },
+
+                    getTileUrl: function (coords) {
+                        return `${API_BASE}/tiles/${this._currentDim}/${BASE_SERVER_ZOOM}/${coords.x}/${coords.y}.png`;
+                    },
+
                     getAttribution: function () {
                         return 'Minecraft Map';
                     },
+
+                    // Refresh specific tiles without flicker
+                    refresh: function (tileCoords) {
+                        const layer = this;
+                        const tilesToRefresh = new Set(tileCoords.map(t => `${t.x}:${t.z}`));
+                        
+                        // Temporarily disable map fade animation
+                        const wasFadeAnimated = map._fadeAnimated;
+                        map._fadeAnimated = false;
+                        
+                        // Loop through internal _tiles object
+                        for (const key in this._tiles) {
+                            const tile = this._tiles[key];
+                            if (!tile || !tile.el) continue;
+                            
+                            const coords = tile.coords;
+                            const tileKey = `${coords.x}:${coords.y}`;
+                            
+                            if (tilesToRefresh.has(tileKey)) {
+                                const newUrl = this.getTileUrl(coords) + '?v=' + Date.now();
+                                
+                                // Preload the new image
+                                const preloadImg = new Image();
+                                preloadImg.onload = (function(tileEl, url) {
+                                    return function() {
+                                        // Mark tile for dynamic refresh (skip animation)
+                                        tileEl.setAttribute('data-dynamic-refresh', 'true');
+                                        // Swap the src - this will trigger _tileOnLoad
+                                        tileEl.src = url;
+                                    };
+                                })(tile.el, newUrl);
+                                
+                                preloadImg.src = newUrl;
+                            }
+                        }
+                        
+                        // Re-enable fade animation after a short delay
+                        setTimeout(function() {
+                            map._fadeAnimated = wasFadeAnimated;
+                        }, 1000);
+                    },
+
                     // Ensure 404s don't look broken
                     errorTileUrl:
                         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
@@ -670,6 +748,9 @@
 
             // Initial Load
             updateMapLayer();
+            loadTile();
+            gridOverlay = new CoordGridOverlay(map); // Create grid overlay
+            updateZoomDisplay(); // Initial zoom display
             loadTile();
             gridOverlay = new CoordGridOverlay(map); // Create grid overlay
             updateZoomDisplay(); // Initial zoom display
@@ -864,9 +945,217 @@
                 updatePlayerList(currentPlayers);
             });
 
-            // Initial fetch and start polling
+            // ==========================================
+            // WebSocket for Real-time Updates
+            // ==========================================
+
+            let ws = null;
+            let wsReconnectTimer = null;
+            let wsConnected = false;
+            const WS_RECONNECT_DELAY = 3000;
+
+            /**
+             * Create WebSocket URL based on current page location
+             */
+            function getWebSocketUrl() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return `${protocol}//${window.location.host}/ws`;
+            }
+
+            /**
+             * Connect to WebSocket server
+             */
+            function connectWebSocket() {
+                if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+                    return; // Already connected or connecting
+                }
+
+                const url = getWebSocketUrl();
+                console.log('[WebSocket] Connecting to', url);
+
+                try {
+                    ws = new WebSocket(url);
+
+                    ws.onopen = () => {
+                        console.log('[WebSocket] Connected');
+                        wsConnected = true;
+                        updateConnectionStatus(true);
+
+                        // Clear any reconnect timer
+                        if (wsReconnectTimer) {
+                            clearTimeout(wsReconnectTimer);
+                            wsReconnectTimer = null;
+                        }
+                    };
+
+                    ws.onclose = () => {
+                        console.log('[WebSocket] Disconnected');
+                        wsConnected = false;
+                        updateConnectionStatus(false);
+
+                        // Schedule reconnect
+                        if (!wsReconnectTimer) {
+                            wsReconnectTimer = setTimeout(() => {
+                                wsReconnectTimer = null;
+                                connectWebSocket();
+                            }, WS_RECONNECT_DELAY);
+                        }
+                    };
+
+                    ws.onerror = error => {
+                        console.error('[WebSocket] Error:', error);
+                    };
+
+                    ws.onmessage = event => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            handleWebSocketEvent(data);
+                        } catch (error) {
+                            console.error('[WebSocket] Failed to parse message:', error);
+                        }
+                    };
+                } catch (error) {
+                    console.error('[WebSocket] Failed to create connection:', error);
+                }
+            }
+
+            /**
+             * Handle incoming WebSocket events
+             */
+            function handleWebSocketEvent(event) {
+                const { type } = event;
+
+                switch (type) {
+                    case 'connection:established':
+                        console.log('[WebSocket] Connection established:', event.message);
+                        break;
+
+                    case 'player:update':
+                        // Update player positions
+                        if (event.players && Array.isArray(event.players)) {
+                            // Merge with existing players
+                            for (const player of event.players) {
+                                const index = currentPlayers.findIndex(p => p.name === player.name);
+                                if (index >= 0) {
+                                    currentPlayers[index] = player;
+                                } else {
+                                    currentPlayers.push(player);
+                                }
+                            }
+                            updatePlayerMarkers(currentPlayers);
+                            updatePlayerList(currentPlayers);
+                        }
+                        break;
+
+                    case 'player:join':
+                        // Add new player
+                        if (event.player) {
+                            const existingIndex = currentPlayers.findIndex(p => p.name === event.player.name);
+                            if (existingIndex >= 0) {
+                                currentPlayers[existingIndex] = event.player;
+                            } else {
+                                currentPlayers.push(event.player);
+                            }
+                            updatePlayerMarkers(currentPlayers);
+                            updatePlayerList(currentPlayers);
+                            console.log('[WebSocket] Player joined:', event.player.name);
+                        }
+                        break;
+
+                    case 'player:leave':
+                        // Remove player
+                        if (event.playerName) {
+                            currentPlayers = currentPlayers.filter(p => p.name !== event.playerName);
+                            // Remove marker
+                            const marker = playerMarkers.get(event.playerName);
+                            if (marker) {
+                                map.removeLayer(marker);
+                                playerMarkers.delete(event.playerName);
+                            }
+                            updatePlayerList(currentPlayers);
+                            console.log('[WebSocket] Player left:', event.playerName);
+                        }
+                        break;
+
+                    case 'tile:update':
+                        // Refresh affected tiles
+                        if (event.tiles && Array.isArray(event.tiles)) {
+                            handleTileUpdates(event.tiles);
+                        }
+                        break;
+
+                    default:
+                        console.log('[WebSocket] Unknown event type:', type);
+                }
+            }
+
+            /**
+             * Handle tile update events - refresh only the specific tiles that changed
+             */
+            function handleTileUpdates(tiles) {
+                const currentDimension = document.getElementById('tile-dim').value;
+
+                // Filter to tiles in current dimension and at our display zoom level
+                const relevantTiles = tiles.filter(
+                    tile => tile.dimension === currentDimension && tile.zoom === BASE_SERVER_ZOOM
+                );
+
+                if (relevantTiles.length === 0) {
+                    return;
+                }
+
+                // Refresh only the specific tiles that were updated
+                if (tileLayer && tileLayer.refresh) {
+                    tileLayer.refresh(relevantTiles);
+                }
+            }
+
+            /**
+             * Update the connection status indicator
+             */
+            function updateConnectionStatus(connected) {
+                let statusEl = document.getElementById('ws-status');
+                if (!statusEl) {
+                    // Create status indicator if it doesn't exist
+                    statusEl = document.createElement('div');
+                    statusEl.id = 'ws-status';
+                    statusEl.style.cssText = `
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        padding: 6px 12px;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        z-index: 1000;
+                        pointer-events: none;
+                    `;
+                    document.querySelector('.map-container').appendChild(statusEl);
+                }
+
+                if (connected) {
+                    statusEl.style.background = 'rgba(46, 204, 113, 0.9)';
+                    statusEl.style.color = '#fff';
+                    statusEl.textContent = '● Live';
+                } else {
+                    statusEl.style.background = 'rgba(231, 76, 60, 0.9)';
+                    statusEl.style.color = '#fff';
+                    statusEl.textContent = '○ Reconnecting...';
+                }
+            }
+
+            // Initial fetch (before WebSocket connects)
             fetchPlayers();
-            setInterval(fetchPlayers, PLAYER_REFRESH_INTERVAL);
+
+            // Connect to WebSocket
+            connectWebSocket();
+
+            // Fallback polling - only if WebSocket is not connected
+            // Reduced frequency since WebSocket handles real-time updates
+            setInterval(() => {
+                if (!wsConnected) {
+                    fetchPlayers();
+                }
+            }, PLAYER_REFRESH_INTERVAL * 2);
         </script>
     </body>
 </html>

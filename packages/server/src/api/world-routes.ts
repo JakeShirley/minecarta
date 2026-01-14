@@ -1,15 +1,22 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { getPlayerStateService, getEntityStateService, getTileUpdateService } from '../services/index.js';
+import {
+    getPlayerStateService,
+    getEntityStateService,
+    getTileUpdateService,
+    getWebSocketService,
+} from '../services/index.js';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { registerAuth } from './auth.js';
 import {
     playersBatchUpdateSchema,
+    playerJoinSchema,
+    playerLeaveSchema,
     blocksBatchUpdateSchema,
     entitiesBatchUpdateSchema,
     chunksBatchUpdateSchema,
     chunkExistsQuerySchema,
 } from './schemas.js';
-import type { Dimension, ZoomLevel } from '@minecraft-map/shared';
+import type { Dimension, ZoomLevel, Player } from '@minecraft-map/shared';
 
 /**
  * Register world data ingestion routes
@@ -36,9 +43,17 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
 
         const { players } = parseResult.data;
         const playerService = getPlayerStateService();
+        const wsService = getWebSocketService();
 
+        const updatedPlayers: Player[] = [];
         for (const player of players) {
-            playerService.updatePlayer(player);
+            const updatedPlayer = playerService.updatePlayer(player);
+            updatedPlayers.push(updatedPlayer);
+        }
+
+        // Emit player update event to WebSocket clients
+        if (updatedPlayers.length > 0) {
+            wsService.emitPlayerUpdate(updatedPlayers);
         }
 
         request.log.info({ count: players.length }, 'Updated player positions');
@@ -46,6 +61,68 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({
             success: true,
             data: { updated: players.length },
+        });
+    });
+
+    /**
+     * POST /world/player/join - Notify when a player joins
+     */
+    app.post('/world/player/join', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = playerJoinSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const playerData = parseResult.data;
+        const playerService = getPlayerStateService();
+        const wsService = getWebSocketService();
+
+        const player = playerService.updatePlayer(playerData);
+
+        // Emit player join event to WebSocket clients
+        wsService.emitPlayerJoin(player);
+
+        request.log.info({ player: player.name }, 'Player joined');
+
+        return reply.send({
+            success: true,
+            data: { player: player.name },
+        });
+    });
+
+    /**
+     * POST /world/player/leave - Notify when a player leaves
+     */
+    app.post('/world/player/leave', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = playerLeaveSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const { name } = parseResult.data;
+        const playerService = getPlayerStateService();
+        const wsService = getWebSocketService();
+
+        const removed = playerService.removePlayer(name);
+
+        // Emit player leave event to WebSocket clients
+        wsService.emitPlayerLeave(name);
+
+        request.log.info({ player: name, removed }, 'Player left');
+
+        return reply.send({
+            success: true,
+            data: { player: name, removed },
         });
     });
 

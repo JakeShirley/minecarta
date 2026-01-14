@@ -24,6 +24,29 @@ export const playersBatchUpdateSchema = z.object({
 export type PlayersBatchUpdateRequest = z.infer<typeof playersBatchUpdateSchema>;
 
 /**
+ * Player join notification schema
+ */
+export const playerJoinSchema = z.object({
+    name: z.string().min(1).max(32),
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+    playfabId: z.string().optional(),
+});
+
+export type PlayerJoinRequest = z.infer<typeof playerJoinSchema>;
+
+/**
+ * Player leave notification schema
+ */
+export const playerLeaveSchema = z.object({
+    name: z.string().min(1).max(32),
+});
+
+export type PlayerLeaveRequest = z.infer<typeof playerLeaveSchema>;
+
+/**
  * Block change request schema
  */
 export const blockChangeSchema = z.object({

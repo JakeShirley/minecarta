@@ -1,10 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import fastifyWebsocket from '@fastify/websocket';
 import type { FastifyInstance } from 'fastify';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { registerRoutes } from './api/index.js';
+import { registerWebSocketRoutes } from './api/websocket-routes.js';
 import { setConfig } from './config/index.js';
 import type { ServerConfig } from './types/index.js';
 
@@ -50,6 +52,12 @@ export async function createApp(config: ServerConfig): Promise<FastifyInstance> 
             res.setHeader('Expires', '0');
         },
     });
+
+    // Register WebSocket plugin
+    await app.register(fastifyWebsocket);
+
+    // Register WebSocket routes
+    await registerWebSocketRoutes(app);
 
     // Register all routes
     await registerRoutes(app);

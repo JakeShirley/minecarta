@@ -1,7 +1,8 @@
-import type { ChunkData, ChunkBlock, BlockChange, Dimension, ZoomLevel } from '@minecraft-map/shared';
+import type { ChunkData, ChunkBlock, BlockChange, Dimension, ZoomLevel, TileCoordinates } from '@minecraft-map/shared';
 import { ZOOM_LEVELS } from '@minecraft-map/shared';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { getTileGeneratorService } from '../tiles/tile-generator.js';
+import { getWebSocketService } from './websocket.js';
 
 /**
  * Block update data with partial info (block changes only have type, no color)
@@ -126,6 +127,10 @@ export class TileUpdateService {
     private async processTasks(tasks: TileUpdateTask[]): Promise<void> {
         const storage = getTileStorageService();
         const generator = getTileGeneratorService();
+        const wsService = getWebSocketService();
+
+        // Track updated tiles to emit WebSocket events
+        const updatedTiles: TileCoordinates[] = [];
 
         // Process sequentially for now to avoid race conditions on same file
         // (Though map splitting handles most contentions)
@@ -144,6 +149,14 @@ export class TileUpdateService {
 
             // Save tile
             storage.writeTile(dimension, zoom, x, z, newTileBuffer);
+
+            // Track for WebSocket notification
+            updatedTiles.push({ dimension, zoom, x, z });
+        }
+
+        // Emit tile update events to WebSocket clients
+        if (updatedTiles.length > 0) {
+            wsService.emitTileUpdate(updatedTiles);
         }
     }
 }

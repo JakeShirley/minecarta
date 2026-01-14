@@ -129,3 +129,65 @@ export interface ChunkExistsResponse {
     readonly chunkX: number;
     readonly chunkZ: number;
 }
+
+// ==========================================
+// WebSocket Event Types
+// ==========================================
+
+/**
+ * Base WebSocket event structure
+ */
+export interface WebSocketEventBase {
+    readonly type: string;
+    readonly timestamp: number;
+}
+
+/**
+ * Player join event
+ */
+export interface PlayerJoinEvent extends WebSocketEventBase {
+    readonly type: 'player:join';
+    readonly player: Player;
+}
+
+/**
+ * Player leave event
+ */
+export interface PlayerLeaveEvent extends WebSocketEventBase {
+    readonly type: 'player:leave';
+    readonly playerName: string;
+}
+
+/**
+ * Player position update event
+ */
+export interface PlayerUpdateEvent extends WebSocketEventBase {
+    readonly type: 'player:update';
+    readonly players: Player[];
+}
+
+/**
+ * Tile update event - sent when a map tile has been regenerated
+ */
+export interface TileUpdateEvent extends WebSocketEventBase {
+    readonly type: 'tile:update';
+    readonly tiles: TileCoordinates[];
+}
+
+/**
+ * Block update event - sent when blocks change
+ */
+export interface BlockUpdateEvent extends WebSocketEventBase {
+    readonly type: 'block:update';
+    readonly blocks: BlockChange[];
+}
+
+/**
+ * Union of all WebSocket event types
+ */
+export type WebSocketEvent =
+    | PlayerJoinEvent
+    | PlayerLeaveEvent
+    | PlayerUpdateEvent
+    | TileUpdateEvent
+    | BlockUpdateEvent;
