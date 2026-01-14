@@ -145,26 +145,23 @@ function scanChunk(
       const worldX = startX + dx;
       const worldZ = startZ + dz;
 
-      // Find the top non-air block by scanning from the top down
-      // Start from max height and work down
-      for (let y = 320; y >= -64; y--) {
-        try {
-          const block = dimension.getBlock({ x: worldX, y, z: worldZ });
-          if (block && block.typeId && block.typeId !== 'minecraft:air') {
-            const mapColor = block.getComponent(BlockMapColorComponent.componentId);
-            blocks.push({
-              x: worldX,
-              y,
-              z: worldZ,
-              type: block.typeId,
-              mapColor: mapColor ? mapColor.color : { red: 0, green: 0, blue: 0, alpha: 0 }
-            });
-            break; // Found the top block, move to next column
-          }
-        } catch {
-          // Block might be in unloaded chunk, skip
-          continue;
+      try {
+        // Use getTopmostBlock to efficiently find the highest non-air block
+        const block = dimension.getTopmostBlock({ x: worldX, z: worldZ });
+        if (block && block.typeId) {
+          const mapColor = block.getComponent(BlockMapColorComponent.componentId);
+          blocks.push({
+            x: worldX,
+            y: block.location.y,
+            z: worldZ,
+            type: block.typeId,
+            mapColor: mapColor ? mapColor.color : { red: 0, green: 0, blue: 0, alpha: 0 },
+          });
         }
+      } catch {
+        // Block might be in unloaded chunk, skip
+        console.log(`[MapSync Events] Failed to get block at (${worldX}, ?, ${worldZ}) in dimension ${dimension.id}`);
+        continue;
       }
     }
   }
