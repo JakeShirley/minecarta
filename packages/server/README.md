@@ -34,13 +34,13 @@ pnpm test
 
 The server is configured via environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | Server port |
-| `HOST` | `0.0.0.0` | Server host |
-| `AUTH_TOKEN` | `dev-token` | Authentication token for protected endpoints |
-| `DATA_DIR` | `./data` | Directory for tile storage |
-| `LOG_LEVEL` | `info` | Log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace` |
+| Variable     | Default     | Description                                                   |
+| ------------ | ----------- | ------------------------------------------------------------- |
+| `PORT`       | `3000`      | Server port                                                   |
+| `HOST`       | `0.0.0.0`   | Server host                                                   |
+| `AUTH_TOKEN` | `dev-token` | Authentication token for protected endpoints                  |
+| `DATA_DIR`   | `./data`    | Directory for tile storage                                    |
+| `LOG_LEVEL`  | `info`      | Log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace` |
 
 ## API Endpoints
 
@@ -53,11 +53,12 @@ GET /health
 Returns server health status. No authentication required.
 
 **Response:**
+
 ```json
 {
-  "status": "ok",
-  "uptime": 12345,
-  "timestamp": 1704067200000
+    "status": "ok",
+    "uptime": 12345,
+    "timestamp": 1704067200000
 }
 ```
 
@@ -74,17 +75,18 @@ POST /api/v1/world/players
 Receive player position updates from Minecraft.
 
 **Request:**
+
 ```json
 {
-  "players": [
-    {
-      "name": "Steve",
-      "x": 100,
-      "y": 64,
-      "z": 200,
-      "dimension": "overworld"
-    }
-  ]
+    "players": [
+        {
+            "name": "Steve",
+            "x": 100,
+            "y": 64,
+            "z": 200,
+            "dimension": "overworld"
+        }
+    ]
 }
 ```
 
@@ -97,19 +99,20 @@ POST /api/v1/world/blocks
 Receive block change events from Minecraft.
 
 **Request:**
+
 ```json
 {
-  "blocks": [
-    {
-      "dimension": "overworld",
-      "x": 100,
-      "y": 64,
-      "z": 200,
-      "blockType": "minecraft:stone",
-      "previousType": "minecraft:air",
-      "player": "Steve"
-    }
-  ]
+    "blocks": [
+        {
+            "dimension": "overworld",
+            "x": 100,
+            "y": 64,
+            "z": 200,
+            "blockType": "minecraft:stone",
+            "previousType": "minecraft:air",
+            "player": "Steve"
+        }
+    ]
 }
 ```
 
@@ -122,18 +125,19 @@ POST /api/v1/world/entities
 Receive entity updates from Minecraft.
 
 **Request:**
+
 ```json
 {
-  "entities": [
-    {
-      "id": "entity-123",
-      "type": "minecraft:zombie",
-      "x": 100,
-      "y": 64,
-      "z": 200,
-      "dimension": "overworld"
-    }
-  ]
+    "entities": [
+        {
+            "id": "entity-123",
+            "type": "minecraft:zombie",
+            "x": 100,
+            "y": 64,
+            "z": 200,
+            "dimension": "overworld"
+        }
+    ]
 }
 ```
 
@@ -146,18 +150,17 @@ POST /api/v1/world/chunks
 Receive chunk data for map generation.
 
 **Request:**
+
 ```json
 {
-  "chunks": [
-    {
-      "dimension": "overworld",
-      "chunkX": 6,
-      "chunkZ": 12,
-      "blocks": [
-        { "x": 100, "y": 64, "z": 200, "type": "minecraft:grass_block" }
-      ]
-    }
-  ]
+    "chunks": [
+        {
+            "dimension": "overworld",
+            "chunkX": 6,
+            "chunkZ": 12,
+            "blocks": [{ "x": 100, "y": 64, "z": 200, "type": "minecraft:grass_block" }]
+        }
+    ]
 }
 ```
 
@@ -170,6 +173,7 @@ GET /api/v1/world/state
 Get current world state snapshot.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -197,15 +201,16 @@ Check if a chunk tile exists at the lowest zoom level (z0). Used by the behavior
 | `chunkZ` | integer | Chunk Z coordinate |
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "exists": false,
-    "dimension": "overworld",
-    "chunkX": 6,
-    "chunkZ": 12
-  }
+    "success": true,
+    "data": {
+        "exists": false,
+        "dimension": "overworld",
+        "chunkX": 6,
+        "chunkZ": 12
+    }
 }
 ```
 
@@ -221,22 +226,23 @@ GET /api/v1/players?dimension=overworld
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "players": [
-      {
-        "name": "Steve",
-        "x": 100,
-        "y": 64,
-        "z": 200,
-        "dimension": "overworld",
-        "lastSeen": 1704067200000
-      }
-    ],
-    "count": 1
-  }
+    "success": true,
+    "data": {
+        "players": [
+            {
+                "name": "Steve",
+                "x": 100,
+                "y": 64,
+                "z": 200,
+                "dimension": "overworld",
+                "lastSeen": 1704067200000
+            }
+        ],
+        "count": 1
+    }
 }
 ```
 
@@ -247,17 +253,18 @@ GET /api/v1/players/:name
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "name": "Steve",
-    "x": 100,
-    "y": 64,
-    "z": 200,
-    "dimension": "overworld",
-    "lastSeen": 1704067200000
-  }
+    "success": true,
+    "data": {
+        "name": "Steve",
+        "x": 100,
+        "y": 64,
+        "z": 200,
+        "dimension": "overworld",
+        "lastSeen": 1704067200000
+    }
 }
 ```
 
@@ -270,6 +277,7 @@ GET /api/v1/tiles/:dimension/:zoom/:x/:z.png
 Get a map tile image.
 
 **Parameters:**
+
 - `dimension`: `overworld`, `nether`, or `the_end`
 - `zoom`: `0`, `1`, `2`, or `3`
 - `x`: Tile X coordinate
@@ -334,11 +342,11 @@ data/tiles/
 
 Map tiles use Minecraft's authentic height-based shading algorithm to create a 3D relief effect. Each block's color is adjusted based on the height difference from the block to its north:
 
-| Height Comparison | Shade Multiplier | Visual Effect |
-|-------------------|------------------|---------------|
-| Higher than north | 255/255 (1.00) | Brightest - highlights rising terrain |
-| Same as north | 220/255 (0.86) | Normal - flat terrain |
-| Lower than north | 180/255 (0.71) | Darker - shadows descending terrain |
+| Height Comparison | Shade Multiplier | Visual Effect                         |
+| ----------------- | ---------------- | ------------------------------------- |
+| Higher than north | 255/255 (1.00)   | Brightest - highlights rising terrain |
+| Same as north     | 220/255 (0.86)   | Normal - flat terrain                 |
+| Lower than north  | 180/255 (0.71)   | Darker - shadows descending terrain   |
 
 This creates the distinctive "dithered" look of Minecraft maps, making hills and valleys clearly visible on the map.
 
@@ -346,13 +354,13 @@ This creates the distinctive "dithered" look of Minecraft maps, making hills and
 
 Water blocks use a special depth-based checkerboard shading pattern that conveys water depth. Minecraft uses 5 distinct levels:
 
-| Depth (blocks) | Shading | Visual Effect |
-|----------------|---------|---------------|
-| 1-2 | Brightest (255/255) | Shallow water |
-| 3-4 | Checkerboard (bright/normal) | Transitional |
-| 5-7 | Normal (220/255) | Medium depth |
-| 8-11 | Checkerboard (normal/dark) | Transitional |
-| 12+ | Darkest (180/255) | Deep water |
+| Depth (blocks) | Shading                      | Visual Effect |
+| -------------- | ---------------------------- | ------------- |
+| 1-2            | Brightest (255/255)          | Shallow water |
+| 3-4            | Checkerboard (bright/normal) | Transitional  |
+| 5-7            | Normal (220/255)             | Medium depth  |
+| 8-11           | Checkerboard (normal/dark)   | Transitional  |
+| 12+            | Darkest (180/255)            | Deep water    |
 
 The checkerboard pattern alternates between two shades based on `(x + z) % 2`, creating the distinctive dithered water appearance seen on vanilla Minecraft maps.
 
@@ -388,22 +396,22 @@ curl -X POST http://localhost:3000/api/v1/world/players \
 
 ```typescript
 const response = await fetch('http://localhost:3000/api/v1/world/players', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-mc-auth-token': 'your-secret-token',
-  },
-  body: JSON.stringify({
-    players: [
-      {
-        name: 'Steve',
-        x: 100,
-        y: 64,
-        z: 200,
-        dimension: 'overworld',
-      },
-    ],
-  }),
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'x-mc-auth-token': 'your-secret-token',
+    },
+    body: JSON.stringify({
+        players: [
+            {
+                name: 'Steve',
+                x: 100,
+                y: 64,
+                z: 200,
+                dimension: 'overworld',
+            },
+        ],
+    }),
 });
 ```
 

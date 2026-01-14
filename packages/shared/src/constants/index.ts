@@ -41,14 +41,14 @@ export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
  * - z7: 128x128 chunks = 1 tile, 2048 blocks per tile (8 blocks per pixel)
  */
 export const BLOCKS_PER_TILE: Record<ZoomLevel, number> = {
-  0: 16,
-  1: 32,
-  2: 64,
-  3: 128,
-  4: 256,
-  5: 512,
-  6: 1024,
-  7: 2048,
+    0: 16,
+    1: 32,
+    2: 64,
+    3: 128,
+    4: 256,
+    5: 512,
+    6: 1024,
+    7: 2048,
 };
 
 /**
@@ -65,9 +65,9 @@ export const AUTH_HEADER = 'x-mc-auth-token';
  * WebSocket events
  */
 export const WS_EVENTS = {
-  PLAYER_UPDATE: 'player:update',
-  PLAYER_JOIN: 'player:join',
-  PLAYER_LEAVE: 'player:leave',
-  BLOCK_UPDATE: 'block:update',
-  TILE_UPDATE: 'tile:update',
+    PLAYER_UPDATE: 'player:update',
+    PLAYER_JOIN: 'player:join',
+    PLAYER_LEAVE: 'player:leave',
+    BLOCK_UPDATE: 'block:update',
+    TILE_UPDATE: 'tile:update',
 } as const;

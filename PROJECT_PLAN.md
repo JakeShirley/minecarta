@@ -4,35 +4,36 @@
 
 ## Completion Status Tracking
 
-<!-- 
+<!--
 COPILOT STATUS TRACKING
 Use these status markers to track completion. Update status as work progresses.
 Format: `[STATUS]` where STATUS is one of the values below.
 -->
 
-| Status | Marker | Description |
-|--------|--------|-------------|
-| Not Started | `[NOT_STARTED]` | Work has not begun |
-| In Progress | `[IN_PROGRESS]` | Currently being worked on |
-| Completed | `[COMPLETED]` | Fully implemented and tested |
-| Blocked | `[BLOCKED]` | Cannot proceed due to dependency/issue |
+| Status      | Marker          | Description                            |
+| ----------- | --------------- | -------------------------------------- |
+| Not Started | `[NOT_STARTED]` | Work has not begun                     |
+| In Progress | `[IN_PROGRESS]` | Currently being worked on              |
+| Completed   | `[COMPLETED]`   | Fully implemented and tested           |
+| Blocked     | `[BLOCKED]`     | Cannot proceed due to dependency/issue |
 
 ### Overall Project Status
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Shared Package | `[COMPLETED]` | Types and constants |
-| Behavior Pack | `[IN_PROGRESS]` | Minecraft script module (Phase 1 complete) |
-| Web Server | `[IN_PROGRESS]` | Fastify + API (Phase 1 complete) |
-| Web Client | `[NOT_STARTED]` | Leaflet.js map UI |
-| CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions |
-| Documentation | `[NOT_STARTED]` | API docs, deployment guide |
+| Component      | Status          | Notes                                      |
+| -------------- | --------------- | ------------------------------------------ |
+| Shared Package | `[COMPLETED]`   | Types and constants                        |
+| Behavior Pack  | `[IN_PROGRESS]` | Minecraft script module (Phase 1 complete) |
+| Web Server     | `[IN_PROGRESS]` | Fastify + API (Phase 1 complete)           |
+| Web Client     | `[NOT_STARTED]` | Leaflet.js map UI                          |
+| CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions                             |
+| Documentation  | `[NOT_STARTED]` | API docs, deployment guide                 |
 
 ---
 
 ## Overview
 
 This project consists of two major components:
+
 1. **Minecraft Behavior Pack** - TypeScript-based behavior pack that monitors world state and sends data to an external server
 2. **Map Web Server** - TypeScript web server that receives world data and serves a Google Maps-like visualization
 
@@ -152,70 +153,71 @@ map/
 
 ### Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Language | TypeScript | Type-safe development |
-| Runtime | Minecraft Script API | `@minecraft/server` v1.16+ |
-| HTTP Client | `@minecraft/server-net` | External HTTP requests |
-| Build Tool | esbuild | Fast bundling for Minecraft |
-| Testing | Vitest | Unit testing with mocks |
+| Component   | Technology              | Purpose                     |
+| ----------- | ----------------------- | --------------------------- |
+| Language    | TypeScript              | Type-safe development       |
+| Runtime     | Minecraft Script API    | `@minecraft/server` v1.16+  |
+| HTTP Client | `@minecraft/server-net` | External HTTP requests      |
+| Build Tool  | esbuild                 | Fast bundling for Minecraft |
+| Testing     | Vitest                  | Unit testing with mocks     |
 
 ### Key Minecraft APIs
 
 ```typescript
 // Core APIs needed
-import { world, system, Player, Block, Dimension } from "@minecraft/server";
-import { http, HttpRequest, HttpRequestMethod } from "@minecraft/server-net";
+import { world, system, Player, Block, Dimension } from '@minecraft/server';
+import { http, HttpRequest, HttpRequestMethod } from '@minecraft/server-net';
 ```
 
 ### manifest.json Structure
 
 ```json
 {
-  "format_version": 2,
-  "header": {
-    "name": "World Map Sync",
-    "description": "Syncs world state to external map server",
-    "uuid": "<generate-uuid>",
-    "version": [1, 0, 0],
-    "min_engine_version": [1, 21, 0]
-  },
-  "modules": [
-    {
-      "type": "script",
-      "language": "javascript",
-      "uuid": "<generate-uuid>",
-      "entry": "scripts/index.js",
-      "version": [1, 0, 0]
-    }
-  ],
-  "dependencies": [
-    {
-      "module_name": "@minecraft/server",
-      "version": "1.16.0"
+    "format_version": 2,
+    "header": {
+        "name": "World Map Sync",
+        "description": "Syncs world state to external map server",
+        "uuid": "<generate-uuid>",
+        "version": [1, 0, 0],
+        "min_engine_version": [1, 21, 0]
     },
-    {
-      "module_name": "@minecraft/server-net",
-      "version": "1.0.0-beta"
-    }
-  ],
-  "capabilities": ["script_eval"]
+    "modules": [
+        {
+            "type": "script",
+            "language": "javascript",
+            "uuid": "<generate-uuid>",
+            "entry": "scripts/index.js",
+            "version": [1, 0, 0]
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "1.16.0"
+        },
+        {
+            "module_name": "@minecraft/server-net",
+            "version": "1.0.0-beta"
+        }
+    ],
+    "capabilities": ["script_eval"]
 }
 ```
 
 ### Events to Monitor
 
-| Event | API | Data Captured |
-|-------|-----|---------------|
-| Block Changes | `world.afterEvents.blockPlace` / `blockBreak` | Position, block type, player |
-| Player Movement | `world.afterEvents.playerSpawn` + polling | Player positions |
-| Entity Changes | `world.afterEvents.entitySpawn` / `entityDie` | Entity positions, types |
-| Chunk Loading | Custom polling with `dimension.getBlock()` | Terrain data |
-| Player Join/Leave | `world.afterEvents.playerJoin` / `playerLeave` | Player list |
+| Event             | API                                            | Data Captured                |
+| ----------------- | ---------------------------------------------- | ---------------------------- |
+| Block Changes     | `world.afterEvents.blockPlace` / `blockBreak`  | Position, block type, player |
+| Player Movement   | `world.afterEvents.playerSpawn` + polling      | Player positions             |
+| Entity Changes    | `world.afterEvents.entitySpawn` / `entityDie`  | Entity positions, types      |
+| Chunk Loading     | Custom polling with `dimension.getBlock()`     | Terrain data                 |
+| Player Join/Leave | `world.afterEvents.playerJoin` / `playerLeave` | Player list                  |
 
 ### Implementation Phases
 
 #### Phase 1: Basic Setup & Events (Week 1) `[COMPLETED]`
+
 - [x] Set up behavior pack project structure
 - [x] Configure TypeScript + esbuild build pipeline
 - [x] Implement basic event listeners (block place/break)
@@ -223,12 +225,14 @@ import { http, HttpRequest, HttpRequestMethod } from "@minecraft/server-net";
 - [x] Basic server connectivity test
 
 #### Phase 2: World State Reading (Week 2) `[NOT_STARTED]`
+
 - [ ] Implement chunk scanning service
 - [ ] Player position tracking
 - [ ] Entity tracking
 - [ ] Efficient data batching/throttling
 
 #### Phase 3: Optimization & Reliability (Week 3) `[NOT_STARTED]`
+
 - [ ] Add request queuing and retry logic
 - [ ] Implement delta updates (only send changes)
 - [ ] Add compression for large payloads
@@ -258,37 +262,40 @@ import { http, HttpRequest, HttpRequestMethod } from "@minecraft/server-net";
 ```
 
 #### Unit Tests (Automated)
+
 ```typescript
 // Example: Testing data transformation logic
 describe('BlockChangeSerializer', () => {
-  it('should serialize block change to API format', () => {
-    const blockChange = {
-      position: { x: 10, y: 64, z: -20 },
-      blockType: 'minecraft:stone',
-      previousType: 'minecraft:air',
-      player: 'Steve'
-    };
-    
-    const result = serializeBlockChange(blockChange);
-    
-    expect(result).toEqual({
-      type: 'block_change',
-      pos: [10, 64, -20],
-      block: 'stone',
-      prev: 'air',
-      player: 'Steve',
-      timestamp: expect.any(Number)
+    it('should serialize block change to API format', () => {
+        const blockChange = {
+            position: { x: 10, y: 64, z: -20 },
+            blockType: 'minecraft:stone',
+            previousType: 'minecraft:air',
+            player: 'Steve',
+        };
+
+        const result = serializeBlockChange(blockChange);
+
+        expect(result).toEqual({
+            type: 'block_change',
+            pos: [10, 64, -20],
+            block: 'stone',
+            prev: 'air',
+            player: 'Steve',
+            timestamp: expect.any(Number),
+        });
     });
-  });
 });
 ```
 
 #### Integration Tests
+
 - Mock `@minecraft/server` and `@minecraft/server-net` modules
 - Test event handlers trigger correct HTTP calls
 - Verify batching and throttling behavior
 
 #### E2E Validation
+
 - Deploy pack to test world
 - Use Minecraft's `/scriptevent` for triggering test scenarios
 - Validate server receives expected data
@@ -299,16 +306,16 @@ describe('BlockChangeSerializer', () => {
 
 ### Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Runtime | Node.js 20+ | Server runtime |
-| Framework | Fastify | Fast, low-overhead HTTP |
-| WebSocket | Socket.io | Real-time browser updates |
-| State Storage | In-memory + File system | Players in memory, tiles on disk |
-| Map Library | Leaflet.js | Client-side map rendering |
-| Tile Generation | Sharp | Image processing |
-| Build Tool | Vite | Frontend bundling |
-| Testing | Vitest + Playwright | Unit + E2E tests |
+| Component       | Technology              | Purpose                          |
+| --------------- | ----------------------- | -------------------------------- |
+| Runtime         | Node.js 20+             | Server runtime                   |
+| Framework       | Fastify                 | Fast, low-overhead HTTP          |
+| WebSocket       | Socket.io               | Real-time browser updates        |
+| State Storage   | In-memory + File system | Players in memory, tiles on disk |
+| Map Library     | Leaflet.js              | Client-side map rendering        |
+| Tile Generation | Sharp                   | Image processing                 |
+| Build Tool      | Vite                    | Frontend bundling                |
+| Testing         | Vitest + Playwright     | Unit + E2E tests                 |
 
 ### API Design
 
@@ -326,6 +333,7 @@ WS   /ws                           - WebSocket for real-time updates
 ```
 
 #### Authentication
+
 ```typescript
 // Simple shared secret for Minecraft → Server auth
 // Header: X-MC-Auth-Token: <shared-secret>
@@ -359,12 +367,14 @@ WS   /ws                           - WebSocket for real-time updates
 ### Implementation Phases
 
 #### Phase 1: Core Server (Week 1) `[COMPLETED]`
+
 - [x] Set up Fastify server with TypeScript
 - [x] Implement REST API for receiving Minecraft data
 - [x] Set up in-memory state management for players
 - [x] Set up file-based tile storage directory structure
 
 #### Phase 2: Map Generation (Week 2) `[COMPLETED]`
+
 - [x] Implement block-to-color mapping
 - [x] Create tile generation service
 - [x] Implement tile caching
@@ -372,12 +382,14 @@ WS   /ws                           - WebSocket for real-time updates
 - [x] Update testing webpage to view tiles (both a map control and fetching specific tiles)
 
 #### Phase 3: Web Client (Week 3) `[NOT_STARTED]`
+
 - [ ] Create Leaflet.js map interface
 - [ ] Implement custom tile layer
 - [ ] Add player markers
 - [ ] Add real-time WebSocket updates
 
 #### Phase 4: Polish & Features (Week 4) `[NOT_STARTED]`
+
 - [ ] Layer controls (terrain, players, structures)
 - [ ] Search functionality
 - [ ] Coordinate display
@@ -392,12 +404,12 @@ WS   /ws                           - WebSocket for real-time updates
 // No persistence - state resets on server restart
 
 interface Player {
-  name: string;
-  x: number;
-  y: number;
-  z: number;
-  dimension: 'overworld' | 'nether' | 'the_end';
-  lastSeen: number;  // Unix timestamp
+    name: string;
+    x: number;
+    y: number;
+    z: number;
+    dimension: 'overworld' | 'nether' | 'the_end';
+    lastSeen: number; // Unix timestamp
 }
 
 // In-memory store
@@ -432,6 +444,7 @@ data/tiles/
 **Path format:** `data/tiles/{dimension}/{zoom}/{x}/{z}.png`
 
 **Benefits:**
+
 - Simple to understand and debug
 - Easy to serve directly via static file server
 - Can be cached by CDN/reverse proxy
@@ -441,110 +454,114 @@ data/tiles/
 ### Testing Strategy for Web Server `[NOT_STARTED]`
 
 #### Unit Tests (Vitest)
+
 ```typescript
 describe('TileGenerator', () => {
-  it('should generate correct tile for chunk data', async () => {
-    const chunkData = createMockChunkData([
-      { x: 0, z: 0, blocks: ['grass_block', 'stone', 'water'] }
-    ]);
-    
-    const tile = await tileGenerator.generate(chunkData, { zoom: 0 });
-    
-    expect(tile.width).toBe(256);
-    expect(tile.height).toBe(256);
-    // Verify specific pixels match expected colors
-  });
+    it('should generate correct tile for chunk data', async () => {
+        const chunkData = createMockChunkData([{ x: 0, z: 0, blocks: ['grass_block', 'stone', 'water'] }]);
+
+        const tile = await tileGenerator.generate(chunkData, { zoom: 0 });
+
+        expect(tile.width).toBe(256);
+        expect(tile.height).toBe(256);
+        // Verify specific pixels match expected colors
+    });
 });
 
 describe('WorldStateService', () => {
-  it('should update block and invalidate affected tiles', async () => {
-    const service = new WorldStateService();
-    
-    await service.updateBlock({
-      dimension: 'overworld',
-      x: 100, y: 64, z: 200,
-      blockType: 'diamond_ore'
+    it('should update block and invalidate affected tiles', async () => {
+        const service = new WorldStateService();
+
+        await service.updateBlock({
+            dimension: 'overworld',
+            x: 100,
+            y: 64,
+            z: 200,
+            blockType: 'diamond_ore',
+        });
+
+        // Verify tile file was deleted (will be regenerated on next request)
+        const tilePath = 'data/tiles/overworld/0/6/12.png';
+        expect(fs.existsSync(tilePath)).toBe(false);
     });
-    
-    // Verify tile file was deleted (will be regenerated on next request)
-    const tilePath = 'data/tiles/overworld/0/6/12.png';
-    expect(fs.existsSync(tilePath)).toBe(false);
-  });
 });
 
 describe('PlayerStateService', () => {
-  it('should store and retrieve player positions in memory', () => {
-    const service = new PlayerStateService();
-    
-    service.updatePlayer({
-      name: 'TestPlayer',
-      x: 100, y: 64, z: 200,
-      dimension: 'overworld'
+    it('should store and retrieve player positions in memory', () => {
+        const service = new PlayerStateService();
+
+        service.updatePlayer({
+            name: 'TestPlayer',
+            x: 100,
+            y: 64,
+            z: 200,
+            dimension: 'overworld',
+        });
+
+        const player = service.getPlayer('TestPlayer');
+        expect(player).toEqual({
+            name: 'TestPlayer',
+            x: 100,
+            y: 64,
+            z: 200,
+            dimension: 'overworld',
+            lastSeen: expect.any(Number),
+        });
     });
-    
-    const player = service.getPlayer('TestPlayer');
-    expect(player).toEqual({
-      name: 'TestPlayer',
-      x: 100, y: 64, z: 200,
-      dimension: 'overworld',
-      lastSeen: expect.any(Number)
-    });
-  });
 });
 ```
 
 #### Integration Tests
+
 ```typescript
 describe('API Integration', () => {
-  let app: FastifyInstance;
-  
-  beforeAll(async () => {
-    app = await buildApp({ testing: true });
-  });
-  
-  it('should accept block changes and update state', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/world/blocks',
-      headers: { 'X-MC-Auth-Token': 'test-secret' },
-      payload: {
-        changes: [
-          { dimension: 'overworld', x: 0, y: 64, z: 0, blockType: 'stone' }
-        ]
-      }
+    let app: FastifyInstance;
+
+    beforeAll(async () => {
+        app = await buildApp({ testing: true });
     });
-    
-    expect(response.statusCode).toBe(200);
-    
-    // Verify state was updated
-    const stateResponse = await app.inject({
-      method: 'GET',
-      url: '/api/v1/world/state'
+
+    it('should accept block changes and update state', async () => {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/api/v1/world/blocks',
+            headers: { 'X-MC-Auth-Token': 'test-secret' },
+            payload: {
+                changes: [{ dimension: 'overworld', x: 0, y: 64, z: 0, blockType: 'stone' }],
+            },
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        // Verify state was updated
+        const stateResponse = await app.inject({
+            method: 'GET',
+            url: '/api/v1/world/state',
+        });
+
+        expect(stateResponse.json().blockCount).toBe(1);
     });
-    
-    expect(stateResponse.json().blockCount).toBe(1);
-  });
 });
 ```
 
 #### E2E Tests (Playwright)
+
 ```typescript
 test('map displays player markers in real-time', async ({ page }) => {
-  await page.goto('/');
-  
-  // Wait for map to load
-  await expect(page.locator('.leaflet-container')).toBeVisible();
-  
-  // Simulate player position update via API
-  await page.request.post('/api/v1/world/players', {
-    data: {
-      players: [{ name: 'TestPlayer', x: 100, y: 64, z: 200 }]
-    }
-  });
-  
-  // Verify marker appears
-  await expect(page.locator('.player-marker[data-player="TestPlayer"]'))
-    .toBeVisible({ timeout: 5000 });
+    await page.goto('/');
+
+    // Wait for map to load
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+
+    // Simulate player position update via API
+    await page.request.post('/api/v1/world/players', {
+        data: {
+            players: [{ name: 'TestPlayer', x: 100, y: 64, z: 200 }],
+        },
+    });
+
+    // Verify marker appears
+    await expect(page.locator('.player-marker[data-player="TestPlayer"]')).toBeVisible({ timeout: 5000 });
 });
 ```
 
@@ -561,63 +578,63 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  test-shared:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm --filter shared test
-      - run: pnpm --filter shared build
+    test-shared:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v2
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'pnpm'
+            - run: pnpm install
+            - run: pnpm --filter shared test
+            - run: pnpm --filter shared build
 
-  test-behavior-pack:
-    runs-on: ubuntu-latest
-    needs: test-shared
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm --filter behavior-pack test
-      - run: pnpm --filter behavior-pack build
-      - run: pnpm --filter behavior-pack lint
+    test-behavior-pack:
+        runs-on: ubuntu-latest
+        needs: test-shared
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v2
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'pnpm'
+            - run: pnpm install
+            - run: pnpm --filter behavior-pack test
+            - run: pnpm --filter behavior-pack build
+            - run: pnpm --filter behavior-pack lint
 
-  test-server:
-    runs-on: ubuntu-latest
-    needs: test-shared
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm --filter server test
-      - run: pnpm --filter server build
-      - run: pnpm --filter server lint
+    test-server:
+        runs-on: ubuntu-latest
+        needs: test-shared
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v2
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'pnpm'
+            - run: pnpm install
+            - run: pnpm --filter server test
+            - run: pnpm --filter server build
+            - run: pnpm --filter server lint
 
-  e2e-tests:
-    runs-on: ubuntu-latest
-    needs: [test-behavior-pack, test-server]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm --filter server build
-      - run: pnpm exec playwright install --with-deps
-      - run: pnpm --filter e2e test
+    e2e-tests:
+        runs-on: ubuntu-latest
+        needs: [test-behavior-pack, test-server]
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v2
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'pnpm'
+            - run: pnpm install
+            - run: pnpm --filter server build
+            - run: pnpm exec playwright install --with-deps
+            - run: pnpm --filter e2e test
 ```
 
 ### Test Commands
@@ -669,17 +686,15 @@ Create a mock Minecraft client for testing server without actual Minecraft:
 // scripts/mock-minecraft.ts
 // Simulates Minecraft sending data to the server
 async function simulateWorld() {
-  setInterval(async () => {
-    await fetch('http://localhost:3000/api/v1/world/players', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        players: [
-          { name: 'Player1', x: Math.random() * 100, y: 64, z: Math.random() * 100 }
-        ]
-      })
-    });
-  }, 1000);
+    setInterval(async () => {
+        await fetch('http://localhost:3000/api/v1/world/players', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                players: [{ name: 'Player1', x: Math.random() * 100, y: 64, z: Math.random() * 100 }],
+            }),
+        });
+    }, 1000);
 }
 ```
 
@@ -687,19 +702,20 @@ async function simulateWorld() {
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| `@minecraft/server-net` limitations | Test early; have fallback via WebSocket if needed |
-| Large world data size | Implement chunking, compression, delta updates |
-| Tile generation performance | Pre-generate tiles, use caching, background workers |
-| Minecraft API changes | Pin versions, abstract API usage |
-| Server availability | Queue requests in behavior pack, retry logic |
+| Risk                                | Mitigation                                          |
+| ----------------------------------- | --------------------------------------------------- |
+| `@minecraft/server-net` limitations | Test early; have fallback via WebSocket if needed   |
+| Large world data size               | Implement chunking, compression, delta updates      |
+| Tile generation performance         | Pre-generate tiles, use caching, background workers |
+| Minecraft API changes               | Pin versions, abstract API usage                    |
+| Server availability                 | Queue requests in behavior pack, retry logic        |
 
 ---
 
 ## Getting Started Checklist
 
 ### Week 1 Goals `[NOT_STARTED]`
+
 - [ ] Initialize monorepo with pnpm workspaces
 - [ ] Set up shared types package
 - [ ] Create basic behavior pack that logs events
@@ -708,6 +724,7 @@ async function simulateWorld() {
 - [ ] Set up CI pipeline
 
 ### Success Criteria `[NOT_STARTED]`
+
 - Behavior pack successfully sends block change to server
 - Server persists block change to database
 - Basic map page shows a single tile

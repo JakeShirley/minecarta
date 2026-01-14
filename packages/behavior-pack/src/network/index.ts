@@ -17,47 +17,44 @@ let isProcessingQueue = false;
  * Process the request queue sequentially
  */
 async function processQueue(): Promise<void> {
-  if (isProcessingQueue) return;
-  isProcessingQueue = true;
+    if (isProcessingQueue) return;
+    isProcessingQueue = true;
 
-  while (requestQueue.length > 0) {
-    const request = requestQueue.shift();
-    if (request) {
-      try {
-        await request();
-      } catch (error) {
-        logError('Queue processing error', error);
-      }
+    while (requestQueue.length > 0) {
+        const request = requestQueue.shift();
+        if (request) {
+            try {
+                await request();
+            } catch (error) {
+                logError('Queue processing error', error);
+            }
+        }
     }
-  }
 
-  isProcessingQueue = false;
+    isProcessingQueue = false;
 }
 
 /**
  * Log debug messages if debug mode is enabled
  */
 function logDebug(message: string, data?: unknown): void {
-  if (config.debug) {
-    console.log(`[MapSync] ${message}`, data ? JSON.stringify(data) : '');
-  }
+    if (config.debug) {
+        console.log(`[MapSync] ${message}`, data ? JSON.stringify(data) : '');
+    }
 }
 
 /**
  * Log error messages
  */
 function logError(message: string, error?: unknown): void {
-  console.error(`[MapSync Error] ${message}`, error);
+    console.error(`[MapSync Error] ${message}`, error);
 }
 
 /**
  * Create HTTP headers for API requests
  */
 function createHeaders(): HttpHeader[] {
-  return [
-    new HttpHeader('Content-Type', 'application/json'),
-    new HttpHeader(AUTH_HEADER, config.authToken),
-  ];
+    return [new HttpHeader('Content-Type', 'application/json'), new HttpHeader(AUTH_HEADER, config.authToken)];
 }
 
 /**
@@ -67,33 +64,33 @@ function createHeaders(): HttpHeader[] {
  * @returns Promise resolving to the parsed JSON response or null on error
  */
 export async function getFromServer<T>(endpoint: string): Promise<T | null> {
-  const url = getApiUrl(endpoint);
+    const url = getApiUrl(endpoint);
 
-  logDebug(`GET ${endpoint}`);
+    logDebug(`GET ${endpoint}`);
 
-  try {
-    const request = new HttpRequest(url);
-    request.method = HttpRequestMethod.Get;
-    request.headers = createHeaders();
+    try {
+        const request = new HttpRequest(url);
+        request.method = HttpRequestMethod.Get;
+        request.headers = createHeaders();
 
-    const response = await http.request(request);
+        const response = await http.request(request);
 
-    if (response.status >= 200 && response.status < 300) {
-      logDebug(`Response ${response.status} from ${endpoint}`);
-      try {
-        return JSON.parse(response.body) as T;
-      } catch {
-        logError(`Failed to parse response from ${endpoint}`, response.body);
+        if (response.status >= 200 && response.status < 300) {
+            logDebug(`Response ${response.status} from ${endpoint}`);
+            try {
+                return JSON.parse(response.body) as T;
+            } catch {
+                logError(`Failed to parse response from ${endpoint}`, response.body);
+                return null;
+            }
+        } else {
+            logError(`HTTP ${response.status} from ${endpoint}`, response.body);
+            return null;
+        }
+    } catch (error) {
+        logError(`Request failed: ${endpoint}`, error);
         return null;
-      }
-    } else {
-      logError(`HTTP ${response.status} from ${endpoint}`, response.body);
-      return null;
     }
-  } catch (error) {
-    logError(`Request failed: ${endpoint}`, error);
-    return null;
-  }
 }
 
 /**
@@ -103,40 +100,37 @@ export async function getFromServer<T>(endpoint: string): Promise<T | null> {
  * @param data - Data to send in the request body
  * @returns Promise resolving to the API response
  */
-export async function postToServer<T>(
-  endpoint: string,
-  data: T
-): Promise<ApiResponse> {
-  const url = getApiUrl(endpoint);
-  const body = JSON.stringify(data);
+export async function postToServer<T>(endpoint: string, data: T): Promise<ApiResponse> {
+    const url = getApiUrl(endpoint);
+    const body = JSON.stringify(data);
 
-  logDebug(`POST ${endpoint}`, { dataSize: body.length });
+    logDebug(`POST ${endpoint}`, { dataSize: body.length });
 
-  try {
-    const request = new HttpRequest(url);
-    request.method = HttpRequestMethod.Post;
-    request.body = body;
-    request.headers = createHeaders();
+    try {
+        const request = new HttpRequest(url);
+        request.method = HttpRequestMethod.Post;
+        request.body = body;
+        request.headers = createHeaders();
 
-    const response = await http.request(request);
+        const response = await http.request(request);
 
-    if (response.status >= 200 && response.status < 300) {
-      logDebug(`Response ${response.status} from ${endpoint}`);
-      return { success: true };
-    } else {
-      logError(`HTTP ${response.status} from ${endpoint}`, response.body);
-      return {
-        success: false,
-        error: `HTTP ${response.status}: ${response.body}`,
-      };
+        if (response.status >= 200 && response.status < 300) {
+            logDebug(`Response ${response.status} from ${endpoint}`);
+            return { success: true };
+        } else {
+            logError(`HTTP ${response.status} from ${endpoint}`, response.body);
+            return {
+                success: false,
+                error: `HTTP ${response.status}: ${response.body}`,
+            };
+        }
+    } catch (error) {
+        logError(`Request failed: ${endpoint}`, error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
     }
-  } catch (error) {
-    logError(`Request failed: ${endpoint}`, error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
 }
 
 /**
@@ -147,10 +141,10 @@ export async function postToServer<T>(
  * @param data - Data to send in the request body
  */
 export function queuePost<T>(endpoint: string, data: T): void {
-  requestQueue.push(async () => {
-    await postToServer(endpoint, data);
-  });
-  processQueue();
+    requestQueue.push(async () => {
+        await postToServer(endpoint, data);
+    });
+    processQueue();
 }
 
 /**
@@ -158,10 +152,8 @@ export function queuePost<T>(endpoint: string, data: T): void {
  *
  * @param changes - Array of block changes to send
  */
-export async function sendBlockChanges(
-  changes: import('../types').BlockChange[]
-): Promise<ApiResponse> {
-  return postToServer('/api/v1/world/blocks', { blocks: changes });
+export async function sendBlockChanges(changes: import('../types').BlockChange[]): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/blocks', { blocks: changes });
 }
 
 /**
@@ -169,10 +161,8 @@ export async function sendBlockChanges(
  *
  * @param players - Array of player data to send
  */
-export async function sendPlayerPositions(
-  players: import('../types').Player[]
-): Promise<ApiResponse> {
-  return postToServer('/api/v1/world/players', { players });
+export async function sendPlayerPositions(players: import('../types').Player[]): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/players', { players });
 }
 
 /**
@@ -180,10 +170,8 @@ export async function sendPlayerPositions(
  *
  * @param entities - Array of entity data to send
  */
-export async function sendEntityUpdates(
-  entities: import('../types').Entity[]
-): Promise<ApiResponse> {
-  return postToServer('/api/v1/world/entities', { entities });
+export async function sendEntityUpdates(entities: import('../types').Entity[]): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/entities', { entities });
 }
 
 /**
@@ -191,24 +179,22 @@ export async function sendEntityUpdates(
  *
  * @param chunks - Array of chunk data to send
  */
-export async function sendChunkData(
-  chunks: import('@minecraft-map/shared').ChunkData[]
-): Promise<ApiResponse> {
-  return postToServer('/api/v1/world/chunks', { chunks });
+export async function sendChunkData(chunks: import('@minecraft-map/shared').ChunkData[]): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/chunks', { chunks });
 }
 
 /**
  * Response from chunk existence check
  */
 interface ChunkExistsApiResponse {
-  success: boolean;
-  data?: {
-    exists: boolean;
-    dimension: string;
-    chunkX: number;
-    chunkZ: number;
-  };
-  error?: string;
+    success: boolean;
+    data?: {
+        exists: boolean;
+        dimension: string;
+        chunkX: number;
+        chunkZ: number;
+    };
+    error?: string;
 }
 
 /**
@@ -220,19 +206,19 @@ interface ChunkExistsApiResponse {
  * @returns Promise resolving to true if the chunk exists, false if it doesn't or on error
  */
 export async function checkChunkExists(
-  dimension: import('@minecraft-map/shared').Dimension,
-  chunkX: number,
-  chunkZ: number
+    dimension: import('@minecraft-map/shared').Dimension,
+    chunkX: number,
+    chunkZ: number
 ): Promise<boolean> {
-  const endpoint = `/api/v1/world/chunk/exists?dimension=${dimension}&chunkX=${chunkX}&chunkZ=${chunkZ}`;
-  const response = await getFromServer<ChunkExistsApiResponse>(endpoint);
-  
-  if (response?.success && response.data) {
-    return response.data.exists;
-  }
-  
-  // On error, assume chunk exists to avoid unnecessary rescans
-  return true;
+    const endpoint = `/api/v1/world/chunk/exists?dimension=${dimension}&chunkX=${chunkX}&chunkZ=${chunkZ}`;
+    const response = await getFromServer<ChunkExistsApiResponse>(endpoint);
+
+    if (response?.success && response.data) {
+        return response.data.exists;
+    }
+
+    // On error, assume chunk exists to avoid unnecessary rescans
+    return true;
 }
 
 /**
@@ -241,22 +227,22 @@ export async function checkChunkExists(
  * @returns Promise resolving to true if server is reachable
  */
 export async function testConnection(): Promise<boolean> {
-  try {
-    const url = getApiUrl('/api/v1/world/state');
-    const request = new HttpRequest(url);
-    request.method = HttpRequestMethod.Get;
-    request.headers = createHeaders();
+    try {
+        const url = getApiUrl('/api/v1/world/state');
+        const request = new HttpRequest(url);
+        request.method = HttpRequestMethod.Get;
+        request.headers = createHeaders();
 
-    const response = await http.request(request);
-    const isConnected = response.status >= 200 && response.status < 300;
+        const response = await http.request(request);
+        const isConnected = response.status >= 200 && response.status < 300;
 
-    logDebug(`Connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}`, {
-      status: response.status,
-    });
+        logDebug(`Connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}`, {
+            status: response.status,
+        });
 
-    return isConnected;
-  } catch (error) {
-    logError('Connection test failed', error);
-    return false;
-  }
+        return isConnected;
+    } catch (error) {
+        logError('Connection test failed', error);
+        return false;
+    }
 }

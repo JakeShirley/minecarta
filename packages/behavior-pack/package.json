@@ -1,31 +1,31 @@
 {
-  "name": "@minecraft-map/behavior-pack",
-  "version": "1.0.0",
-  "description": "Minecraft behavior pack that syncs world state to map server",
-  "type": "module",
-  "scripts": {
-    "build": "just-scripts build",
-    "build:watch": "just-scripts watch",
-    "pack:deploy": "just-scripts deploy",
-    "pack:build-deploy": "just-scripts build:deploy",
-    "test": "just-scripts test",
-    "test:watch": "vitest",
-    "clean": "just-scripts clean",
-    "clean:deploy": "just-scripts clean:deploy"
-  },
-  "dependencies": {
-    "@minecraft-map/shared": "workspace:*"
-  },
-  "devDependencies": {
-    "@minecraft/core-build-tasks": "^5.5.0",
-    "@minecraft/server": "2.5.0-beta.1.21.132-stable",
-    "@minecraft/server-admin": "1.0.0-beta.1.21.132-stable",
-    "@minecraft/server-net": "1.0.0-beta.1.21.132-stable",
-    "@types/node": "^20.0.0",
-    "esbuild": "^0.24.0",
-    "just-scripts": "^2.5.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.0",
-    "vitest": "^2.0.0"
-  }
+    "name": "@minecraft-map/behavior-pack",
+    "version": "1.0.0",
+    "description": "Minecraft behavior pack that syncs world state to map server",
+    "type": "module",
+    "scripts": {
+        "build": "just-scripts build",
+        "build:watch": "just-scripts watch",
+        "pack:deploy": "just-scripts deploy",
+        "pack:build-deploy": "just-scripts build:deploy",
+        "test": "just-scripts test",
+        "test:watch": "vitest",
+        "clean": "just-scripts clean",
+        "clean:deploy": "just-scripts clean:deploy"
+    },
+    "dependencies": {
+        "@minecraft-map/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "@minecraft/core-build-tasks": "^5.5.0",
+        "@minecraft/server": "2.5.0-beta.1.21.132-stable",
+        "@minecraft/server-admin": "1.0.0-beta.1.21.132-stable",
+        "@minecraft/server-net": "1.0.0-beta.1.21.132-stable",
+        "@types/node": "^20.0.0",
+        "esbuild": "^0.24.0",
+        "just-scripts": "^2.5.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.6.0",
+        "vitest": "^2.0.0"
+    }
 }

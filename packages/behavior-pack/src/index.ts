@@ -18,43 +18,43 @@ registerCustomCommands();
  * Log a startup message
  */
 function logStartup(message: string): void {
-  console.log(`[MapSync] ${message}`);
+    console.log(`[MapSync] ${message}`);
 }
 
 /**
  * Initialize the behavior pack
  */
 async function initialize(): Promise<void> {
-  logStartup('World Map Sync initializing...');
-  logStartup(`Server URL: ${config.serverUrl}`);
-  logStartup(`Debug mode: ${config.debug}`);
+    logStartup('World Map Sync initializing...');
+    logStartup(`Server URL: ${config.serverUrl}`);
+    logStartup(`Debug mode: ${config.debug}`);
 
-  // Test connection to the server
-  const connected = await testConnection();
-  if (connected) {
-    logStartup('Successfully connected to map server!');
-  } else {
-    logStartup('Warning: Could not connect to map server. Will retry on events.');
-  }
+    // Test connection to the server
+    const connected = await testConnection();
+    if (connected) {
+        logStartup('Successfully connected to map server!');
+    } else {
+        logStartup('Warning: Could not connect to map server. Will retry on events.');
+    }
 
-  // Register event listeners
-  registerAllEventListeners();
+    // Register event listeners
+    registerAllEventListeners();
 
-  // Set up periodic player position updates
-  system.runInterval(() => {
-    updatePlayerPositions();
-  }, config.playerUpdateInterval);
+    // Set up periodic player position updates
+    system.runInterval(() => {
+        updatePlayerPositions();
+    }, config.playerUpdateInterval);
 
-  logStartup('Initialization complete!');
+    logStartup('Initialization complete!');
 }
 
 /**
  * Wait for world to be ready before initializing
  */
 system.runTimeout(() => {
-  initialize().catch((error) => {
-    console.error('[MapSync] Initialization failed:', error);
-  });
+    initialize().catch(error => {
+        console.error('[MapSync] Initialization failed:', error);
+    });
 }, 20); // Wait 1 second (20 ticks) for world to stabilize
 
 // Export for testing

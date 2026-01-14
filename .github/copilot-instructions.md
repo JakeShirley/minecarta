@@ -68,18 +68,18 @@ src/
 
 ```typescript
 describe('FunctionName', () => {
-  describe('when [condition]', () => {
-    it('should [expected behavior]', () => {
-      // Arrange
-      const input = createTestInput();
-      
-      // Act
-      const result = functionName(input);
-      
-      // Assert
-      expect(result).toEqual(expectedOutput);
+    describe('when [condition]', () => {
+        it('should [expected behavior]', () => {
+            // Arrange
+            const input = createTestInput();
+
+            // Act
+            const result = functionName(input);
+
+            // Assert
+            expect(result).toEqual(expectedOutput);
+        });
     });
-  });
 });
 ```
 
@@ -99,14 +99,14 @@ describe('FunctionName', () => {
 
 ```typescript
 export class ValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly field: string,
-    public readonly code: string
-  ) {
-    super(message);
-    this.name = 'ValidationError';
-  }
+    constructor(
+        message: string,
+        public readonly field: string,
+        public readonly code: string
+    ) {
+        super(message);
+        this.name = 'ValidationError';
+    }
 }
 ```
 
@@ -143,7 +143,7 @@ import type { User, Config } from './types';
 - Add `@example` for complex functions
 - Keep comments up-to-date with code changes
 
-```typescript
+````typescript
 /**
  * Processes user data and returns a normalized user object.
  *
@@ -157,9 +157,9 @@ import type { User, Config } from './types';
  * ```
  */
 export function processUser(input: UserInput): User {
-  // Implementation
+    // Implementation
 }
-```
+````
 
 ## Configuration Files
 
@@ -167,22 +167,22 @@ export function processUser(input: UserInput): User {
 
 ```json
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "outDir": "./dist",
+        "rootDir": "./src"
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }
 ```
 

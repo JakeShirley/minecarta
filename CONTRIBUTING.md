@@ -47,6 +47,7 @@ pnpm install
 ```
 
 This will install dependencies for:
+
 - Root workspace
 - `@minecraft-map/shared` - Shared types and constants
 - `@minecraft-map/behavior-pack` - Minecraft behavior pack
@@ -82,12 +83,12 @@ This runs the build script for all packages in the workspace.
 
 ### Package-Specific Builds
 
-| Command | Description |
-|---------|-------------|
-| `pnpm build` | Build all packages |
-| `pnpm build:pack` | Build the behavior pack only |
-| `pnpm build:pack:watch` | Build behavior pack in watch mode |
-| `pnpm --filter @minecraft-map/server build` | Build the server only |
+| Command                                     | Description                       |
+| ------------------------------------------- | --------------------------------- |
+| `pnpm build`                                | Build all packages                |
+| `pnpm build:pack`                           | Build the behavior pack only      |
+| `pnpm build:pack:watch`                     | Build behavior pack in watch mode |
+| `pnpm --filter @minecraft-map/server build` | Build the server only             |
 
 ### Watch Mode
 
@@ -148,6 +149,7 @@ pnpm pack:deploy
 ```
 
 The deploy script will copy the pack to:
+
 - **Windows**: `%APPDATA%\Minecraft\development_behavior_packs\world-map-sync`
 - **macOS**: `~/Library/Application Support/minecraft/development_behavior_packs/world-map-sync`
 
@@ -223,6 +225,7 @@ Follow conventional commits:
 - `chore:` maintenance tasks
 
 Example:
+
 ```
 feat: add player position tracking to behavior pack
 ```
@@ -248,19 +251,20 @@ feat: add player position tracking to behavior pack
 
 When running the server, you can configure it with these environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | Server port |
-| `HOST` | `0.0.0.0` | Server host |
-| `AUTH_TOKEN` | `dev-token` | Authentication token |
-| `DATA_DIR` | `./data` | Directory for tile storage |
-| `LOG_LEVEL` | `info` | Log level |
+| Variable     | Default     | Description                |
+| ------------ | ----------- | -------------------------- |
+| `PORT`       | `3000`      | Server port                |
+| `HOST`       | `0.0.0.0`   | Server host                |
+| `AUTH_TOKEN` | `dev-token` | Authentication token       |
+| `DATA_DIR`   | `./data`    | Directory for tile storage |
+| `LOG_LEVEL`  | `info`      | Log level                  |
 
 ## Troubleshooting
 
 ### pnpm not found
 
 Make sure pnpm is installed globally:
+
 ```bash
 npm install -g pnpm
 ```
@@ -268,6 +272,7 @@ npm install -g pnpm
 ### Build errors
 
 Try cleaning and rebuilding:
+
 ```bash
 pnpm clean
 pnpm install

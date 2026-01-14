@@ -1,0 +1,15 @@
+# Build outputs
+dist/
+lib/
+build/
+node_modules/
+
+# Minecraft pack files
+packages/behavior-pack/scripts/
+
+# Generated files
+pnpm-lock.yaml
+
+# Data files
+packages/server/data/
+packages/server/test-data/

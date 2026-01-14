@@ -1,22 +1,22 @@
 {
-  "name": "@minecraft-map/shared",
-  "version": "1.0.0",
-  "description": "Shared types and constants for Minecraft Map project",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "name": "@minecraft-map/shared",
+    "version": "1.0.0",
+    "description": "Shared types and constants for Minecraft Map project",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc",
+        "clean": "rm -rf dist",
+        "dev": "tsc --watch"
+    },
+    "devDependencies": {
+        "typescript": "^5.4.0"
     }
-  },
-  "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist",
-    "dev": "tsc --watch"
-  },
-  "devDependencies": {
-    "typescript": "^5.4.0"
-  }
 }

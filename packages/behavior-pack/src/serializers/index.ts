@@ -4,11 +4,11 @@
 
 import type { BlockChange, Player, Entity, ChunkData, ChunkBlock } from '@minecraft-map/shared';
 import type {
-  MinecraftBlockEvent,
-  MinecraftPlayer,
-  MinecraftEntity,
-  MinecraftChunkData,
-  MinecraftChunkBlock,
+    MinecraftBlockEvent,
+    MinecraftPlayer,
+    MinecraftEntity,
+    MinecraftChunkData,
+    MinecraftChunkBlock,
 } from '../types';
 
 /**
@@ -18,18 +18,16 @@ import type {
  * @returns BlockChange object for API transmission
  */
 export function serializeBlockChange(event: MinecraftBlockEvent): BlockChange {
-  return {
-    dimension: event.dimension,
-    x: Math.floor(event.x),
-    y: Math.floor(event.y),
-    z: Math.floor(event.z),
-    blockType: normalizeBlockType(event.blockType),
-    previousType: event.previousType
-      ? normalizeBlockType(event.previousType)
-      : undefined,
-    player: event.playerName,
-    timestamp: Date.now(),
-  };
+    return {
+        dimension: event.dimension,
+        x: Math.floor(event.x),
+        y: Math.floor(event.y),
+        z: Math.floor(event.z),
+        blockType: normalizeBlockType(event.blockType),
+        previousType: event.previousType ? normalizeBlockType(event.previousType) : undefined,
+        player: event.playerName,
+        timestamp: Date.now(),
+    };
 }
 
 /**
@@ -39,15 +37,15 @@ export function serializeBlockChange(event: MinecraftBlockEvent): BlockChange {
  * @returns Player object for API transmission
  */
 export function serializePlayer(player: MinecraftPlayer): Player {
-  return {
-    name: player.name,
-    x: Math.floor(player.x),
-    y: Math.floor(player.y),
-    z: Math.floor(player.z),
-    dimension: player.dimension,
-    lastSeen: Date.now(),
-    playfabId: player.playfabId,
-  };
+    return {
+        name: player.name,
+        x: Math.floor(player.x),
+        y: Math.floor(player.y),
+        z: Math.floor(player.z),
+        dimension: player.dimension,
+        lastSeen: Date.now(),
+        playfabId: player.playfabId,
+    };
 }
 
 /**
@@ -57,14 +55,14 @@ export function serializePlayer(player: MinecraftPlayer): Player {
  * @returns Entity object for API transmission
  */
 export function serializeEntity(entity: MinecraftEntity): Entity {
-  return {
-    id: entity.id,
-    type: normalizeEntityType(entity.type),
-    x: Math.floor(entity.x),
-    y: Math.floor(entity.y),
-    z: Math.floor(entity.z),
-    dimension: entity.dimension,
-  };
+    return {
+        id: entity.id,
+        type: normalizeEntityType(entity.type),
+        x: Math.floor(entity.x),
+        y: Math.floor(entity.y),
+        z: Math.floor(entity.z),
+        dimension: entity.dimension,
+    };
 }
 
 /**
@@ -74,7 +72,7 @@ export function serializeEntity(entity: MinecraftEntity): Entity {
  * @returns Normalized block type without namespace prefix
  */
 export function normalizeBlockType(blockType: string): string {
-  return blockType.replace(/^minecraft:/, '');
+    return blockType.replace(/^minecraft:/, '');
 }
 
 /**
@@ -84,7 +82,7 @@ export function normalizeBlockType(blockType: string): string {
  * @returns Normalized entity type without namespace prefix
  */
 export function normalizeEntityType(entityType: string): string {
-  return entityType.replace(/^minecraft:/, '');
+    return entityType.replace(/^minecraft:/, '');
 }
 
 /**
@@ -93,10 +91,8 @@ export function normalizeEntityType(entityType: string): string {
  * @param events - Array of Minecraft block events
  * @returns Array of BlockChange objects
  */
-export function serializeBlockChanges(
-  events: MinecraftBlockEvent[]
-): BlockChange[] {
-  return events.map(serializeBlockChange);
+export function serializeBlockChanges(events: MinecraftBlockEvent[]): BlockChange[] {
+    return events.map(serializeBlockChange);
 }
 
 /**
@@ -106,7 +102,7 @@ export function serializeBlockChanges(
  * @returns Array of Player objects
  */
 export function serializePlayers(players: MinecraftPlayer[]): Player[] {
-  return players.map(serializePlayer);
+    return players.map(serializePlayer);
 }
 
 /**
@@ -116,7 +112,7 @@ export function serializePlayers(players: MinecraftPlayer[]): Player[] {
  * @returns Array of Entity objects
  */
 export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
-  return entities.map(serializeEntity);
+    return entities.map(serializeEntity);
 }
 
 /**
@@ -126,21 +122,21 @@ export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
  * @returns ChunkBlock object for API transmission
  */
 export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
-  // Minecraft RGBA values are in 0-1 range, convert to 0-255 for rendering
-  const result: ChunkBlock = {
-    x: block.x,
-    y: block.y,
-    z: block.z,
-    type: normalizeBlockType(block.type),
-    mapColor: {
-      r: Math.round(block.mapColor.red * 255),
-      g: Math.round(block.mapColor.green * 255),
-      b: Math.round(block.mapColor.blue * 255),
-      a: Math.round(block.mapColor.alpha * 255),
-    },
-    waterDepth: block.waterDepth,
-  };
-  return result;
+    // Minecraft RGBA values are in 0-1 range, convert to 0-255 for rendering
+    const result: ChunkBlock = {
+        x: block.x,
+        y: block.y,
+        z: block.z,
+        type: normalizeBlockType(block.type),
+        mapColor: {
+            r: Math.round(block.mapColor.red * 255),
+            g: Math.round(block.mapColor.green * 255),
+            b: Math.round(block.mapColor.blue * 255),
+            a: Math.round(block.mapColor.alpha * 255),
+        },
+        waterDepth: block.waterDepth,
+    };
+    return result;
 }
 
 /**
@@ -150,10 +146,10 @@ export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
  * @returns ChunkData object for API transmission
  */
 export function serializeChunkData(chunk: MinecraftChunkData): ChunkData {
-  return {
-    dimension: chunk.dimension,
-    chunkX: chunk.chunkX,
-    chunkZ: chunk.chunkZ,
-    blocks: chunk.blocks.map(serializeChunkBlock),
-  };
+    return {
+        dimension: chunk.dimension,
+        chunkX: chunk.chunkX,
+        chunkZ: chunk.chunkZ,
+        blocks: chunk.blocks.map(serializeChunkBlock),
+    };
 }

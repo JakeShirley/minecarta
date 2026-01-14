@@ -22,19 +22,19 @@ const DEFAULT_BLOCK_COLOR: RGBA = { red: 0, green: 0, blue: 0, alpha: 0 };
  * @returns Normalized dimension type
  */
 export function toDimension(dimensionId: string): Dimension {
-  switch (dimensionId) {
-    case 'minecraft:overworld':
-    case 'overworld':
-      return 'overworld';
-    case 'minecraft:nether':
-    case 'nether':
-      return 'nether';
-    case 'minecraft:the_end':
-    case 'the_end':
-      return 'the_end';
-    default:
-      return 'overworld';
-  }
+    switch (dimensionId) {
+        case 'minecraft:overworld':
+        case 'overworld':
+            return 'overworld';
+        case 'minecraft:nether':
+        case 'nether':
+            return 'nether';
+        case 'minecraft:the_end':
+        case 'the_end':
+            return 'the_end';
+        default:
+            return 'overworld';
+    }
 }
 
 /**
@@ -44,16 +44,16 @@ export function toDimension(dimensionId: string): Dimension {
  * @returns Maximum Y coordinate for the dimension
  */
 export function getMaxHeight(dimensionId: string): number {
-  switch (dimensionId) {
-    case 'minecraft:nether':
-    case 'nether':
-      return 128;
-    case 'minecraft:the_end':
-    case 'the_end':
-      return 256;
-    default:
-      return 320; // Overworld
-  }
+    switch (dimensionId) {
+        case 'minecraft:nether':
+        case 'nether':
+            return 128;
+        case 'minecraft:the_end':
+        case 'the_end':
+            return 256;
+        default:
+            return 320; // Overworld
+    }
 }
 
 /**
@@ -64,10 +64,10 @@ export function getMaxHeight(dimensionId: string): number {
  * @returns Chunk coordinates (chunkX, chunkZ)
  */
 export function getChunkCoordinates(x: number, z: number): { chunkX: number; chunkZ: number } {
-  return {
-    chunkX: Math.floor(x / 16),
-    chunkZ: Math.floor(z / 16),
-  };
+    return {
+        chunkX: Math.floor(x / 16),
+        chunkZ: Math.floor(z / 16),
+    };
 }
 
 /**
@@ -77,7 +77,7 @@ export function getChunkCoordinates(x: number, z: number): { chunkX: number; chu
  * @returns RGBA color value, or null if the block has no map color
  */
 export function getBlockMapColor(block: Block): RGBA {
-  return block.getMapColor();
+    return block.getMapColor();
 }
 
 /**
@@ -87,92 +87,92 @@ export function getBlockMapColor(block: Block): RGBA {
  * @returns Minimum Y coordinate for the dimension
  */
 export function getMinHeight(dimensionId: string): number {
-  switch (dimensionId) {
-    case 'minecraft:nether':
-    case 'nether':
-      return 0;
-    case 'minecraft:the_end':
-    case 'the_end':
-      return 0;
-    default:
-      return -64; // Overworld
-  }
+    switch (dimensionId) {
+        case 'minecraft:nether':
+        case 'nether':
+            return 0;
+        case 'minecraft:the_end':
+        case 'the_end':
+            return 0;
+        default:
+            return -64; // Overworld
+    }
 }
 
 /**
  * Options for ray casting to find surface blocks
  */
 export interface RaycastOptions {
-  /** Include liquid blocks like water and lava (default: true) */
-  readonly includeLiquidBlocks?: boolean;
-  /** Include passable blocks like tall grass (default: true) */
-  readonly includePassableBlocks?: boolean;
+    /** Include liquid blocks like water and lava (default: true) */
+    readonly includeLiquidBlocks?: boolean;
+    /** Include passable blocks like tall grass (default: true) */
+    readonly includePassableBlocks?: boolean;
 }
 
 /**
  * Result from a surface block raycast
  */
 export interface SurfaceBlockResult {
-  readonly block: Block;
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-  readonly type: string;
-  readonly mapColor: RGBA;
-  /**
-   * For water blocks, the depth to the first non-water block below.
-   * Used for Minecraft's water depth shading with checkerboard patterns.
-   * Undefined for non-water blocks.
-   */
-  readonly waterDepth?: number;
+    readonly block: Block;
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly type: string;
+    readonly mapColor: RGBA;
+    /**
+     * For water blocks, the depth to the first non-water block below.
+     * Used for Minecraft's water depth shading with checkerboard patterns.
+     * Undefined for non-water blocks.
+     */
+    readonly waterDepth?: number;
 }
 
 /**
  * Check if a block type is water
  */
 function isWaterBlock(typeId: string): boolean {
-  return typeId.includes("water");
+    return typeId.includes('water');
 }
 
 /**
  * Calculate water depth by finding the first non-water block below.
- * 
+ *
  * @param dimension - The Minecraft dimension
  * @param startX - X coordinate
  * @param startY - Y coordinate of water surface
- * @param startZ - Z coordinate  
+ * @param startZ - Z coordinate
  * @param minHeight - Minimum world height
  * @returns Depth in blocks to first non-water block, or undefined if not water
  */
 function calculateWaterDepth(
-  dimension: MinecraftDimension,
-  startX: number,
-  startY: number,
-  startZ: number,
-  minHeight: number
+    dimension: MinecraftDimension,
+    startX: number,
+    startY: number,
+    startZ: number,
+    minHeight: number
 ): number | undefined {
-  let depth = 0;
-  let currentY = startY;
+    let depth = 0;
+    let currentY = startY;
 
-  // Count water blocks downward
-  while (currentY >= minHeight) {
-    try {
-      const block = dimension.getBlock({ x: startX, y: currentY, z: startZ });
-      
-      if (!block?.typeId || !isWaterBlock(block.typeId)) {
-        // Found first non-water block
-        return depth > 0 ? depth : undefined;
-      }
-      
-      depth++;
-      currentY--;
-    } catch {
-      // Block in unloaded chunk
-      break;
+    // Count water blocks downward
+    while (currentY >= minHeight) {
+        try {
+            const block = dimension.getBlock({ x: startX, y: currentY, z: startZ });
+
+            if (!block?.typeId || !isWaterBlock(block.typeId)) {
+                // Found first non-water block
+                return depth > 0 ? depth : undefined;
+            }
+
+            depth++;
+            currentY--;
+        } catch {
+            // Block in unloaded chunk
+            break;
+        }
     }
-  }
 
-  return depth > 0 ? depth : undefined;
+    return depth > 0 ? depth : undefined;
 }
 
 /**
@@ -187,84 +187,86 @@ function calculateWaterDepth(
  * @returns Surface block result with valid map color, or null if no suitable block found
  */
 export function getSurfaceBlock(
-  dimension: MinecraftDimension,
-  worldX: number,
-  worldZ: number,
-  options: RaycastOptions = {}
+    dimension: MinecraftDimension,
+    worldX: number,
+    worldZ: number,
+    options: RaycastOptions = {}
 ): SurfaceBlockResult | null {
-  const { includeLiquidBlocks = true, includePassableBlocks = true } = options;
-  const maxHeight = getMaxHeight(dimension.id);
-  const minHeight = getMinHeight(dimension.id);
+    const { includeLiquidBlocks = true, includePassableBlocks = true } = options;
+    const maxHeight = getMaxHeight(dimension.id);
+    const minHeight = getMinHeight(dimension.id);
 
-  // Start from max height and cast downward to find the first block
-  const raycastResult = dimension.getBlockFromRay(
-    { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 }, // Start from max height, center of block
-    { x: 0, y: -1, z: 0 }, // Cast downward
-    {
-      includeLiquidBlocks,
-      includePassableBlocks,
-      maxDistance: maxHeight + 64, // Account for negative Y in overworld
-    }
-  );
-
-  if (!raycastResult?.block?.typeId) {
-    return null;
-  }
-
-  // Start from the raycast hit and iterate downward until we find a block with a valid map color
-  let currentY = raycastResult.block.location.y;
-
-  while (currentY >= minHeight) {
-    try {
-        const block = dimension.getBlock({ x: worldX, y: currentY, z: worldZ });
- 
-      if (block?.typeId) {
-        const mapColor = getBlockMapColor(block);
-
-        if (mapColor) {
-          // Calculate water depth if this is a water block
-          const waterDepth = isWaterBlock(block.typeId) 
-            ? calculateWaterDepth(dimension, worldX, currentY, worldZ, minHeight)
-            : undefined;
-
-          return {
-            block,
-            x: worldX,
-            y: currentY,
-            z: worldZ,
-            type: block.typeId,
-            mapColor,
-            waterDepth,
-          };
-        } else {
-            console.log(`[SurfaceBlock] Block at (${worldX}, ${currentY}, ${worldZ}) of type ${block.typeId} has no valid map color`);
+    // Start from max height and cast downward to find the first block
+    const raycastResult = dimension.getBlockFromRay(
+        { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 }, // Start from max height, center of block
+        { x: 0, y: -1, z: 0 }, // Cast downward
+        {
+            includeLiquidBlocks,
+            includePassableBlocks,
+            maxDistance: maxHeight + 64, // Account for negative Y in overworld
         }
-      }
-    } catch {
-        console.log(`[SurfaceBlock] Failed to get block at (${worldX}, ${currentY}, ${worldZ})`);
-      // Block might be in unloaded chunk, continue searching
+    );
+
+    if (!raycastResult?.block?.typeId) {
+        return null;
     }
 
-    currentY--;
-  }
+    // Start from the raycast hit and iterate downward until we find a block with a valid map color
+    let currentY = raycastResult.block.location.y;
 
-  // No block with a valid map color found
-  return null;
+    while (currentY >= minHeight) {
+        try {
+            const block = dimension.getBlock({ x: worldX, y: currentY, z: worldZ });
+
+            if (block?.typeId) {
+                const mapColor = getBlockMapColor(block);
+
+                if (mapColor) {
+                    // Calculate water depth if this is a water block
+                    const waterDepth = isWaterBlock(block.typeId)
+                        ? calculateWaterDepth(dimension, worldX, currentY, worldZ, minHeight)
+                        : undefined;
+
+                    return {
+                        block,
+                        x: worldX,
+                        y: currentY,
+                        z: worldZ,
+                        type: block.typeId,
+                        mapColor,
+                        waterDepth,
+                    };
+                } else {
+                    console.log(
+                        `[SurfaceBlock] Block at (${worldX}, ${currentY}, ${worldZ}) of type ${block.typeId} has no valid map color`
+                    );
+                }
+            }
+        } catch {
+            console.log(`[SurfaceBlock] Failed to get block at (${worldX}, ${currentY}, ${worldZ})`);
+            // Block might be in unloaded chunk, continue searching
+        }
+
+        currentY--;
+    }
+
+    // No block with a valid map color found
+    return null;
 }
 
 /**
  * Convert a surface block result to chunk block format
  */
 function toChunkBlock(result: SurfaceBlockResult): MinecraftChunkBlock {
-  const block: MinecraftChunkBlock = {
-    x: result.x,
-    y: result.y,
-    z: result.z,
-    type: result.type,
-    mapColor: result.mapColor,
-    waterDepth: result.waterDepth,
-  };
-  return block;
+    const block: MinecraftChunkBlock = {
+        x: result.x,
+        y: result.y,
+        z: result.z,
+        type: result.type,
+        mapColor: result.mapColor,
+        waterDepth: result.waterDepth,
+    };
+    return block;
 }
 
 /**
@@ -276,39 +278,35 @@ function toChunkBlock(result: SurfaceBlockResult): MinecraftChunkBlock {
  * @param chunkZ - Chunk Z coordinate
  * @returns Chunk data with all surface blocks
  */
-export function scanChunk(
-  dimension: MinecraftDimension,
-  chunkX: number,
-  chunkZ: number
-): MinecraftChunkData {
-  const blocks: MinecraftChunkBlock[] = [];
-  const startX = chunkX * 16;
-  const startZ = chunkZ * 16;
+export function scanChunk(dimension: MinecraftDimension, chunkX: number, chunkZ: number): MinecraftChunkData {
+    const blocks: MinecraftChunkBlock[] = [];
+    const startX = chunkX * 16;
+    const startZ = chunkZ * 16;
 
-  // Scan each column in the 16x16 chunk
-  for (let dx = 0; dx < 16; dx++) {
-    for (let dz = 0; dz < 16; dz++) {
-      const worldX = startX + dx;
-      const worldZ = startZ + dz;
+    // Scan each column in the 16x16 chunk
+    for (let dx = 0; dx < 16; dx++) {
+        for (let dz = 0; dz < 16; dz++) {
+            const worldX = startX + dx;
+            const worldZ = startZ + dz;
 
-      try {
-        const result = getSurfaceBlock(dimension, worldX, worldZ);
-        if (result) {
-          blocks.push(toChunkBlock(result));
+            try {
+                const result = getSurfaceBlock(dimension, worldX, worldZ);
+                if (result) {
+                    blocks.push(toChunkBlock(result));
+                }
+            } catch {
+                // Block might be in unloaded chunk, skip silently
+                continue;
+            }
         }
-      } catch {
-        // Block might be in unloaded chunk, skip silently
-        continue;
-      }
     }
-  }
 
-  return {
-    dimension: toDimension(dimension.id),
-    chunkX,
-    chunkZ,
-    blocks,
-  };
+    return {
+        dimension: toDimension(dimension.id),
+        chunkX,
+        chunkZ,
+        blocks,
+    };
 }
 
 /**
@@ -322,35 +320,35 @@ export function scanChunk(
  * @returns Chunk data with surface blocks in the area
  */
 export function scanArea(
-  dimension: MinecraftDimension,
-  centerX: number,
-  centerZ: number,
-  radius: number = 1
+    dimension: MinecraftDimension,
+    centerX: number,
+    centerZ: number,
+    radius: number = 1
 ): MinecraftChunkData {
-  const blocks: MinecraftChunkBlock[] = [];
-  const { chunkX, chunkZ } = getChunkCoordinates(centerX, centerZ);
+    const blocks: MinecraftChunkBlock[] = [];
+    const { chunkX, chunkZ } = getChunkCoordinates(centerX, centerZ);
 
-  for (let dx = -radius; dx <= radius; dx++) {
-    for (let dz = -radius; dz <= radius; dz++) {
-      const worldX = centerX + dx;
-      const worldZ = centerZ + dz;
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+            const worldX = centerX + dx;
+            const worldZ = centerZ + dz;
 
-      try {
-        const result = getSurfaceBlock(dimension, worldX, worldZ);
-        if (result) {
-          blocks.push(toChunkBlock(result));
+            try {
+                const result = getSurfaceBlock(dimension, worldX, worldZ);
+                if (result) {
+                    blocks.push(toChunkBlock(result));
+                }
+            } catch {
+                // Block might be in unloaded chunk, skip silently
+                continue;
+            }
         }
-      } catch {
-        // Block might be in unloaded chunk, skip silently
-        continue;
-      }
     }
-  }
 
-  return {
-    dimension: toDimension(dimension.id),
-    chunkX,
-    chunkZ,
-    blocks,
-  };
+    return {
+        dimension: toDimension(dimension.id),
+        chunkX,
+        chunkZ,
+        blocks,
+    };
 }
