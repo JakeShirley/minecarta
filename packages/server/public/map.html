@@ -167,6 +167,43 @@
                 border: 1px solid #1f4068;
             }
 
+            /* Chat bubble on player marker */
+            .player-chat-bubble {
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 255, 255, 0.95);
+                color: #1a1a2e;
+                padding: 6px 10px;
+                border-radius: 8px;
+                font-size: 12px;
+                max-width: 200px;
+                word-wrap: break-word;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                margin-bottom: 8px;
+                opacity: 0;
+                visibility: hidden;
+                transition:
+                    opacity 0.3s ease,
+                    visibility 0.3s ease;
+                z-index: 1000;
+                pointer-events: none;
+            }
+            .player-chat-bubble.visible {
+                opacity: 1;
+                visibility: visible;
+            }
+            .player-chat-bubble::after {
+                content: '';
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                border: 6px solid transparent;
+                border-top-color: rgba(255, 255, 255, 0.95);
+            }
+
             /* Player stats popup styling */
             .player-popup {
                 min-width: 320px;
@@ -972,6 +1009,8 @@
             let playersVisible = true;
             let currentPlayers = []; // Store current player data
             let playerAnimationFrame = null; // Animation frame ID for player lerping
+            let chatBubbleTimeouts = new Map(); // Map of player name -> timeout ID for hiding chat bubbles
+            const CHAT_BUBBLE_DURATION = 10000; // How long chat bubbles stay visible (ms)
 
             /**
              * Linear interpolation between two values
@@ -1138,11 +1177,39 @@
             function createPlayerMarkerHtml(player) {
                 const headUrl = getPlayerHeadUrl(player.playfabId);
                 return `
-        <div class="player-marker">
+        <div class="player-marker" data-player-name="${player.name}">
+          <div class="player-chat-bubble" data-bubble-for="${player.name}"></div>
           <img class="player-head" src="${headUrl}" alt="${player.name}" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect fill="#8B4513" width="32" height="32"/><rect fill="#F5DEB3" x="8" y="8" width="16" height="16"/></svg>')}'">
           <span class="player-name">${player.name}</span>
         </div>
       `;
+            }
+
+            /**
+             * Show a chat bubble on a player's marker
+             */
+            function showPlayerChatBubble(playerName, message) {
+                // Find the bubble element for this player
+                const bubble = document.querySelector(`.player-chat-bubble[data-bubble-for="${playerName}"]`);
+                if (!bubble) return;
+
+                // Truncate long messages
+                const displayMessage = message.length > 100 ? message.substring(0, 100) + '...' : message;
+                bubble.textContent = displayMessage;
+                bubble.classList.add('visible');
+
+                // Clear any existing timeout for this player
+                if (chatBubbleTimeouts.has(playerName)) {
+                    clearTimeout(chatBubbleTimeouts.get(playerName));
+                }
+
+                // Set timeout to hide the bubble
+                const timeoutId = setTimeout(() => {
+                    bubble.classList.remove('visible');
+                    chatBubbleTimeouts.delete(playerName);
+                }, CHAT_BUBBLE_DURATION);
+
+                chatBubbleTimeouts.set(playerName, timeoutId);
             }
 
             /**
@@ -1389,6 +1456,11 @@
                 }
 
                 updateChatDisplay();
+
+                // Show chat bubble on the player's marker
+                if (chat.playerName && chat.message) {
+                    showPlayerChatBubble(chat.playerName, chat.message);
+                }
             }
 
             /**
