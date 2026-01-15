@@ -9,8 +9,10 @@ import type {
     Player,
     ChatMessage,
     ChatMessageEvent,
+    ChatHistoryEvent,
 } from '@minecraft-map/shared';
 import { WS_EVENTS } from '@minecraft-map/shared';
+import { getChatHistoryService } from './chat-history.js';
 
 /**
  * WebSocket service for managing real-time client connections and broadcasting events.
@@ -119,12 +121,39 @@ export class WebSocketService {
     emitChatMessage(chat: ChatMessage): void {
         console.log(`[WebSocketService] Emitting chat:message from ${chat.playerName} to ${this.clients.size} clients`);
 
+        // Add to chat history
+        const chatHistoryService = getChatHistoryService();
+        chatHistoryService.addMessage(chat);
+
         const event: ChatMessageEvent = {
             type: WS_EVENTS.CHAT_MESSAGE,
             timestamp: Date.now(),
             chat,
         };
         this.broadcast(event);
+    }
+
+    /**
+     * Send chat history to a specific client
+     */
+    sendChatHistory(socket: WebSocket): void {
+        const chatHistoryService = getChatHistoryService();
+        const messages = chatHistoryService.getMessages();
+
+        if (messages.length === 0) {
+            return;
+        }
+
+        const event: ChatHistoryEvent = {
+            type: WS_EVENTS.CHAT_HISTORY,
+            timestamp: Date.now(),
+            messages,
+        };
+
+        if (socket.readyState === 1) {
+            socket.send(JSON.stringify(event));
+            console.log(`[WebSocketService] Sent ${messages.length} chat history messages to client`);
+        }
     }
 
     /**

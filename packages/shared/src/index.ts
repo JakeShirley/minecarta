@@ -19,6 +19,7 @@ export type {
     TileUpdateEvent,
     BlockUpdateEvent,
     ChatMessageEvent,
+    ChatHistoryEvent,
     WebSocketEvent,
 } from './types/index.js';
 

@@ -1392,6 +1392,21 @@
             }
 
             /**
+             * Load chat history (replaces current messages)
+             */
+            function loadChatHistory(messages) {
+                // Replace current messages with history
+                chatMessages = [...messages];
+
+                // Limit to max
+                if (chatMessages.length > MAX_CHAT_MESSAGES) {
+                    chatMessages = chatMessages.slice(-MAX_CHAT_MESSAGES);
+                }
+
+                updateChatDisplay();
+            }
+
+            /**
              * Update the chat messages display
              */
             function updateChatDisplay() {
@@ -1556,6 +1571,14 @@
                         if (event.chat) {
                             addChatMessage(event.chat);
                             console.log('[WebSocket] Chat message from:', event.chat.playerName);
+                        }
+                        break;
+
+                    case 'chat:history':
+                        // Handle chat history (sent on connection)
+                        if (event.messages && Array.isArray(event.messages)) {
+                            loadChatHistory(event.messages);
+                            console.log('[WebSocket] Loaded chat history:', event.messages.length, 'messages');
                         }
                         break;
 

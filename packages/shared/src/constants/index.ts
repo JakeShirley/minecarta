@@ -71,4 +71,5 @@ export const WS_EVENTS = {
     BLOCK_UPDATE: 'block:update',
     TILE_UPDATE: 'tile:update',
     CHAT_MESSAGE: 'chat:message',
+    CHAT_HISTORY: 'chat:history',
 } as const;

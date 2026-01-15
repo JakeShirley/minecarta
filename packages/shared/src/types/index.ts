@@ -232,6 +232,14 @@ export interface ChatMessageEvent extends WebSocketEventBase {
 }
 
 /**
+ * Chat history event - sent when a client connects with recent chat messages
+ */
+export interface ChatHistoryEvent extends WebSocketEventBase {
+    readonly type: 'chat:history';
+    readonly messages: readonly ChatMessage[];
+}
+
+/**
  * Union of all WebSocket event types
  */
 export type WebSocketEvent =
@@ -240,4 +248,5 @@ export type WebSocketEvent =
     | PlayerUpdateEvent
     | TileUpdateEvent
     | BlockUpdateEvent
-    | ChatMessageEvent;
+    | ChatMessageEvent
+    | ChatHistoryEvent;

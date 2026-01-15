@@ -9,6 +9,8 @@ import { getWebSocketService } from '../services/index.js';
  * - player:leave - A player left the server
  * - player:update - Player positions updated
  * - tile:update - Map tiles were regenerated
+ * - chat:message - A chat message was sent
+ * - chat:history - Recent chat history (sent on connection)
  */
 export async function registerWebSocketRoutes(app: FastifyInstance): Promise<void> {
     app.get('/ws', { websocket: true }, (socket, _request) => {
@@ -29,5 +31,8 @@ export async function registerWebSocketRoutes(app: FastifyInstance): Promise<voi
                 message: 'Connected to Minecraft Map WebSocket',
             })
         );
+
+        // Send chat history to the new client
+        wsService.sendChatHistory(socket);
     });
 }
