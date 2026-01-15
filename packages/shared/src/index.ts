@@ -1,6 +1,7 @@
 // Types
 export type {
     Dimension,
+    MapType,
     Position,
     Player,
     BlockChange,
@@ -33,6 +34,7 @@ export {
     ZOOM_LEVELS,
     BLOCKS_PER_TILE,
     DIMENSIONS,
+    MAP_TYPES,
     AUTH_HEADER,
     WS_EVENTS,
 } from './constants/index.js';

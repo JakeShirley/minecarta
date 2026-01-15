@@ -4,6 +4,13 @@
 export type Dimension = 'overworld' | 'nether' | 'the_end';
 
 /**
+ * Map rendering types
+ * - 'block': Standard block-color map (similar to Minecraft's map item)
+ * - 'height': Grayscale height map based on Y values
+ */
+export type MapType = 'block' | 'height';
+
+/**
  * RGBA color for map rendering
  */
 export interface RGBA {
@@ -131,6 +138,7 @@ export interface TileCoordinates {
     readonly zoom: number;
     readonly x: number;
     readonly z: number;
+    readonly mapType?: MapType;
 }
 
 /**

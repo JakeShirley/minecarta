@@ -1,13 +1,14 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { DIMENSIONS, ZOOM_LEVELS, BLOCKS_PER_TILE } from '@minecraft-map/shared';
-import type { Dimension, ZoomLevel } from '@minecraft-map/shared';
+import { DIMENSIONS, ZOOM_LEVELS, BLOCKS_PER_TILE, MAP_TYPES } from '@minecraft-map/shared';
+import type { Dimension, ZoomLevel, MapType } from '@minecraft-map/shared';
 import { getConfig } from '../config/index.js';
 
 /**
  * Tile storage service
  *
- * Manages the file-based tile storage directory structure
+ * Manages the file-based tile storage directory structure.
+ * Directory structure: tiles/<dimension>/<mapType>/<zoom>/<x>/<z>.png
  */
 export class TileStorageService {
     private readonly baseDir: string;
@@ -33,11 +34,19 @@ export class TileStorageService {
                 fs.mkdirSync(dimensionDir, { recursive: true });
             }
 
-            // Create zoom level directories
-            for (const zoom of ZOOM_LEVELS) {
-                const zoomDir = path.join(dimensionDir, String(zoom));
-                if (!fs.existsSync(zoomDir)) {
-                    fs.mkdirSync(zoomDir, { recursive: true });
+            // Create map type directories
+            for (const mapType of MAP_TYPES) {
+                const mapTypeDir = path.join(dimensionDir, mapType);
+                if (!fs.existsSync(mapTypeDir)) {
+                    fs.mkdirSync(mapTypeDir, { recursive: true });
+                }
+
+                // Create zoom level directories
+                for (const zoom of ZOOM_LEVELS) {
+                    const zoomDir = path.join(mapTypeDir, String(zoom));
+                    if (!fs.existsSync(zoomDir)) {
+                        fs.mkdirSync(zoomDir, { recursive: true });
+                    }
                 }
             }
         }
@@ -46,22 +55,22 @@ export class TileStorageService {
     /**
      * Get the path for a specific tile
      */
-    getTilePath(dimension: Dimension, zoom: ZoomLevel, x: number, z: number): string {
-        return path.join(this.baseDir, dimension, String(zoom), String(x), `${z}.png`);
+    getTilePath(dimension: Dimension, zoom: ZoomLevel, x: number, z: number, mapType: MapType = 'block'): string {
+        return path.join(this.baseDir, dimension, mapType, String(zoom), String(x), `${z}.png`);
     }
 
     /**
      * Check if a tile exists
      */
-    tileExists(dimension: Dimension, zoom: ZoomLevel, x: number, z: number): boolean {
-        return fs.existsSync(this.getTilePath(dimension, zoom, x, z));
+    tileExists(dimension: Dimension, zoom: ZoomLevel, x: number, z: number, mapType: MapType = 'block'): boolean {
+        return fs.existsSync(this.getTilePath(dimension, zoom, x, z, mapType));
     }
 
     /**
      * Read a tile from storage
      */
-    readTile(dimension: Dimension, zoom: ZoomLevel, x: number, z: number): Buffer | null {
-        const tilePath = this.getTilePath(dimension, zoom, x, z);
+    readTile(dimension: Dimension, zoom: ZoomLevel, x: number, z: number, mapType: MapType = 'block'): Buffer | null {
+        const tilePath = this.getTilePath(dimension, zoom, x, z, mapType);
         if (!fs.existsSync(tilePath)) {
             return null;
         }
@@ -71,8 +80,15 @@ export class TileStorageService {
     /**
      * Write a tile to storage
      */
-    writeTile(dimension: Dimension, zoom: ZoomLevel, x: number, z: number, data: Buffer): void {
-        const tilePath = this.getTilePath(dimension, zoom, x, z);
+    writeTile(
+        dimension: Dimension,
+        zoom: ZoomLevel,
+        x: number,
+        z: number,
+        data: Buffer,
+        mapType: MapType = 'block'
+    ): void {
+        const tilePath = this.getTilePath(dimension, zoom, x, z, mapType);
         const tileDir = path.dirname(tilePath);
 
         // Ensure directory exists
@@ -86,8 +102,8 @@ export class TileStorageService {
     /**
      * Delete a tile from storage
      */
-    deleteTile(dimension: Dimension, zoom: ZoomLevel, x: number, z: number): boolean {
-        const tilePath = this.getTilePath(dimension, zoom, x, z);
+    deleteTile(dimension: Dimension, zoom: ZoomLevel, x: number, z: number, mapType: MapType = 'block'): boolean {
+        const tilePath = this.getTilePath(dimension, zoom, x, z, mapType);
         if (fs.existsSync(tilePath)) {
             fs.unlinkSync(tilePath);
             return true;
@@ -99,10 +115,12 @@ export class TileStorageService {
      * Invalidate tiles affected by a block change at a position
      */
     invalidateTilesAt(dimension: Dimension, blockX: number, blockZ: number): void {
-        // Delete tiles at all zoom levels that contain this block
+        // Delete tiles at all zoom levels that contain this block (for all map types)
         for (const zoom of ZOOM_LEVELS) {
             const { x, z } = this.blockToTile(blockX, blockZ, zoom);
-            this.deleteTile(dimension, zoom, x, z);
+            for (const mapType of MAP_TYPES) {
+                this.deleteTile(dimension, zoom, x, z, mapType);
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 import type { ChunkData, ChunkBlock, BlockChange, Dimension, ZoomLevel, TileCoordinates } from '@minecraft-map/shared';
-import { ZOOM_LEVELS } from '@minecraft-map/shared';
+import { ZOOM_LEVELS, MAP_TYPES } from '@minecraft-map/shared';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { getTileGeneratorService } from '../tiles/tile-generator.js';
 import { getWebSocketService } from './websocket.js';
@@ -143,21 +143,25 @@ export class TileUpdateService {
         for (const task of tasks) {
             const { dimension, zoom, x, z, blocks } = task;
 
-            // Read existing tile
-            const existingBuffer = storage.readTile(dimension, zoom, x, z);
+            // Generate and save tiles for both map types
+            for (const mapType of MAP_TYPES) {
+                // Read existing tile for this map type
+                const existingBuffer = storage.readTile(dimension, zoom, x, z, mapType);
 
-            // Generate updated tile
-            const newTileBuffer = await generator.generateTile(
-                blocks,
-                { dimension, zoom, x, z },
-                existingBuffer ?? undefined
-            );
+                // Generate updated tile
+                const newTileBuffer = await generator.generateTile(
+                    blocks,
+                    { dimension, zoom, x, z, mapType },
+                    existingBuffer ?? undefined,
+                    mapType
+                );
 
-            // Save tile
-            storage.writeTile(dimension, zoom, x, z, newTileBuffer);
+                // Save tile
+                storage.writeTile(dimension, zoom, x, z, newTileBuffer, mapType);
 
-            // Track for WebSocket notification
-            updatedTiles.push({ dimension, zoom, x, z });
+                // Track for WebSocket notification
+                updatedTiles.push({ dimension, zoom, x, z, mapType });
+            }
         }
 
         // Emit tile update events to WebSocket clients

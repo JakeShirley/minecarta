@@ -543,6 +543,44 @@
                 --dimension-color: #c084fc;
             }
 
+            /* Map Type Toggle Buttons */
+            .map-type-toggle {
+                display: flex;
+                gap: 4px;
+                margin-bottom: 10px;
+            }
+            .map-type-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                padding: 8px 6px;
+                background: #0f3460;
+                border: 2px solid transparent;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: #888;
+            }
+            .map-type-btn:hover {
+                background: #1f4068;
+                color: #aaa;
+            }
+            .map-type-btn.active {
+                border-color: #6dd5ed;
+                color: #6dd5ed;
+                background: rgba(15, 52, 96, 0.8);
+            }
+            .map-type-btn .type-icon {
+                font-size: 1.2rem;
+            }
+            .map-type-btn .type-label {
+                font-size: 0.65rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
             /* Dimension-specific theming */
             body.dim-overworld {
                 --accent-color: #4ade80;
@@ -682,6 +720,25 @@
                 </div>
 
                 <div class="control-group">
+                    <label>Map Type</label>
+                    <div class="map-type-toggle" id="map-type-toggle">
+                        <button class="map-type-btn active" data-type="block" onclick="selectMapType('block')">
+                            <span class="type-icon">🎨</span>
+                            <span class="type-label">Block Colors</span>
+                        </button>
+                        <button class="map-type-btn" data-type="height" onclick="selectMapType('height')">
+                            <span class="type-icon">⛰️</span>
+                            <span class="type-label">Height Map</span>
+                        </button>
+                    </div>
+                    <!-- Hidden select for compatibility -->
+                    <select id="tile-map-type" style="display: none">
+                        <option value="block">Block Colors</option>
+                        <option value="height">Height Map</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
                     <button onclick="updateMapLayer()">Refresh Map</button>
                 </div>
 
@@ -768,6 +825,9 @@
             // Current dimension (load from localStorage or default to overworld)
             let currentDimension = localStorage.getItem('map-dimension') || 'overworld';
 
+            // Current map type (load from localStorage or default to block)
+            let currentMapType = localStorage.getItem('map-type') || 'block';
+
             // Player state (declared early so selectDimension can reference them)
             let playerMarkers = new Map(); // Map of player name -> { marker, currentPos, targetPos, startPos, lerpStartTime }
             let playersVisible = true;
@@ -820,10 +880,31 @@
             }
 
             /**
+             * Select and apply a map type
+             */
+            function selectMapType(mapType) {
+                currentMapType = mapType;
+                localStorage.setItem('map-type', mapType);
+
+                // Update hidden select for compatibility
+                document.getElementById('tile-map-type').value = mapType;
+
+                // Update toggle button states
+                document.querySelectorAll('.map-type-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.type === mapType);
+                });
+
+                // Update map layer
+                updateMapLayer();
+                loadTile();
+            }
+
+            /**
              * Initialize dimension on page load
              */
             function initializeDimension() {
                 selectDimension(currentDimension);
+                selectMapType(currentMapType);
             }
 
             // Server zoom levels: 0 (16 blocks/tile, highest detail) to 7 (2048 blocks/tile)
@@ -1110,6 +1191,7 @@
                 }
 
                 const dim = document.getElementById('tile-dim').value;
+                const mapType = document.getElementById('tile-map-type').value;
 
                 // Custom TileLayer with refresh support that doesn't cause flicker
                 // Based on: https://github.com/Leaflet/Leaflet/issues/6659
@@ -1126,6 +1208,7 @@
                     initialize: function (options) {
                         L.TileLayer.prototype.initialize.call(this, '', options);
                         this._currentDim = dim;
+                        this._currentMapType = mapType;
 
                         // Store reference to original _tileOnLoad
                         const originalTileOnLoad = this._tileOnLoad;
@@ -1145,7 +1228,7 @@
                     },
 
                     getTileUrl: function (coords) {
-                        return `${API_BASE}/tiles/${this._currentDim}/${BASE_SERVER_ZOOM}/${coords.x}/${coords.y}.png`;
+                        return `${API_BASE}/tiles/${this._currentDim}/${this._currentMapType}/${BASE_SERVER_ZOOM}/${coords.x}/${coords.y}.png`;
                     },
 
                     getAttribution: function () {
@@ -1206,15 +1289,16 @@
 
             function loadTile() {
                 const dim = document.getElementById('tile-dim').value;
+                const mapType = document.getElementById('tile-map-type').value;
                 const z = document.getElementById('preview-z').value;
                 const x = document.getElementById('preview-x').value;
                 const y = document.getElementById('preview-y').value;
 
-                const url = `${API_BASE}/tiles/${dim}/${z}/${x}/${y}.png?t=${Date.now()}`;
+                const url = `${API_BASE}/tiles/${dim}/${mapType}/${z}/${x}/${y}.png?t=${Date.now()}`;
                 const img = document.getElementById('tile-preview');
                 img.src = url;
 
-                const displayUrl = `${API_BASE}/tiles/${dim}/${z}/${x}/${y}.png`;
+                const displayUrl = `${API_BASE}/tiles/${dim}/${mapType}/${z}/${x}/${y}.png`;
                 document.getElementById('tile-url').innerText = displayUrl;
 
                 img.onerror = () => {
@@ -1914,10 +1998,14 @@
              */
             function handleTileUpdates(tiles) {
                 const currentDimension = document.getElementById('tile-dim').value;
+                const currentMapType = document.getElementById('tile-map-type').value;
 
-                // Filter to tiles in current dimension and at our display zoom level
+                // Filter to tiles in current dimension, map type, and at our display zoom level
                 const relevantTiles = tiles.filter(
-                    tile => tile.dimension === currentDimension && tile.zoom === BASE_SERVER_ZOOM
+                    tile =>
+                        tile.dimension === currentDimension &&
+                        tile.zoom === BASE_SERVER_ZOOM &&
+                        (tile.mapType === currentMapType || tile.mapType === undefined)
                 );
 
                 if (relevantTiles.length === 0) {

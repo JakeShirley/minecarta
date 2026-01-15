@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { TILE_SIZE, BLOCKS_PER_TILE } from '@minecraft-map/shared';
-import type { ZoomLevel, TileCoordinates, ChunkBlock, RGBA } from '@minecraft-map/shared';
+import type { ZoomLevel, TileCoordinates, ChunkBlock, RGBA, MapType } from '@minecraft-map/shared';
 
 /**
  * Minecraft map shade multipliers.
@@ -35,6 +35,23 @@ const WATER_DEPTH_LEVELS = {
     LEVEL_2_MAX: 7, // 5-7 blocks: normal
     LEVEL_3_MAX: 11, // 8-11 blocks: checkerboard normal/dark
     // 12+ blocks: darkest
+} as const;
+
+/**
+ * Height map configuration for grayscale rendering.
+ *
+ * The Y coordinate is mapped to a grayscale value:
+ * - minY: The minimum Y value (maps to black, 0)
+ * - maxY: The maximum Y value (maps to white, 255)
+ *
+ * Default values cover the full Minecraft world height range.
+ * Overworld: -64 to 320
+ * Nether: 0 to 128
+ * The End: 0 to 256
+ */
+const HEIGHT_MAP_CONFIG = {
+    minY: -64,
+    maxY: 320,
 } as const;
 
 /**
@@ -150,13 +167,158 @@ export class TileGeneratorService {
     }
 
     /**
-     * Generate a PNG tile from block data
+     * Convert a Y coordinate to a grayscale value for height mapping.
+     *
+     * @param y The Y coordinate of the block
+     * @returns Grayscale value (0-255)
+     */
+    private yToGrayscale(y: number): number {
+        const { minY, maxY } = HEIGHT_MAP_CONFIG;
+        // Clamp Y to the configured range
+        const clampedY = Math.max(minY, Math.min(maxY, y));
+        // Normalize to 0-1 range, then scale to 0-255
+        const normalized = (clampedY - minY) / (maxY - minY);
+        return Math.floor(normalized * 255);
+    }
+
+    /**
+     * Generate a PNG tile from block data.
+     * Dispatches to the appropriate generator based on map type.
+     *
+     * @param blocks Array of blocks that fall within this tile's area
+     * @param coords The coordinates of the tile being generated
+     * @param baseImage Optional buffer of the existing tile image to update
+     * @param mapType The type of map to generate ('block' or 'height')
+     */
+    async generateTile(
+        blocks: ChunkBlock[],
+        coords: TileCoordinates,
+        baseImage?: Buffer,
+        mapType: MapType = 'block'
+    ): Promise<Buffer> {
+        if (mapType === 'height') {
+            return this.generateHeightTile(blocks, coords, baseImage);
+        }
+        return this.generateBlockTile(blocks, coords, baseImage);
+    }
+
+    /**
+     * Generate a grayscale height map tile from block Y values.
      *
      * @param blocks Array of blocks that fall within this tile's area
      * @param coords The coordinates of the tile being generated
      * @param baseImage Optional buffer of the existing tile image to update
      */
-    async generateTile(blocks: ChunkBlock[], coords: TileCoordinates, baseImage?: Buffer): Promise<Buffer> {
+    private async generateHeightTile(
+        blocks: ChunkBlock[],
+        coords: TileCoordinates,
+        baseImage?: Buffer
+    ): Promise<Buffer> {
+        const { zoom, x: tileX, z: tileZ } = coords;
+
+        // Create pixel buffer (RGBA)
+        let pixelData: Uint8ClampedArray;
+
+        if (baseImage) {
+            const { data, info } = await sharp(baseImage).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            if (info.width !== TILE_SIZE || info.height !== TILE_SIZE) {
+                pixelData = new Uint8ClampedArray(TILE_SIZE * TILE_SIZE * 4);
+                pixelData.fill(0);
+            } else {
+                pixelData = new Uint8ClampedArray(data);
+            }
+        } else {
+            pixelData = new Uint8ClampedArray(TILE_SIZE * TILE_SIZE * 4);
+            pixelData.fill(0);
+        }
+
+        const blockStartX = tileX * BLOCKS_PER_TILE[zoom as ZoomLevel];
+        const blockStartZ = tileZ * BLOCKS_PER_TILE[zoom as ZoomLevel];
+
+        const scale = BLOCKS_PER_TILE[zoom as ZoomLevel] / TILE_SIZE;
+        const pixelsPerBlock = scale < 1 ? Math.round(1 / scale) : 1;
+
+        // Build height map for this tile (x,z -> highest Y)
+        const heightMap = this.buildHeightMap(blocks);
+
+        for (const block of blocks) {
+            const relX = block.x - blockStartX;
+            const relZ = block.z - blockStartZ;
+
+            if (
+                relX < 0 ||
+                relZ < 0 ||
+                relX >= BLOCKS_PER_TILE[zoom as ZoomLevel] ||
+                relZ >= BLOCKS_PER_TILE[zoom as ZoomLevel]
+            ) {
+                continue;
+            }
+
+            // Check if this is the highest block at this position
+            const key = `${block.x},${block.z}`;
+            const highestY = heightMap.get(key);
+            if (highestY !== block.y) {
+                continue; // Skip non-surface blocks for height map
+            }
+
+            // Convert Y to grayscale
+            const gray = this.yToGrayscale(block.y);
+
+            if (scale >= 1) {
+                const px = Math.floor(relX / scale);
+                const py = Math.floor(relZ / scale);
+                const idx = (py * TILE_SIZE + px) * 4;
+
+                pixelData[idx] = gray;
+                pixelData[idx + 1] = gray;
+                pixelData[idx + 2] = gray;
+                pixelData[idx + 3] = 255;
+            } else {
+                const startPx = relX * pixelsPerBlock;
+                const startPy = relZ * pixelsPerBlock;
+
+                for (let dy = 0; dy < pixelsPerBlock; dy++) {
+                    for (let dx = 0; dx < pixelsPerBlock; dx++) {
+                        const px = startPx + dx;
+                        const py = startPy + dy;
+
+                        if (px >= TILE_SIZE || py >= TILE_SIZE) continue;
+
+                        const idx = (py * TILE_SIZE + px) * 4;
+
+                        pixelData[idx] = gray;
+                        pixelData[idx + 1] = gray;
+                        pixelData[idx + 2] = gray;
+                        pixelData[idx + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        return sharp(pixelData, {
+            raw: {
+                width: TILE_SIZE,
+                height: TILE_SIZE,
+                channels: 4,
+            },
+        })
+            .png()
+            .toBuffer();
+    }
+
+    /**
+     * Generate a standard block-color PNG tile from block data
+     *
+     * @param blocks Array of blocks that fall within this tile's area
+     * @param coords The coordinates of the tile being generated
+     * @param baseImage Optional buffer of the existing tile image to update
+     */
+    private async generateBlockTile(
+        blocks: ChunkBlock[],
+        coords: TileCoordinates,
+        baseImage?: Buffer
+    ): Promise<Buffer> {
         const { zoom, x: tileX, z: tileZ } = coords;
 
         // Create distinct pixel buffer (RGBA)

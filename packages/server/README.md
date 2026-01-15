@@ -271,7 +271,7 @@ GET /api/v1/players/:name
 ### Map Tiles (Public)
 
 ```
-GET /api/v1/tiles/:dimension/:zoom/:x/:z.png
+GET /api/v1/tiles/:dimension/:mapType/:zoom/:x/:z.png
 ```
 
 Get a map tile image.
@@ -279,11 +279,17 @@ Get a map tile image.
 **Parameters:**
 
 - `dimension`: `overworld`, `nether`, or `the_end`
-- `zoom`: `0`, `1`, `2`, or `3`
+- `mapType`: `block` (standard colored map) or `height` (grayscale height map)
+- `zoom`: `0` through `7` (0 = highest detail, 7 = most zoomed out)
 - `x`: Tile X coordinate
 - `z`: Tile Z coordinate
 
 **Response:** PNG image (256x256 pixels)
+
+**Map Types:**
+
+- **block**: Standard block-color map similar to Minecraft's in-game map item, with height-based shading for terrain and checkerboard patterns for water depth.
+- **height**: Grayscale height map where pixel brightness represents the Y coordinate of the topmost block. Darker = lower elevation, brighter = higher elevation.
 
 ## Project Structure
 
@@ -324,10 +330,16 @@ Map tiles are stored on disk with the following structure:
 ```
 data/tiles/
 ├── overworld/
-│   ├── 0/           # Zoom level 0 (highest detail)
-│   │   ├── 0/
-│   │   │   ├── 0.png
-│   │   │   └── 1.png
+│   ├── block/       # Standard block-color map tiles
+│   │   ├── 0/       # Zoom level 0 (highest detail)
+│   │   │   ├── 0/
+│   │   │   │   ├── 0.png
+│   │   │   │   └── 1.png
+│   │   │   └── ...
+│   │   └── ...
+│   └── height/      # Grayscale height map tiles
+│       ├── 0/
+│       └── ...
 │   │   └── 1/
 │   ├── 1/           # Zoom level 1
 │   ├── 2/           # Zoom level 2

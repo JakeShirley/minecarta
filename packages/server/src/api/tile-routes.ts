@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { Dimension, ZoomLevel } from '@minecraft-map/shared';
-import { DIMENSIONS, ZOOM_LEVELS } from '@minecraft-map/shared';
+import type { Dimension, ZoomLevel, MapType } from '@minecraft-map/shared';
+import { DIMENSIONS, ZOOM_LEVELS, MAP_TYPES } from '@minecraft-map/shared';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getConfig } from '../config/index.js';
@@ -9,6 +9,7 @@ import { registerAuth } from './auth.js';
 
 interface TileParams {
     dimension: string;
+    mapType: string;
     z: string;
     x: string;
     y: string;
@@ -19,12 +20,12 @@ interface TileParams {
  */
 export async function registerTileRoutes(app: FastifyInstance): Promise<void> {
     /**
-     * GET /tiles/:dimension/:z/:x/:y.png - Get a map tile
+     * GET /tiles/:dimension/:mapType/:z/:x/:y.png - Get a map tile
      */
     app.get(
-        '/tiles/:dimension/:z/:x/:y.png',
+        '/tiles/:dimension/:mapType/:z/:x/:y.png',
         async (request: FastifyRequest<{ Params: TileParams }>, reply: FastifyReply) => {
-            const { dimension, z, x, y } = request.params;
+            const { dimension, mapType, z, x, y } = request.params;
             const config = getConfig();
 
             // Validate dimension
@@ -32,6 +33,14 @@ export async function registerTileRoutes(app: FastifyInstance): Promise<void> {
                 return reply.code(400).send({
                     success: false,
                     error: `Invalid dimension: ${dimension}. Must be one of: ${DIMENSIONS.join(', ')}`,
+                });
+            }
+
+            // Validate map type
+            if (!MAP_TYPES.includes(mapType as MapType)) {
+                return reply.code(400).send({
+                    success: false,
+                    error: `Invalid map type: ${mapType}. Must be one of: ${MAP_TYPES.join(', ')}`,
                 });
             }
 
@@ -55,13 +64,12 @@ export async function registerTileRoutes(app: FastifyInstance): Promise<void> {
                 });
             }
 
-            // Build tile path
-            const tilePath = path.join(config.dataDir, 'tiles', dimension, z, x, `${y}.png`);
+            // Build tile path (new structure: dimension/mapType/zoom/x/y.png)
+            const tilePath = path.join(config.dataDir, 'tiles', dimension, mapType, z, x, `${y}.png`);
 
             // Check if tile exists
             if (!fs.existsSync(tilePath)) {
                 // Return a placeholder or 404
-                // For now, return 404 - in Phase 2 we'll generate tiles on demand
                 return reply.code(404).send({
                     success: false,
                     error: 'Tile not found',

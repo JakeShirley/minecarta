@@ -57,6 +57,11 @@ export const BLOCKS_PER_TILE: Record<ZoomLevel, number> = {
 export const DIMENSIONS = ['overworld', 'nether', 'the_end'] as const;
 
 /**
+ * Map types for tile rendering
+ */
+export const MAP_TYPES = ['block', 'height'] as const;
+
+/**
  * Authentication header name
  */
 export const AUTH_HEADER = 'x-mc-auth-token';

@@ -367,4 +367,123 @@ describe('TileGeneratorService', () => {
             expect(data[idx1]).toBe(Math.floor((WATER_COLOR.r * 180) / 255));
         });
     });
+
+    describe('Height map generation', () => {
+        it('should generate a grayscale tile based on Y values', async () => {
+            const service = new TileGeneratorService();
+
+            // Block at y=64 should map to a mid-gray value
+            // Height range: -64 to 320 (384 total)
+            // y=64 is at position (64 - (-64)) / 384 = 128/384 ≈ 0.333
+            // Grayscale: 0.333 * 255 ≈ 85
+            const blocks: ChunkBlock[] = [{ x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR }];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'height'
+            );
+
+            expect(buffer).toBeDefined();
+            expect(Buffer.isBuffer(buffer)).toBe(true);
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // Check that pixel at (0,0) has grayscale value
+            const expectedGray = Math.floor(((64 - -64) / (320 - -64)) * 255);
+            expect(data[0]).toBe(expectedGray); // R
+            expect(data[1]).toBe(expectedGray); // G
+            expect(data[2]).toBe(expectedGray); // B
+            expect(data[3]).toBe(255); // A (fully opaque)
+        });
+
+        it('should render darker for lower Y values', async () => {
+            const service = new TileGeneratorService();
+
+            // Block at y=-64 (minimum) should be black
+            const blocks: ChunkBlock[] = [{ x: 0, y: -64, z: 0, type: 'minecraft:bedrock', mapColor: STONE_COLOR }];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'height'
+            );
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // y=-64 maps to gray value 0 (black)
+            expect(data[0]).toBe(0);
+            expect(data[1]).toBe(0);
+            expect(data[2]).toBe(0);
+            expect(data[3]).toBe(255);
+        });
+
+        it('should render brighter for higher Y values', async () => {
+            const service = new TileGeneratorService();
+
+            // Block at y=320 (maximum) should be white
+            const blocks: ChunkBlock[] = [{ x: 0, y: 320, z: 0, type: 'minecraft:air', mapColor: STONE_COLOR }];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'height'
+            );
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // y=320 maps to gray value 255 (white)
+            expect(data[0]).toBe(255);
+            expect(data[1]).toBe(255);
+            expect(data[2]).toBe(255);
+            expect(data[3]).toBe(255);
+        });
+
+        it('should only use the highest block at each position for height map', async () => {
+            const service = new TileGeneratorService();
+
+            // Two blocks at same x,z but different y - only highest should be used
+            const blocks: ChunkBlock[] = [
+                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
+                { x: 0, y: 128, z: 0, type: 'minecraft:grass_block', mapColor: GRASS_COLOR },
+            ];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'height'
+            );
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // Should use y=128, not y=64
+            const expectedGray = Math.floor(((128 - -64) / (320 - -64)) * 255);
+            expect(data[0]).toBe(expectedGray);
+        });
+
+        it('should clamp Y values to the configured range', async () => {
+            const service = new TileGeneratorService();
+
+            // Block at y=500 (above max) should clamp to white
+            const blocks: ChunkBlock[] = [{ x: 0, y: 500, z: 0, type: 'minecraft:air', mapColor: STONE_COLOR }];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'height'
+            );
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // y=500 should clamp to 320 and map to 255 (white)
+            expect(data[0]).toBe(255);
+            expect(data[1]).toBe(255);
+            expect(data[2]).toBe(255);
+        });
+    });
 });
