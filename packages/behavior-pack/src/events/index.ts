@@ -537,7 +537,6 @@ function getAllPlayers(): MinecraftPlayer[] {
 
             // Get PlayFab ID from dynamic property (survives /reload) or pending cache
             const playfabId = getPlayfabId(player);
-            logDebug(`Player ${player.name} playfabId: ${playfabId ?? 'NOT FOUND'}`);
 
             // Get player stats if enabled
             const stats = getPlayerStats(player);
@@ -572,11 +571,6 @@ export async function updatePlayerPositions(): Promise<void> {
     }
 
     const serialized = serializePlayers(players);
-    logDebug(`Updating ${serialized.length} player positions`);
-    // Debug: Log the serialized player data including playfabId
-    for (const p of serialized) {
-        logDebug(`Serialized player ${p.name} playfabId: ${p.playfabId ?? 'UNDEFINED'}`);
-    }
     await sendPlayerPositions(serialized);
 
     // Check if any player's current chunk needs generation
