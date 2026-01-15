@@ -180,3 +180,28 @@ export type ChunkExistsQuery = z.infer<typeof chunkExistsQuerySchema>;
 export const dimensionParamSchema = z.object({
     dimension: z.enum(['overworld', 'nether', 'the_end']).optional(),
 });
+
+/**
+ * World spawn update request schema
+ */
+export const worldSpawnSchema = z.object({
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+});
+
+export type WorldSpawnRequest = z.infer<typeof worldSpawnSchema>;
+
+/**
+ * Player spawn update request schema
+ */
+export const playerSpawnSchema = z.object({
+    playerName: z.string().min(1).max(32),
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+});
+
+export type PlayerSpawnRequest = z.infer<typeof playerSpawnSchema>;

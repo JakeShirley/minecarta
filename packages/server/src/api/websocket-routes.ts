@@ -11,6 +11,9 @@ import { getWebSocketService } from '../services/index.js';
  * - tile:update - Map tiles were regenerated
  * - chat:message - A chat message was sent
  * - chat:history - Recent chat history (sent on connection)
+ * - spawn:world - World spawn location updated
+ * - spawn:player - Player spawn point updated
+ * - spawn:state - All spawn locations (sent on connection)
  */
 export async function registerWebSocketRoutes(app: FastifyInstance): Promise<void> {
     app.get('/ws', { websocket: true }, (socket, _request) => {
@@ -34,5 +37,8 @@ export async function registerWebSocketRoutes(app: FastifyInstance): Promise<voi
 
         // Send chat history to the new client
         wsService.sendChatHistory(socket);
+
+        // Send spawn state to the new client
+        wsService.sendSpawnState(socket);
     });
 }

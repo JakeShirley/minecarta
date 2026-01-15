@@ -4,6 +4,7 @@ import {
     getEntityStateService,
     getTileUpdateService,
     getWebSocketService,
+    getSpawnStateService,
 } from '../services/index.js';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { registerAuth } from './auth.js';
@@ -16,6 +17,8 @@ import {
     chunksBatchUpdateSchema,
     chunkExistsQuerySchema,
     chatMessageSchema,
+    worldSpawnSchema,
+    playerSpawnSchema,
 } from './schemas.js';
 import type { Dimension, ZoomLevel, Player } from '@minecraft-map/shared';
 
@@ -297,6 +300,68 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
                 chunkX,
                 chunkZ,
             },
+        });
+    });
+
+    /**
+     * POST /world/spawn/world - Receive world spawn location
+     */
+    app.post('/world/spawn/world', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = worldSpawnSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const spawnData = parseResult.data;
+        const spawnService = getSpawnStateService();
+        const wsService = getWebSocketService();
+
+        const spawn = spawnService.updateWorldSpawn(spawnData);
+
+        // Emit world spawn update to WebSocket clients
+        wsService.emitWorldSpawnUpdate(spawn);
+
+        request.log.info({ spawn }, 'Updated world spawn location');
+
+        return reply.send({
+            success: true,
+            data: { spawn },
+        });
+    });
+
+    /**
+     * POST /world/spawn/player - Receive player spawn point (bed location)
+     */
+    app.post('/world/spawn/player', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = playerSpawnSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const spawnData = parseResult.data;
+        const spawnService = getSpawnStateService();
+        const wsService = getWebSocketService();
+
+        const spawn = spawnService.updatePlayerSpawn(spawnData);
+
+        // Emit player spawn update to WebSocket clients
+        wsService.emitPlayerSpawnUpdate(spawn);
+
+        request.log.info({ player: spawnData.playerName }, 'Updated player spawn point');
+
+        return reply.send({
+            success: true,
+            data: { spawn },
         });
     });
 }

@@ -23,6 +23,8 @@ import {
     sendChunkData,
     sendChatMessage,
     checkChunkExists,
+    sendWorldSpawn,
+    sendPlayerSpawn,
 } from '../network';
 import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
@@ -408,6 +410,11 @@ export function registerPlayerJoinListener(): void {
             sendPlayerJoin(playerData).catch(error => {
                 logError('Failed to send player join', error);
             });
+
+            // Sync the player's spawn point (bed location)
+            syncPlayerSpawn(player).catch(error => {
+                logError('Failed to sync player spawn point', error);
+            });
         } catch (error) {
             logError(`Failed to get player data for join event: ${playerName}`, error);
             // Fall back to updating all player positions
@@ -577,6 +584,58 @@ export async function updatePlayerPositions(): Promise<void> {
     // Process one player at a time to avoid overwhelming the server
     for (const player of players) {
         await checkAndGeneratePlayerChunk(player);
+    }
+}
+
+/**
+ * Send world spawn location to the server.
+ * Called on boot to sync the default spawn point.
+ */
+export async function syncWorldSpawn(): Promise<void> {
+    try {
+        const spawnLocation = world.getDefaultSpawnLocation();
+
+        logDebug(`World spawn location: (${spawnLocation.x}, ${spawnLocation.y}, ${spawnLocation.z})`);
+
+        await sendWorldSpawn({
+            x: spawnLocation.x,
+            y: spawnLocation.y,
+            z: spawnLocation.z,
+            dimension: 'overworld', // World spawn is always in overworld
+        });
+    } catch (error) {
+        logError('Failed to sync world spawn', error);
+    }
+}
+
+/**
+ * Send a player's spawn point (bed location) to the server.
+ * Called when a player joins to sync their respawn point.
+ */
+export async function syncPlayerSpawn(player: Player): Promise<void> {
+    try {
+        const spawnPoint = player.getSpawnPoint();
+
+        if (!spawnPoint) {
+            logDebug(`Player ${player.name} has no spawn point set`);
+            return;
+        }
+
+        const dimension = toDimension(spawnPoint.dimension.id);
+
+        logDebug(
+            `Player ${player.name} spawn point: (${spawnPoint.x}, ${spawnPoint.y}, ${spawnPoint.z}) in ${dimension}`
+        );
+
+        await sendPlayerSpawn({
+            playerName: player.name,
+            x: spawnPoint.x,
+            y: spawnPoint.y,
+            z: spawnPoint.z,
+            dimension,
+        });
+    } catch (error) {
+        logError(`Failed to sync spawn for player ${player.name}`, error);
     }
 }
 

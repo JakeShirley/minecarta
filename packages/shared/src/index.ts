@@ -4,6 +4,7 @@ export type {
     MapType,
     Position,
     Player,
+    PlayerStats,
     BlockChange,
     Entity,
     ChunkData,
@@ -12,6 +13,12 @@ export type {
     WorldState,
     RGBA,
     ChatMessage,
+    // Spawn types
+    WorldSpawn,
+    PlayerSpawn,
+    WorldSpawnUpdateEvent,
+    PlayerSpawnUpdateEvent,
+    SpawnsStateEvent,
     // WebSocket event types
     WebSocketEventBase,
     PlayerJoinEvent,

@@ -77,4 +77,7 @@ export const WS_EVENTS = {
     TILE_UPDATE: 'tile:update',
     CHAT_MESSAGE: 'chat:message',
     CHAT_HISTORY: 'chat:history',
+    SPAWN_WORLD: 'spawn:world',
+    SPAWN_PLAYER: 'spawn:player',
+    SPAWN_STATE: 'spawn:state',
 } as const;

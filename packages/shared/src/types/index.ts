@@ -247,6 +247,56 @@ export interface ChatHistoryEvent extends WebSocketEventBase {
     readonly messages: readonly ChatMessage[];
 }
 
+// ==========================================
+// Spawn Location Types
+// ==========================================
+
+/**
+ * World spawn location (default spawn point for new players)
+ */
+export interface WorldSpawn {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly dimension: Dimension;
+}
+
+/**
+ * Player spawn point (bed spawn location)
+ */
+export interface PlayerSpawn {
+    readonly playerName: string;
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly dimension: Dimension;
+}
+
+/**
+ * World spawn update event
+ */
+export interface WorldSpawnUpdateEvent extends WebSocketEventBase {
+    readonly type: 'spawn:world';
+    readonly spawn: WorldSpawn;
+}
+
+/**
+ * Player spawn update event
+ */
+export interface PlayerSpawnUpdateEvent extends WebSocketEventBase {
+    readonly type: 'spawn:player';
+    readonly spawn: PlayerSpawn;
+}
+
+/**
+ * All spawns state event (sent on connection)
+ */
+export interface SpawnsStateEvent extends WebSocketEventBase {
+    readonly type: 'spawn:state';
+    readonly worldSpawn: WorldSpawn | null;
+    readonly playerSpawns: readonly PlayerSpawn[];
+}
+
 /**
  * Union of all WebSocket event types
  */
@@ -257,4 +307,7 @@ export type WebSocketEvent =
     | TileUpdateEvent
     | BlockUpdateEvent
     | ChatMessageEvent
-    | ChatHistoryEvent;
+    | ChatHistoryEvent
+    | WorldSpawnUpdateEvent
+    | PlayerSpawnUpdateEvent
+    | SpawnsStateEvent;

@@ -6,7 +6,7 @@
  */
 
 import { system, world } from '@minecraft/server';
-import { registerAllEventListeners, updatePlayerPositions } from './events';
+import { registerAllEventListeners, updatePlayerPositions, syncWorldSpawn } from './events';
 import { registerCustomCommands } from './commands';
 import { testConnection } from './network';
 import { config } from './config';
@@ -33,6 +33,9 @@ async function initialize(): Promise<void> {
     const connected = await testConnection();
     if (connected) {
         logStartup('Successfully connected to map server!');
+
+        // Sync the world spawn location on boot
+        await syncWorldSpawn();
     } else {
         logStartup('Warning: Could not connect to map server. Will retry on events.');
     }

@@ -260,6 +260,35 @@ export async function checkChunkExists(
 }
 
 /**
+ * Send world spawn location to the server
+ *
+ * @param spawn - World spawn location data
+ */
+export async function sendWorldSpawn(spawn: {
+    x: number;
+    y: number;
+    z: number;
+    dimension: import('@minecraft-map/shared').Dimension;
+}): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/spawn/world', spawn);
+}
+
+/**
+ * Send player spawn point (bed location) to the server
+ *
+ * @param spawn - Player spawn data
+ */
+export async function sendPlayerSpawn(spawn: {
+    playerName: string;
+    x: number;
+    y: number;
+    z: number;
+    dimension: import('@minecraft-map/shared').Dimension;
+}): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/spawn/player', spawn);
+}
+
+/**
  * Test connection to the map server
  *
  * @returns Promise resolving to true if server is reachable

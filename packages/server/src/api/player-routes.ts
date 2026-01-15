@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Dimension } from '@minecraft-map/shared';
-import { getPlayerStateService } from '../services/index.js';
+import { getPlayerStateService, getSpawnStateService } from '../services/index.js';
 
 interface DimensionQuery {
     dimension?: Dimension;
@@ -79,6 +79,28 @@ export async function registerPlayerRoutes(app: FastifyInstance): Promise<void> 
         return reply.send({
             success: true,
             data: player,
+        });
+    });
+
+    /**
+     * GET /spawns - Get all spawn locations (world spawn and player spawns)
+     */
+    app.get('/spawns', async (request: FastifyRequest<{ Querystring: DimensionQuery }>, reply: FastifyReply) => {
+        const spawnService = getSpawnStateService();
+        const { dimension } = request.query;
+
+        const worldSpawn = spawnService.getWorldSpawn();
+        const playerSpawns = dimension
+            ? spawnService.getPlayerSpawnsByDimension(dimension)
+            : spawnService.getAllPlayerSpawns();
+
+        return reply.send({
+            success: true,
+            data: {
+                worldSpawn,
+                playerSpawns,
+                playerSpawnCount: playerSpawns.length,
+            },
         });
     });
 }

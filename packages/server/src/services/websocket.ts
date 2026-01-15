@@ -10,9 +10,15 @@ import type {
     ChatMessage,
     ChatMessageEvent,
     ChatHistoryEvent,
+    WorldSpawn,
+    PlayerSpawn,
+    WorldSpawnUpdateEvent,
+    PlayerSpawnUpdateEvent,
+    SpawnsStateEvent,
 } from '@minecraft-map/shared';
 import { WS_EVENTS } from '@minecraft-map/shared';
 import { getChatHistoryService } from './chat-history.js';
+import { getSpawnStateService } from './spawn-state.js';
 
 /**
  * WebSocket service for managing real-time client connections and broadcasting events.
@@ -153,6 +159,57 @@ export class WebSocketService {
         if (socket.readyState === 1) {
             socket.send(JSON.stringify(event));
             console.log(`[WebSocketService] Sent ${messages.length} chat history messages to client`);
+        }
+    }
+
+    /**
+     * Emit a world spawn update event
+     */
+    emitWorldSpawnUpdate(spawn: WorldSpawn): void {
+        console.log(`[WebSocketService] Emitting spawn:world to ${this.clients.size} clients`);
+
+        const event: WorldSpawnUpdateEvent = {
+            type: WS_EVENTS.SPAWN_WORLD,
+            timestamp: Date.now(),
+            spawn,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Emit a player spawn update event
+     */
+    emitPlayerSpawnUpdate(spawn: PlayerSpawn): void {
+        console.log(`[WebSocketService] Emitting spawn:player for ${spawn.playerName} to ${this.clients.size} clients`);
+
+        const event: PlayerSpawnUpdateEvent = {
+            type: WS_EVENTS.SPAWN_PLAYER,
+            timestamp: Date.now(),
+            spawn,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Send current spawn state to a specific client
+     */
+    sendSpawnState(socket: WebSocket): void {
+        const spawnStateService = getSpawnStateService();
+        const worldSpawn = spawnStateService.getWorldSpawn();
+        const playerSpawns = spawnStateService.getAllPlayerSpawns();
+
+        const event: SpawnsStateEvent = {
+            type: WS_EVENTS.SPAWN_STATE,
+            timestamp: Date.now(),
+            worldSpawn,
+            playerSpawns,
+        };
+
+        if (socket.readyState === 1) {
+            socket.send(JSON.stringify(event));
+            console.log(
+                `[WebSocketService] Sent spawn state to client (world: ${worldSpawn ? 'yes' : 'no'}, players: ${playerSpawns.length})`
+            );
         }
     }
 

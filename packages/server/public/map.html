@@ -672,6 +672,40 @@
             .player-filter-toggle input {
                 width: auto;
             }
+
+            /* Spawn marker styles */
+            .spawn-marker {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                pointer-events: auto;
+            }
+            .spawn-icon {
+                font-size: 24px;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+            }
+            .spawn-label {
+                margin-top: 2px;
+                background: rgba(15, 52, 96, 0.9);
+                color: #fff;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 10px;
+                white-space: nowrap;
+                border: 1px solid #1f4068;
+            }
+            .spawn-label.world-spawn {
+                background: rgba(74, 222, 128, 0.9);
+                border-color: #4ade80;
+                color: #000;
+            }
+            .spawn-label.player-spawn {
+                background: rgba(248, 113, 113, 0.9);
+                border-color: #f87171;
+                color: #000;
+            }
         </style>
     </head>
     <body>
@@ -744,13 +778,19 @@
 
                 <div class="control-group">
                     <label style="display: flex; align-items: center; gap: 8px">
-                        <input type="checkbox" id="show-grid" checked style="width: auto" /> Show Coordinate Grid
+                        <input type="checkbox" id="show-grid" style="width: auto" /> Show Coordinate Grid
                     </label>
                 </div>
 
                 <div class="control-group">
                     <label style="display: flex; align-items: center; gap: 8px">
                         <input type="checkbox" id="show-players" checked style="width: auto" /> Show Players
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <label style="display: flex; align-items: center; gap: 8px">
+                        <input type="checkbox" id="show-spawns" style="width: auto" /> Show Spawn Points
                     </label>
                 </div>
 
@@ -834,6 +874,13 @@
             let currentPlayers = []; // Store current player data
             let playerAnimationFrame = null; // Animation frame ID for player lerping
             let chatBubbleTimeouts = new Map(); // Map of player name -> timeout ID for hiding chat bubbles
+
+            // Spawn state
+            let worldSpawnMarker = null; // Single marker for world spawn
+            let playerSpawnMarkers = new Map(); // Map of player name -> marker
+            let currentWorldSpawn = null; // Current world spawn data
+            let currentPlayerSpawns = []; // Current player spawns data
+            let spawnsVisible = false;
 
             /**
              * Select and apply a dimension
@@ -1315,6 +1362,7 @@
             // Initial Load
             initializeDimension(); // This calls updateMapLayer() and loadTile()
             gridOverlay = new CoordGridOverlay(map); // Create grid overlay
+            gridOverlay.setVisible(false);
             updateZoomDisplay(); // Initial zoom display
 
             // ==========================================
@@ -1720,6 +1768,211 @@
             });
 
             // ==========================================
+            // Spawn Markers
+            // ==========================================
+
+            /**
+             * Create HTML for world spawn marker (home icon)
+             */
+            function createWorldSpawnMarkerHtml() {
+                return `
+                    <div class="spawn-marker">
+                        <span class="spawn-icon">🏠</span>
+                        <span class="spawn-label world-spawn">World Spawn</span>
+                    </div>
+                `;
+            }
+
+            /**
+             * Create HTML for player spawn marker (bed icon)
+             */
+            function createPlayerSpawnMarkerHtml() {
+                return `
+                    <div class="spawn-marker">
+                        <span class="spawn-icon">🛏️</span>
+                    </div>
+                `;
+            }
+
+            /**
+             * Update the world spawn marker
+             */
+            function updateWorldSpawnMarker(spawn) {
+                if (!spawn) {
+                    // Remove marker if no spawn
+                    if (worldSpawnMarker) {
+                        map.removeLayer(worldSpawnMarker);
+                        worldSpawnMarker = null;
+                    }
+                    return;
+                }
+
+                currentWorldSpawn = spawn;
+                const currentDimension = document.getElementById('tile-dim').value;
+
+                // Only show if in the same dimension
+                if (spawn.dimension !== currentDimension) {
+                    if (worldSpawnMarker) {
+                        map.removeLayer(worldSpawnMarker);
+                        worldSpawnMarker = null;
+                    }
+                    return;
+                }
+
+                const latLng = minecraftToLeaflet(spawn.x, spawn.z);
+
+                if (worldSpawnMarker) {
+                    // Update existing marker position
+                    worldSpawnMarker.setLatLng(latLng);
+                } else {
+                    // Create new marker
+                    const icon = L.divIcon({
+                        html: createWorldSpawnMarkerHtml(),
+                        className: '',
+                        iconSize: [60, 40],
+                        iconAnchor: [30, 20],
+                    });
+
+                    worldSpawnMarker = L.marker(latLng, { icon, interactive: true }).bindPopup(
+                        `<b>World Spawn</b><br>X: ${Math.floor(spawn.x)}, Y: ${Math.floor(spawn.y)}, Z: ${Math.floor(spawn.z)}`
+                    );
+
+                    if (spawnsVisible) {
+                        worldSpawnMarker.addTo(map);
+                    }
+                }
+            }
+
+            /**
+             * Update player spawn markers
+             */
+            function updatePlayerSpawnMarkers(spawns) {
+                currentPlayerSpawns = spawns;
+                const currentDimension = document.getElementById('tile-dim').value;
+
+                // Filter spawns by current dimension
+                const dimensionSpawns = spawns.filter(s => s.dimension === currentDimension);
+
+                // Track which players we've seen
+                const seenPlayers = new Set();
+
+                dimensionSpawns.forEach(spawn => {
+                    seenPlayers.add(spawn.playerName);
+
+                    const latLng = minecraftToLeaflet(spawn.x, spawn.z);
+
+                    if (playerSpawnMarkers.has(spawn.playerName)) {
+                        // Update existing marker
+                        const marker = playerSpawnMarkers.get(spawn.playerName);
+                        marker.setLatLng(latLng);
+                        marker.setPopupContent(
+                            `<b>${spawn.playerName}'s Bed</b><br>X: ${Math.floor(spawn.x)}, Y: ${Math.floor(spawn.y)}, Z: ${Math.floor(spawn.z)}`
+                        );
+                    } else {
+                        // Create new marker
+                        const icon = L.divIcon({
+                            html: createPlayerSpawnMarkerHtml(),
+                            className: '',
+                            iconSize: [80, 40],
+                            iconAnchor: [40, 20],
+                        });
+
+                        const marker = L.marker(latLng, { icon, interactive: true }).bindPopup(
+                            `<b>${spawn.playerName}'s Bed</b><br>X: ${Math.floor(spawn.x)}, Y: ${Math.floor(spawn.y)}, Z: ${Math.floor(spawn.z)}`
+                        );
+
+                        if (spawnsVisible) {
+                            marker.addTo(map);
+                        }
+
+                        playerSpawnMarkers.set(spawn.playerName, marker);
+                    }
+                });
+
+                // Remove markers for players no longer in this dimension
+                for (const [playerName, marker] of playerSpawnMarkers) {
+                    if (!seenPlayers.has(playerName)) {
+                        map.removeLayer(marker);
+                        playerSpawnMarkers.delete(playerName);
+                    }
+                }
+            }
+
+            /**
+             * Toggle spawn marker visibility
+             */
+            function setSpawnsVisible(visible) {
+                spawnsVisible = visible;
+
+                if (worldSpawnMarker) {
+                    if (visible) {
+                        worldSpawnMarker.addTo(map);
+                    } else {
+                        map.removeLayer(worldSpawnMarker);
+                    }
+                }
+
+                for (const marker of playerSpawnMarkers.values()) {
+                    if (visible) {
+                        marker.addTo(map);
+                    } else {
+                        map.removeLayer(marker);
+                    }
+                }
+            }
+
+            /**
+             * Refresh spawn markers when dimension changes
+             */
+            function refreshSpawnMarkers() {
+                // Clear current markers
+                if (worldSpawnMarker) {
+                    map.removeLayer(worldSpawnMarker);
+                    worldSpawnMarker = null;
+                }
+                for (const marker of playerSpawnMarkers.values()) {
+                    map.removeLayer(marker);
+                }
+                playerSpawnMarkers.clear();
+
+                // Re-render with current data
+                updateWorldSpawnMarker(currentWorldSpawn);
+                updatePlayerSpawnMarkers(currentPlayerSpawns);
+            }
+
+            /**
+             * Fetch spawns from the API
+             */
+            async function fetchSpawns() {
+                try {
+                    const response = await fetch(`${API_BASE}/spawns`);
+                    if (!response.ok) throw new Error('Failed to fetch spawns');
+
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        if (data.data.worldSpawn) {
+                            updateWorldSpawnMarker(data.data.worldSpawn);
+                        }
+                        if (data.data.playerSpawns) {
+                            updatePlayerSpawnMarkers(data.data.playerSpawns);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching spawns:', error);
+                }
+            }
+
+            // Event listener for spawn visibility toggle
+            document.getElementById('show-spawns').addEventListener('change', function () {
+                setSpawnsVisible(this.checked);
+            });
+
+            // Refresh spawn markers when dimension changes
+            document.getElementById('tile-dim').addEventListener('change', () => {
+                refreshSpawnMarkers();
+            });
+
+            // ==========================================
             // Chat Messages
             // ==========================================
 
@@ -1988,6 +2241,49 @@
                         }
                         break;
 
+                    case 'spawn:world':
+                        // Handle world spawn update
+                        if (event.spawn) {
+                            updateWorldSpawnMarker(event.spawn);
+                            console.log('[WebSocket] World spawn updated:', event.spawn);
+                        }
+                        break;
+
+                    case 'spawn:player':
+                        // Handle player spawn update
+                        if (event.spawn) {
+                            // Update the spawn in our current list
+                            const existingIndex = currentPlayerSpawns.findIndex(
+                                s => s.playerName === event.spawn.playerName
+                            );
+                            if (existingIndex >= 0) {
+                                currentPlayerSpawns[existingIndex] = event.spawn;
+                            } else {
+                                currentPlayerSpawns.push(event.spawn);
+                            }
+                            updatePlayerSpawnMarkers(currentPlayerSpawns);
+                            console.log('[WebSocket] Player spawn updated:', event.spawn.playerName);
+                        }
+                        break;
+
+                    case 'spawn:state':
+                        // Handle full spawn state (sent on connection)
+                        if (event.worldSpawn) {
+                            updateWorldSpawnMarker(event.worldSpawn);
+                        }
+                        if (event.playerSpawns && Array.isArray(event.playerSpawns)) {
+                            currentPlayerSpawns = event.playerSpawns;
+                            updatePlayerSpawnMarkers(event.playerSpawns);
+                        }
+                        console.log(
+                            '[WebSocket] Loaded spawn state:',
+                            event.worldSpawn ? 'world spawn' : 'no world spawn',
+                            ',',
+                            event.playerSpawns?.length || 0,
+                            'player spawns'
+                        );
+                        break;
+
                     default:
                         console.log('[WebSocket] Unknown event type:', type);
                 }
@@ -2053,6 +2349,7 @@
 
             // Initial fetch (before WebSocket connects)
             fetchPlayers();
+            fetchSpawns();
 
             // Connect to WebSocket
             connectWebSocket();
@@ -2062,6 +2359,7 @@
             setInterval(() => {
                 if (!wsConnected) {
                     fetchPlayers();
+                    fetchSpawns();
                 }
             }, PLAYER_REFRESH_INTERVAL * 2);
         </script>
