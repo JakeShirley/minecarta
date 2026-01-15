@@ -5,7 +5,8 @@
 import { http, HttpRequest, HttpRequestMethod, HttpHeader } from '@minecraft/server-net';
 import { config, getApiUrl } from '../config';
 import { AUTH_HEADER } from '@minecraft-map/shared';
-import type { ApiResponse } from '../types';
+import type { ChunkData, Dimension } from '@minecraft-map/shared';
+import type { ApiResponse, BlockChange, Entity, Player } from '../types';
 
 /**
  * Queue of pending requests to handle rate limiting
@@ -152,7 +153,7 @@ export function queuePost<T>(endpoint: string, data: T): void {
  *
  * @param changes - Array of block changes to send
  */
-export async function sendBlockChanges(changes: import('../types').BlockChange[]): Promise<ApiResponse> {
+export async function sendBlockChanges(changes: BlockChange[]): Promise<ApiResponse> {
     return postToServer('/api/v1/world/blocks', { blocks: changes });
 }
 
@@ -161,7 +162,7 @@ export async function sendBlockChanges(changes: import('../types').BlockChange[]
  *
  * @param players - Array of player data to send
  */
-export async function sendPlayerPositions(players: import('../types').Player[]): Promise<ApiResponse> {
+export async function sendPlayerPositions(players: Player[]): Promise<ApiResponse> {
     return postToServer('/api/v1/world/players', { players });
 }
 
@@ -170,7 +171,7 @@ export async function sendPlayerPositions(players: import('../types').Player[]):
  *
  * @param player - Player data for the joining player
  */
-export async function sendPlayerJoin(player: import('../types').Player): Promise<ApiResponse> {
+export async function sendPlayerJoin(player: Player): Promise<ApiResponse> {
     return postToServer('/api/v1/world/player/join', player);
 }
 
@@ -188,7 +189,7 @@ export async function sendPlayerLeave(playerName: string): Promise<ApiResponse> 
  *
  * @param entities - Array of entity data to send
  */
-export async function sendEntityUpdates(entities: import('../types').Entity[]): Promise<ApiResponse> {
+export async function sendEntityUpdates(entities: Entity[]): Promise<ApiResponse> {
     return postToServer('/api/v1/world/entities', { entities });
 }
 
@@ -197,7 +198,7 @@ export async function sendEntityUpdates(entities: import('../types').Entity[]): 
  *
  * @param chunks - Array of chunk data to send
  */
-export async function sendChunkData(chunks: import('@minecraft-map/shared').ChunkData[]): Promise<ApiResponse> {
+export async function sendChunkData(chunks: ChunkData[]): Promise<ApiResponse> {
     return postToServer('/api/v1/world/chunks', { chunks });
 }
 
@@ -208,11 +209,7 @@ export async function sendChunkData(chunks: import('@minecraft-map/shared').Chun
  * @param message - The chat message content
  * @param dimension - The dimension the player is in
  */
-export async function sendChatMessage(
-    playerName: string,
-    message: string,
-    dimension: import('@minecraft-map/shared').Dimension
-): Promise<ApiResponse> {
+export async function sendChatMessage(playerName: string, message: string, dimension: Dimension): Promise<ApiResponse> {
     return postToServer('/api/v1/world/chat', {
         playerName,
         message,
@@ -243,11 +240,7 @@ interface ChunkExistsApiResponse {
  * @param chunkZ - Chunk Z coordinate
  * @returns Promise resolving to true if the chunk exists, false if it doesn't or on error
  */
-export async function checkChunkExists(
-    dimension: import('@minecraft-map/shared').Dimension,
-    chunkX: number,
-    chunkZ: number
-): Promise<boolean> {
+export async function checkChunkExists(dimension: Dimension, chunkX: number, chunkZ: number): Promise<boolean> {
     const endpoint = `/api/v1/world/chunk/exists?dimension=${dimension}&chunkX=${chunkX}&chunkZ=${chunkZ}`;
     const response = await getFromServer<ChunkExistsApiResponse>(endpoint);
 
@@ -268,7 +261,7 @@ export async function sendWorldSpawn(spawn: {
     x: number;
     y: number;
     z: number;
-    dimension: import('@minecraft-map/shared').Dimension;
+    dimension: Dimension;
 }): Promise<ApiResponse> {
     return postToServer('/api/v1/world/spawn/world', spawn);
 }
@@ -283,7 +276,7 @@ export async function sendPlayerSpawn(spawn: {
     x: number;
     y: number;
     z: number;
-    dimension: import('@minecraft-map/shared').Dimension;
+    dimension: Dimension;
 }): Promise<ApiResponse> {
     return postToServer('/api/v1/world/spawn/player', spawn);
 }
@@ -306,10 +299,7 @@ export async function sendWorldTime(time: {
  *
  * @param weather - World weather data
  */
-export async function sendWorldWeather(weather: {
-    weather: string;
-    dimension: import('@minecraft-map/shared').Dimension;
-}): Promise<ApiResponse> {
+export async function sendWorldWeather(weather: { weather: string; dimension: Dimension }): Promise<ApiResponse> {
     return postToServer('/api/v1/world/weather', weather);
 }
 
