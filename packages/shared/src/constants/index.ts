@@ -70,4 +70,5 @@ export const WS_EVENTS = {
     PLAYER_LEAVE: 'player:leave',
     BLOCK_UPDATE: 'block:update',
     TILE_UPDATE: 'tile:update',
+    CHAT_MESSAGE: 'chat:message',
 } as const;

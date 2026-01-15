@@ -21,6 +21,7 @@ import {
     sendPlayerJoin,
     sendPlayerLeave,
     sendChunkData,
+    sendChatMessage,
     checkChunkExists,
 } from '../network';
 import { config } from '../config';
@@ -586,6 +587,31 @@ export async function updatePlayerPositions(): Promise<void> {
 }
 
 /**
+ * Register chat message event listener
+ */
+export function registerChatListener(): void {
+    world.afterEvents.chatSend.subscribe(event => {
+        const { sender, message } = event;
+
+        if (!sender) return;
+
+        try {
+            const dimension = toDimension(sender.dimension.id);
+
+            logDebug(`Chat message from ${sender.name}: ${message}`);
+
+            sendChatMessage(sender.name, message, dimension).catch(error => {
+                logError('Failed to send chat message', error);
+            });
+        } catch (error) {
+            logError(`Failed to process chat message from ${sender.name}`, error);
+        }
+    });
+
+    logDebug('Chat listener registered');
+}
+
+/**
  * Register all event listeners
  */
 export function registerAllEventListeners(): void {
@@ -594,6 +620,7 @@ export function registerAllEventListeners(): void {
     registerBlockBreakListener();
     registerPlayerJoinListener();
     registerPlayerLeaveListener();
+    registerChatListener();
 
     console.log('[MapSync] All event listeners registered');
 }

@@ -202,6 +202,26 @@ export async function sendChunkData(chunks: import('@minecraft-map/shared').Chun
 }
 
 /**
+ * Send a chat message to the server
+ *
+ * @param playerName - Name of the player who sent the message
+ * @param message - The chat message content
+ * @param dimension - The dimension the player is in
+ */
+export async function sendChatMessage(
+    playerName: string,
+    message: string,
+    dimension: import('@minecraft-map/shared').Dimension
+): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/chat', {
+        playerName,
+        message,
+        dimension,
+        timestamp: Date.now(),
+    });
+}
+
+/**
  * Response from chunk existence check
  */
 interface ChunkExistsApiResponse {

@@ -10,6 +10,7 @@ export type {
     TileCoordinates,
     WorldState,
     RGBA,
+    ChatMessage,
     // WebSocket event types
     WebSocketEventBase,
     PlayerJoinEvent,
@@ -17,6 +18,7 @@ export type {
     PlayerUpdateEvent,
     TileUpdateEvent,
     BlockUpdateEvent,
+    ChatMessageEvent,
     WebSocketEvent,
 } from './types/index.js';
 

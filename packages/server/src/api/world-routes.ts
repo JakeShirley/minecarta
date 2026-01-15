@@ -15,6 +15,7 @@ import {
     entitiesBatchUpdateSchema,
     chunksBatchUpdateSchema,
     chunkExistsQuerySchema,
+    chatMessageSchema,
 } from './schemas.js';
 import type { Dimension, ZoomLevel, Player } from '@minecraft-map/shared';
 
@@ -180,6 +181,39 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({
             success: true,
             data: { updated: entities.length },
+        });
+    });
+
+    /**
+     * POST /world/chat - Receive chat messages
+     */
+    app.post('/world/chat', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = chatMessageSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const chatMessage = parseResult.data;
+        const wsService = getWebSocketService();
+
+        // Emit chat message event to WebSocket clients
+        wsService.emitChatMessage({
+            playerName: chatMessage.playerName,
+            message: chatMessage.message,
+            dimension: chatMessage.dimension,
+            timestamp: chatMessage.timestamp,
+        });
+
+        request.log.info({ player: chatMessage.playerName }, 'Received chat message');
+
+        return reply.send({
+            success: true,
+            data: { received: true },
         });
     });
 

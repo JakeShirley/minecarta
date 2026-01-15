@@ -382,6 +382,82 @@
                 color: #888;
                 word-break: break-all;
             }
+
+            /* Chat Panel */
+            .chat-panel {
+                border-top: 1px solid #0f3460;
+                padding-top: 15px;
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                min-height: 200px;
+            }
+            .chat-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 8px;
+            }
+            .chat-header label {
+                margin: 0;
+            }
+            .chat-count {
+                font-size: 0.75rem;
+                color: #888;
+            }
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                background: #0f3460;
+                border-radius: 4px;
+                padding: 8px;
+                min-height: 150px;
+                max-height: 300px;
+            }
+            .chat-message {
+                margin-bottom: 8px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #1f4068;
+            }
+            .chat-message:last-child {
+                margin-bottom: 0;
+                padding-bottom: 0;
+                border-bottom: none;
+            }
+            .chat-message-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2px;
+            }
+            .chat-player {
+                font-weight: bold;
+                color: #6dd5ed;
+                font-size: 0.85rem;
+            }
+            .chat-time {
+                font-size: 0.7rem;
+                color: #666;
+            }
+            .chat-dimension {
+                font-size: 0.65rem;
+                color: #888;
+                padding: 1px 4px;
+                background: #16213e;
+                border-radius: 2px;
+            }
+            .chat-text {
+                font-size: 0.85rem;
+                color: #ddd;
+                word-break: break-word;
+            }
+            .chat-empty {
+                text-align: center;
+                color: #666;
+                font-style: italic;
+                font-size: 0.85rem;
+                padding: 20px;
+            }
         </style>
     </head>
     <body>
@@ -443,6 +519,16 @@
                     <button onclick="loadTile()">Preview Tile</button>
                     <img id="tile-preview" alt="Tile Preview" />
                     <div class="tile-info" id="tile-url"></div>
+                </div>
+
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <label>💬 Chat Stream</label>
+                        <span class="chat-count" id="chat-count">0 messages</span>
+                    </div>
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-empty">No messages yet...</div>
+                    </div>
                 </div>
 
                 <div style="margin-top: auto; font-size: 0.8rem; color: #666">
@@ -1233,6 +1319,100 @@
             });
 
             // ==========================================
+            // Chat Messages
+            // ==========================================
+
+            const MAX_CHAT_MESSAGES = 100; // Maximum messages to keep in memory
+            let chatMessages = [];
+
+            /**
+             * Format a timestamp for display
+             */
+            function formatChatTime(timestamp) {
+                const date = new Date(timestamp);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            /**
+             * Get dimension display name
+             */
+            function getDimensionDisplayName(dimension) {
+                switch (dimension) {
+                    case 'overworld':
+                        return 'Overworld';
+                    case 'nether':
+                        return 'Nether';
+                    case 'the_end':
+                        return 'The End';
+                    default:
+                        return dimension;
+                }
+            }
+
+            /**
+             * Create HTML for a single chat message
+             */
+            function createChatMessageHtml(chat) {
+                const time = formatChatTime(chat.timestamp);
+                const dimensionName = getDimensionDisplayName(chat.dimension);
+
+                return `
+                    <div class="chat-message">
+                        <div class="chat-message-header">
+                            <span class="chat-player">${escapeHtml(chat.playerName)}</span>
+                            <span class="chat-time">${time}</span>
+                        </div>
+                        <div class="chat-text">${escapeHtml(chat.message)}</div>
+                        <span class="chat-dimension">${dimensionName}</span>
+                    </div>
+                `;
+            }
+
+            /**
+             * Escape HTML special characters to prevent XSS
+             */
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            /**
+             * Add a new chat message to the display
+             */
+            function addChatMessage(chat) {
+                chatMessages.push(chat);
+
+                // Limit stored messages
+                if (chatMessages.length > MAX_CHAT_MESSAGES) {
+                    chatMessages = chatMessages.slice(-MAX_CHAT_MESSAGES);
+                }
+
+                updateChatDisplay();
+            }
+
+            /**
+             * Update the chat messages display
+             */
+            function updateChatDisplay() {
+                const container = document.getElementById('chat-messages');
+                const countEl = document.getElementById('chat-count');
+
+                if (chatMessages.length === 0) {
+                    container.innerHTML = '<div class="chat-empty">No messages yet...</div>';
+                    countEl.textContent = '0 messages';
+                    return;
+                }
+
+                // Show messages in reverse order (newest at bottom, scroll to bottom)
+                container.innerHTML = chatMessages.map(createChatMessageHtml).join('');
+                countEl.textContent = `${chatMessages.length} message${chatMessages.length !== 1 ? 's' : ''}`;
+
+                // Auto-scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            }
+
+            // ==========================================
             // WebSocket for Real-time Updates
             // ==========================================
 
@@ -1368,6 +1548,14 @@
                         // Refresh affected tiles
                         if (event.tiles && Array.isArray(event.tiles)) {
                             handleTileUpdates(event.tiles);
+                        }
+                        break;
+
+                    case 'chat:message':
+                        // Handle chat message
+                        if (event.chat) {
+                            addChatMessage(event.chat);
+                            console.log('[WebSocket] Chat message from:', event.chat.playerName);
                         }
                         break;
 

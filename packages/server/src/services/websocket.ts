@@ -7,6 +7,8 @@ import type {
     TileUpdateEvent,
     TileCoordinates,
     Player,
+    ChatMessage,
+    ChatMessageEvent,
 } from '@minecraft-map/shared';
 import { WS_EVENTS } from '@minecraft-map/shared';
 
@@ -107,6 +109,20 @@ export class WebSocketService {
             type: WS_EVENTS.TILE_UPDATE,
             timestamp: Date.now(),
             tiles,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Emit a chat message event
+     */
+    emitChatMessage(chat: ChatMessage): void {
+        console.log(`[WebSocketService] Emitting chat:message from ${chat.playerName} to ${this.clients.size} clients`);
+
+        const event: ChatMessageEvent = {
+            type: WS_EVENTS.CHAT_MESSAGE,
+            timestamp: Date.now(),
+            chat,
         };
         this.broadcast(event);
     }

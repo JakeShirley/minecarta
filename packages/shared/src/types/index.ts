@@ -214,6 +214,24 @@ export interface BlockUpdateEvent extends WebSocketEventBase {
 }
 
 /**
+ * Chat message data from Minecraft
+ */
+export interface ChatMessage {
+    readonly playerName: string;
+    readonly message: string;
+    readonly dimension: Dimension;
+    readonly timestamp: number;
+}
+
+/**
+ * Chat message event - sent when a player sends a chat message
+ */
+export interface ChatMessageEvent extends WebSocketEventBase {
+    readonly type: 'chat:message';
+    readonly chat: ChatMessage;
+}
+
+/**
  * Union of all WebSocket event types
  */
 export type WebSocketEvent =
@@ -221,4 +239,5 @@ export type WebSocketEvent =
     | PlayerLeaveEvent
     | PlayerUpdateEvent
     | TileUpdateEvent
-    | BlockUpdateEvent;
+    | BlockUpdateEvent
+    | ChatMessageEvent;

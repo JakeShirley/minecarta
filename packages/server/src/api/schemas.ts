@@ -152,6 +152,18 @@ export const chunksBatchUpdateSchema = z.object({
 export type ChunksBatchUpdateRequest = z.infer<typeof chunksBatchUpdateSchema>;
 
 /**
+ * Chat message request schema
+ */
+export const chatMessageSchema = z.object({
+    playerName: z.string().min(1).max(32),
+    message: z.string().min(1).max(500),
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+    timestamp: z.number().default(() => Date.now()),
+});
+
+export type ChatMessageRequest = z.infer<typeof chatMessageSchema>;
+
+/**
  * Chunk existence check request schema
  */
 export const chunkExistsQuerySchema = z.object({
