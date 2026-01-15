@@ -348,6 +348,49 @@ export interface WorldTimeStateEvent extends WebSocketEventBase {
     readonly time: WorldTime | null;
 }
 
+// ==========================================
+// World Weather Types
+// ==========================================
+
+/**
+ * Weather types in Minecraft
+ * - Clear: No precipitation, clear skies
+ * - Rain: Raining (or snowing in cold biomes)
+ * - Thunder: Thunderstorm with lightning
+ */
+export type WeatherType = 'Clear' | 'Rain' | 'Thunder';
+
+/**
+ * World weather data from Minecraft.
+ */
+export interface WorldWeather {
+    /**
+     * The current weather type.
+     */
+    readonly weather: WeatherType;
+    /**
+     * The dimension this weather applies to.
+     * Weather is global but can be observed per-dimension.
+     */
+    readonly dimension: Dimension;
+}
+
+/**
+ * World weather update event - sent when weather changes in the game
+ */
+export interface WorldWeatherUpdateEvent extends WebSocketEventBase {
+    readonly type: 'weather:update';
+    readonly weather: WorldWeather;
+}
+
+/**
+ * World weather state event - sent when a client connects
+ */
+export interface WorldWeatherStateEvent extends WebSocketEventBase {
+    readonly type: 'weather:state';
+    readonly weather: WorldWeather | null;
+}
+
 /**
  * Union of all WebSocket event types
  */
@@ -363,4 +406,6 @@ export type WebSocketEvent =
     | PlayerSpawnUpdateEvent
     | SpawnsStateEvent
     | WorldTimeUpdateEvent
-    | WorldTimeStateEvent;
+    | WorldTimeStateEvent
+    | WorldWeatherUpdateEvent
+    | WorldWeatherStateEvent;

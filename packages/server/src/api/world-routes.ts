@@ -6,6 +6,7 @@ import {
     getWebSocketService,
     getSpawnStateService,
     getTimeStateService,
+    getWeatherStateService,
 } from '../services/index.js';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { registerAuth } from './auth.js';
@@ -21,6 +22,7 @@ import {
     worldSpawnSchema,
     playerSpawnSchema,
     worldTimeSchema,
+    worldWeatherSchema,
 } from './schemas.js';
 import type { Dimension, ZoomLevel, Player } from '@minecraft-map/shared';
 
@@ -398,6 +400,40 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({
             success: true,
             data: { time },
+        });
+    });
+
+    /**
+     * POST /world/weather - Receive world weather update
+     *
+     * The behavior pack sends weather updates when weather changes
+     * (e.g., due to natural weather cycle or /weather command).
+     */
+    app.post('/world/weather', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = worldWeatherSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const weatherData = parseResult.data;
+        const weatherService = getWeatherStateService();
+        const wsService = getWebSocketService();
+
+        const weather = weatherService.updateWeather(weatherData);
+
+        // Emit weather update to WebSocket clients
+        wsService.emitWeatherUpdate(weather);
+
+        request.log.info({ weather: weather.weather }, 'Updated world weather');
+
+        return reply.send({
+            success: true,
+            data: { weather },
         });
     });
 }

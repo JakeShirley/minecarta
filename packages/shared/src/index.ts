@@ -23,6 +23,11 @@ export type {
     WorldTime,
     WorldTimeUpdateEvent,
     WorldTimeStateEvent,
+    // Weather types
+    WeatherType,
+    WorldWeather,
+    WorldWeatherUpdateEvent,
+    WorldWeatherStateEvent,
     // WebSocket event types
     WebSocketEventBase,
     PlayerJoinEvent,

@@ -82,4 +82,6 @@ export const WS_EVENTS = {
     SPAWN_STATE: 'spawn:state',
     TIME_UPDATE: 'time:update',
     TIME_STATE: 'time:state',
+    WEATHER_UPDATE: 'weather:update',
+    WEATHER_STATE: 'weather:state',
 } as const;

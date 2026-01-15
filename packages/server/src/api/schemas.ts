@@ -221,3 +221,18 @@ export const worldTimeSchema = z.object({
 });
 
 export type WorldTimeRequest = z.infer<typeof worldTimeSchema>;
+
+/**
+ * World weather update request schema
+ *
+ * Weather types:
+ * - Clear: No precipitation, clear skies
+ * - Rain: Raining (or snowing in cold biomes)
+ * - Thunder: Thunderstorm with lightning
+ */
+export const worldWeatherSchema = z.object({
+    weather: z.enum(['Clear', 'Rain', 'Thunder']),
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+});
+
+export type WorldWeatherRequest = z.infer<typeof worldWeatherSchema>;

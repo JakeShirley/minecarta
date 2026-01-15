@@ -26,6 +26,7 @@ import {
     sendWorldSpawn,
     sendPlayerSpawn,
     sendWorldTime,
+    sendWorldWeather,
 } from '../network';
 import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
@@ -727,6 +728,55 @@ export function checkWorldTimeChange(): void {
     }
 }
 
+// ==========================================
+// Weather Tracking and Sync
+// ==========================================
+
+/**
+ * Current weather state, tracked from events.
+ * Minecraft doesn't have a getWeather() API, so we track it from weatherChange events.
+ */
+let currentWeather: 'Clear' | 'Rain' | 'Thunder' = 'Clear';
+
+/**
+ * Send world weather to the server.
+ * Called on boot (after first weather event) and when weather changes.
+ */
+export async function syncWorldWeather(): Promise<void> {
+    try {
+        logDebug(`Syncing world weather: ${currentWeather}`);
+
+        await sendWorldWeather({
+            weather: currentWeather,
+            dimension: 'overworld', // Weather is global, we report from overworld
+        });
+    } catch (error) {
+        logError('Failed to sync world weather', error);
+    }
+}
+
+/**
+ * Register weather change event listener.
+ * This tracks weather changes and syncs to the server.
+ */
+export function registerWeatherChangeListener(): void {
+    world.afterEvents.weatherChange.subscribe(event => {
+        const { newWeather, dimension } = event;
+
+        // Update our tracked weather state
+        currentWeather = newWeather as 'Clear' | 'Rain' | 'Thunder';
+
+        logDebug(`Weather changed to ${newWeather} in ${dimension}`);
+
+        // Sync to server immediately on weather change
+        syncWorldWeather().catch(error => {
+            logError('Failed to sync weather after change', error);
+        });
+    });
+
+    logDebug('Weather change listener registered');
+}
+
 /**
  * Register chat message event listener
  */
@@ -762,6 +812,7 @@ export function registerAllEventListeners(): void {
     registerPlayerJoinListener();
     registerPlayerLeaveListener();
     registerChatListener();
+    registerWeatherChangeListener();
 
     console.log('[MapSync] All event listeners registered');
 }

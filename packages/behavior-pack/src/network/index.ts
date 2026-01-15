@@ -302,6 +302,18 @@ export async function sendWorldTime(time: {
 }
 
 /**
+ * Send world weather to the server
+ *
+ * @param weather - World weather data
+ */
+export async function sendWorldWeather(weather: {
+    weather: string;
+    dimension: import('@minecraft-map/shared').Dimension;
+}): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/weather', weather);
+}
+
+/**
  * Test connection to the map server
  *
  * @returns Promise resolving to true if server is reachable

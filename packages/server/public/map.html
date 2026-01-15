@@ -205,6 +205,69 @@
                 font-style: italic;
             }
 
+            /* Weather Widget */
+            .world-weather {
+                position: absolute;
+                top: 10px;
+                left: 200px;
+                background: rgba(15, 52, 96, 0.9);
+                color: #6dd5ed;
+                padding: 6px 10px;
+                border-radius: 4px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                z-index: 1000;
+                border: 1px solid #1f4068;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                user-select: none;
+                height: 62px;
+                box-sizing: border-box;
+            }
+            .weather-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 4px;
+                position: relative;
+                overflow: hidden;
+                border: 2px solid #1f4068;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+            }
+            .weather-icon.clear {
+                background: linear-gradient(to bottom, #87ceeb 0%, #b8e4f0 100%);
+            }
+            .weather-icon.rain {
+                background: linear-gradient(to bottom, #5a6c7d 0%, #778899 100%);
+            }
+            .weather-icon.thunder {
+                background: linear-gradient(to bottom, #2c3e50 0%, #4a5568 100%);
+            }
+            .weather-info {
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+            }
+            .weather-type {
+                font-size: 14px;
+                font-weight: bold;
+                color: #6dd5ed;
+                line-height: 1.1;
+            }
+            .weather-desc {
+                font-size: 10px;
+                color: #888;
+                line-height: 1.1;
+            }
+            .weather-no-data {
+                font-size: 12px;
+                color: #666;
+                font-style: italic;
+            }
+
             /* Grid line styling */
             .coord-grid-canvas {
                 position: absolute;
@@ -995,6 +1058,13 @@
                         <div class="clock-day" id="clock-day">Day --</div>
                     </div>
                 </div>
+                <div class="world-weather" id="world-weather">
+                    <div class="weather-icon clear" id="weather-icon">☀️</div>
+                    <div class="weather-info">
+                        <div class="weather-type" id="weather-type">---</div>
+                        <div class="weather-desc" id="weather-desc">Waiting...</div>
+                    </div>
+                </div>
                 <div class="coord-display" id="coord-display">
                     <div class="label">Minecraft Coordinates</div>
                     <div id="coord-text">X: 0, Z: 0</div>
@@ -1205,6 +1275,71 @@
                     // Update every second for smooth display
                     clockUpdateInterval = setInterval(updateClockDisplay, 1000);
                 }
+            }
+
+            // ==========================================
+            // Weather Display
+            // ==========================================
+
+            /**
+             * Current weather state
+             */
+            let worldWeatherData = null;
+
+            /**
+             * Weather configuration for display
+             */
+            const WEATHER_CONFIG = {
+                Clear: {
+                    icon: '☀️',
+                    name: 'Clear',
+                    desc: 'Clear skies',
+                    class: 'clear',
+                },
+                Rain: {
+                    icon: '🌧️',
+                    name: 'Rain',
+                    desc: 'Raining',
+                    class: 'rain',
+                },
+                Thunder: {
+                    icon: '⛈️',
+                    name: 'Thunder',
+                    desc: 'Thunderstorm',
+                    class: 'thunder',
+                },
+            };
+
+            /**
+             * Update the weather display
+             */
+            function updateWeatherDisplay() {
+                const weatherIcon = document.getElementById('weather-icon');
+                const weatherType = document.getElementById('weather-type');
+                const weatherDesc = document.getElementById('weather-desc');
+
+                if (!worldWeatherData) {
+                    weatherIcon.textContent = '❓';
+                    weatherIcon.className = 'weather-icon';
+                    weatherType.textContent = '---';
+                    weatherDesc.textContent = 'Connect Minecraft';
+                    return;
+                }
+
+                const config = WEATHER_CONFIG[worldWeatherData.weather] || WEATHER_CONFIG.Clear;
+
+                weatherIcon.textContent = config.icon;
+                weatherIcon.className = `weather-icon ${config.class}`;
+                weatherType.textContent = config.name;
+                weatherDesc.textContent = config.desc;
+            }
+
+            /**
+             * Handle world weather sync from server
+             */
+            function handleWeatherSync(weather) {
+                worldWeatherData = weather;
+                updateWeatherDisplay();
             }
 
             /**
@@ -2666,6 +2801,22 @@
                         }
                         break;
 
+                    case 'weather:update':
+                        // Handle world weather update
+                        if (event.weather) {
+                            handleWeatherSync(event.weather);
+                            console.log('[WebSocket] Weather changed to:', event.weather.weather);
+                        }
+                        break;
+
+                    case 'weather:state':
+                        // Handle world weather state (sent on connection)
+                        if (event.weather) {
+                            handleWeatherSync(event.weather);
+                            console.log('[WebSocket] Loaded weather state:', event.weather.weather);
+                        }
+                        break;
+
                     default:
                         console.log('[WebSocket] Unknown event type:', type);
                 }
@@ -2735,6 +2886,9 @@
 
             // Initialize the clock display
             updateClockDisplay();
+
+            // Initialize the weather display
+            updateWeatherDisplay();
 
             // Connect to WebSocket
             connectWebSocket();

@@ -18,11 +18,15 @@ import type {
     WorldTime,
     WorldTimeUpdateEvent,
     WorldTimeStateEvent,
+    WorldWeather,
+    WorldWeatherUpdateEvent,
+    WorldWeatherStateEvent,
 } from '@minecraft-map/shared';
 import { WS_EVENTS } from '@minecraft-map/shared';
 import { getChatHistoryService } from './chat-history.js';
 import { getSpawnStateService } from './spawn-state.js';
 import { getTimeStateService } from './time-state.js';
+import { getWeatherStateService } from './weather-state.js';
 
 /**
  * WebSocket service for managing real-time client connections and broadcasting events.
@@ -249,6 +253,41 @@ export class WebSocketService {
                 console.log(
                     `[WebSocketService] Sent time state to client (day: ${time.day}, timeOfDay: ${time.timeOfDay})`
                 );
+            }
+        }
+    }
+
+    /**
+     * Emit a world weather update event
+     */
+    emitWeatherUpdate(weather: WorldWeather): void {
+        console.log(`[WebSocketService] Emitting weather:update (${weather.weather}) to ${this.clients.size} clients`);
+
+        const event: WorldWeatherUpdateEvent = {
+            type: WS_EVENTS.WEATHER_UPDATE,
+            timestamp: Date.now(),
+            weather,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Send current weather state to a specific client
+     */
+    sendWeatherState(socket: WebSocket): void {
+        const weatherStateService = getWeatherStateService();
+        const weather = weatherStateService.getWeather();
+
+        const event: WorldWeatherStateEvent = {
+            type: WS_EVENTS.WEATHER_STATE,
+            timestamp: Date.now(),
+            weather,
+        };
+
+        if (socket.readyState === 1) {
+            socket.send(JSON.stringify(event));
+            if (weather) {
+                console.log(`[WebSocketService] Sent weather state to client (${weather.weather})`);
             }
         }
     }
