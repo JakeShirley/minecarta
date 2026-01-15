@@ -395,9 +395,7 @@
 
             /* Tile Preview */
             .tile-preview-container {
-                margin-top: 20px;
-                border-top: 1px solid #0f3460;
-                padding-top: 20px;
+                /* Now handled by collapsible-section */
             }
             #tile-preview {
                 width: 100%;
@@ -420,14 +418,59 @@
                 word-break: break-all;
             }
 
-            /* Chat Panel */
-            .chat-panel {
+            /* Collapsible Section */
+            .collapsible-section {
                 border-top: 1px solid #0f3460;
                 padding-top: 15px;
+            }
+            .collapsible-header {
                 display: flex;
-                flex-direction: column;
-                flex: 1;
-                min-height: 200px;
+                align-items: center;
+                justify-content: space-between;
+                cursor: pointer;
+                user-select: none;
+                padding: 8px;
+                margin: -8px -8px 0 -8px;
+                border-radius: 4px;
+                transition: background 0.2s;
+            }
+            .collapsible-header:hover {
+                background: rgba(15, 52, 96, 0.5);
+            }
+            .collapsible-header label {
+                margin: 0;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .collapsible-toggle {
+                font-size: 0.8rem;
+                color: #888;
+                transition: transform 0.2s;
+            }
+            .collapsible-section.collapsed .collapsible-toggle {
+                transform: rotate(-90deg);
+            }
+            .collapsible-content {
+                overflow: hidden;
+                transition:
+                    max-height 0.3s ease,
+                    opacity 0.2s ease,
+                    margin-top 0.2s ease;
+                max-height: 1000px;
+                opacity: 1;
+                margin-top: 8px;
+            }
+            .collapsible-section.collapsed .collapsible-content {
+                max-height: 0;
+                opacity: 0;
+                margin-top: 0;
+            }
+
+            /* Chat Panel */
+            .chat-panel {
+                /* Styling handled by collapsible-section */
             }
             .chat-header {
                 display: flex;
@@ -780,15 +823,9 @@
                     <label style="display: flex; align-items: center; gap: 8px">
                         <input type="checkbox" id="show-grid" style="width: auto" /> Show Coordinate Grid
                     </label>
-                </div>
-
-                <div class="control-group">
                     <label style="display: flex; align-items: center; gap: 8px">
                         <input type="checkbox" id="show-players" checked style="width: auto" /> Show Players
                     </label>
-                </div>
-
-                <div class="control-group">
                     <label style="display: flex; align-items: center; gap: 8px">
                         <input type="checkbox" id="show-spawns" style="width: auto" /> Show Spawn Points
                     </label>
@@ -806,32 +843,44 @@
                     <div class="player-list" id="player-list"></div>
                 </div>
 
-                <div class="tile-preview-container">
-                    <label>Single Tile Inspector</label>
-                    <div style="display: flex; gap: 5px; margin-bottom: 5px">
-                        <div style="flex: 1">
-                            <label style="font-size: 0.8em">Zoom (0=High)</label
-                            ><input type="number" id="preview-z" value="2" min="0" max="7" />
-                        </div>
-                        <div style="flex: 1">
-                            <label style="font-size: 0.8em">X</label><input type="number" id="preview-x" value="0" />
-                        </div>
-                        <div style="flex: 1">
-                            <label style="font-size: 0.8em">Y</label><input type="number" id="preview-y" value="0" />
+                <div class="chat-panel collapsible-section" id="chat-section">
+                    <div class="collapsible-header" onclick="toggleSection('chat-section')">
+                        <label>💬 Chat Stream</label>
+                        <div style="display: flex; align-items: center; gap: 8px">
+                            <span class="chat-count" id="chat-count">0 messages</span>
+                            <span class="collapsible-toggle">▼</span>
                         </div>
                     </div>
-                    <button onclick="loadTile()">Preview Tile</button>
-                    <img id="tile-preview" alt="Tile Preview" />
-                    <div class="tile-info" id="tile-url"></div>
+                    <div class="collapsible-content">
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="chat-empty">No messages yet...</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="chat-panel">
-                    <div class="chat-header">
-                        <label>💬 Chat Stream</label>
-                        <span class="chat-count" id="chat-count">0 messages</span>
+                <div class="tile-preview-container collapsible-section" id="tile-inspector-section">
+                    <div class="collapsible-header" onclick="toggleSection('tile-inspector-section')">
+                        <label>🔍 Tile Inspector</label>
+                        <span class="collapsible-toggle">▼</span>
                     </div>
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="chat-empty">No messages yet...</div>
+                    <div class="collapsible-content">
+                        <div style="display: flex; gap: 5px; margin-bottom: 5px">
+                            <div style="flex: 1">
+                                <label style="font-size: 0.8em">Zoom</label
+                                ><input type="number" id="preview-z" value="2" min="0" max="7" />
+                            </div>
+                            <div style="flex: 1">
+                                <label style="font-size: 0.8em">X</label
+                                ><input type="number" id="preview-x" value="0" />
+                            </div>
+                            <div style="flex: 1">
+                                <label style="font-size: 0.8em">Z</label
+                                ><input type="number" id="preview-y" value="0" />
+                            </div>
+                        </div>
+                        <button onclick="loadTile()">Preview Tile</button>
+                        <img id="tile-preview" alt="Tile Preview" />
+                        <div class="tile-info" id="tile-url"></div>
                     </div>
                 </div>
 
@@ -881,6 +930,42 @@
             let currentWorldSpawn = null; // Current world spawn data
             let currentPlayerSpawns = []; // Current player spawns data
             let spawnsVisible = false;
+
+            /**
+             * Toggle collapsible section
+             */
+            function toggleSection(sectionId) {
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.classList.toggle('collapsed');
+                    // Save state to localStorage
+                    const isCollapsed = section.classList.contains('collapsed');
+                    localStorage.setItem(`section-${sectionId}`, isCollapsed ? 'collapsed' : 'expanded');
+                }
+            }
+
+            /**
+             * Restore collapsible section states from localStorage
+             * Default: chat expanded, tile inspector collapsed
+             */
+            function restoreCollapsibleStates() {
+                const defaults = {
+                    'chat-section': 'expanded',
+                    'tile-inspector-section': 'collapsed',
+                };
+
+                Object.entries(defaults).forEach(([sectionId, defaultState]) => {
+                    const state = localStorage.getItem(`section-${sectionId}`) || defaultState;
+                    const section = document.getElementById(sectionId);
+                    if (section) {
+                        if (state === 'collapsed') {
+                            section.classList.add('collapsed');
+                        } else {
+                            section.classList.remove('collapsed');
+                        }
+                    }
+                });
+            }
 
             /**
              * Select and apply a dimension
@@ -952,6 +1037,7 @@
             function initializeDimension() {
                 selectDimension(currentDimension);
                 selectMapType(currentMapType);
+                restoreCollapsibleStates();
             }
 
             // Server zoom levels: 0 (16 blocks/tile, highest detail) to 7 (2048 blocks/tile)
