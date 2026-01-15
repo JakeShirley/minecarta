@@ -76,8 +76,14 @@ export function getChunkCoordinates(x: number, z: number): { chunkX: number; chu
  * @param block - The Minecraft block to get color from
  * @returns RGBA color value, or null if the block has no map color
  */
-export function getBlockMapColor(block: Block): RGBA {
-    return block.getMapColor();
+export function getBlockMapColor(block: Block): RGBA | undefined {
+    const resultColor = block.getMapColor();
+
+    // No valid map color
+    if (resultColor.red === 0 && resultColor.green === 0 && resultColor.blue === 0 && resultColor.alpha === 0) {
+        return undefined;
+    }
+    return resultColor;
 }
 
 /**
