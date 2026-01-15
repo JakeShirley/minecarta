@@ -297,6 +297,57 @@ export interface SpawnsStateEvent extends WebSocketEventBase {
     readonly playerSpawns: readonly PlayerSpawn[];
 }
 
+// ==========================================
+// World Time Types
+// ==========================================
+
+/**
+ * World time data from Minecraft.
+ *
+ * Minecraft time works as follows:
+ * - 1 tick = 1/20 of a real-world second
+ * - 1 Minecraft day = 24000 ticks = 20 real-world minutes
+ * - Time of day cycles from 0 to 23999:
+ *   - 0 (6:00 AM) = Sunrise/Dawn
+ *   - 1000 (7:00 AM) = Day begins
+ *   - 6000 (12:00 PM) = Noon
+ *   - 12000 (6:00 PM) = Sunset
+ *   - 13000 (7:00 PM) = Night begins
+ *   - 18000 (12:00 AM) = Midnight
+ *   - 23000 (5:00 AM) = Dawn begins
+ */
+export interface WorldTime {
+    /**
+     * Time of day in ticks (0-23999).
+     * 0 = sunrise (6:00 AM in Minecraft)
+     */
+    readonly timeOfDay: number;
+    /**
+     * Absolute time since world creation in ticks.
+     */
+    readonly absoluteTime: number;
+    /**
+     * Current in-game day number (0-based).
+     */
+    readonly day: number;
+}
+
+/**
+ * World time update event - sent when time is synced from the game
+ */
+export interface WorldTimeUpdateEvent extends WebSocketEventBase {
+    readonly type: 'time:update';
+    readonly time: WorldTime;
+}
+
+/**
+ * World time state event - sent when a client connects
+ */
+export interface WorldTimeStateEvent extends WebSocketEventBase {
+    readonly type: 'time:state';
+    readonly time: WorldTime | null;
+}
+
 /**
  * Union of all WebSocket event types
  */
@@ -310,4 +361,6 @@ export type WebSocketEvent =
     | ChatHistoryEvent
     | WorldSpawnUpdateEvent
     | PlayerSpawnUpdateEvent
-    | SpawnsStateEvent;
+    | SpawnsStateEvent
+    | WorldTimeUpdateEvent
+    | WorldTimeStateEvent;

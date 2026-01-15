@@ -19,6 +19,10 @@ export type {
     WorldSpawnUpdateEvent,
     PlayerSpawnUpdateEvent,
     SpawnsStateEvent,
+    // Time types
+    WorldTime,
+    WorldTimeUpdateEvent,
+    WorldTimeStateEvent,
     // WebSocket event types
     WebSocketEventBase,
     PlayerJoinEvent,

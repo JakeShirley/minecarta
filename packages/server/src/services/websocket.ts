@@ -15,10 +15,14 @@ import type {
     WorldSpawnUpdateEvent,
     PlayerSpawnUpdateEvent,
     SpawnsStateEvent,
+    WorldTime,
+    WorldTimeUpdateEvent,
+    WorldTimeStateEvent,
 } from '@minecraft-map/shared';
 import { WS_EVENTS } from '@minecraft-map/shared';
 import { getChatHistoryService } from './chat-history.js';
 import { getSpawnStateService } from './spawn-state.js';
+import { getTimeStateService } from './time-state.js';
 
 /**
  * WebSocket service for managing real-time client connections and broadcasting events.
@@ -210,6 +214,42 @@ export class WebSocketService {
             console.log(
                 `[WebSocketService] Sent spawn state to client (world: ${worldSpawn ? 'yes' : 'no'}, players: ${playerSpawns.length})`
             );
+        }
+    }
+
+    /**
+     * Emit a world time update event
+     */
+    emitTimeUpdate(time: WorldTime): void {
+        // Only log occasionally to avoid spam (time updates can be frequent for prediction)
+        const event: WorldTimeUpdateEvent = {
+            type: WS_EVENTS.TIME_UPDATE,
+            timestamp: Date.now(),
+            time,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Send current time state to a specific client
+     */
+    sendTimeState(socket: WebSocket): void {
+        const timeStateService = getTimeStateService();
+        const time = timeStateService.getTime();
+
+        const event: WorldTimeStateEvent = {
+            type: WS_EVENTS.TIME_STATE,
+            timestamp: Date.now(),
+            time,
+        };
+
+        if (socket.readyState === 1) {
+            socket.send(JSON.stringify(event));
+            if (time) {
+                console.log(
+                    `[WebSocketService] Sent time state to client (day: ${time.day}, timeOfDay: ${time.timeOfDay})`
+                );
+            }
         }
     }
 

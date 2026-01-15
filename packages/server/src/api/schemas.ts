@@ -205,3 +205,19 @@ export const playerSpawnSchema = z.object({
 });
 
 export type PlayerSpawnRequest = z.infer<typeof playerSpawnSchema>;
+
+/**
+ * World time update request schema
+ *
+ * Minecraft time:
+ * - timeOfDay: 0-23999 ticks (0 = 6:00 AM sunrise)
+ * - absoluteTime: Total ticks since world creation
+ * - day: Current day number (0-based)
+ */
+export const worldTimeSchema = z.object({
+    timeOfDay: z.number().int().min(0).max(23999),
+    absoluteTime: z.number().int().min(0),
+    day: z.number().int().min(0),
+});
+
+export type WorldTimeRequest = z.infer<typeof worldTimeSchema>;

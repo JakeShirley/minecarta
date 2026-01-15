@@ -14,6 +14,8 @@ import { getWebSocketService } from '../services/index.js';
  * - spawn:world - World spawn location updated
  * - spawn:player - Player spawn point updated
  * - spawn:state - All spawn locations (sent on connection)
+ * - time:update - World time updated
+ * - time:state - Current world time (sent on connection)
  */
 export async function registerWebSocketRoutes(app: FastifyInstance): Promise<void> {
     app.get('/ws', { websocket: true }, (socket, _request) => {
@@ -40,5 +42,8 @@ export async function registerWebSocketRoutes(app: FastifyInstance): Promise<voi
 
         // Send spawn state to the new client
         wsService.sendSpawnState(socket);
+
+        // Send time state to the new client
+        wsService.sendTimeState(socket);
     });
 }

@@ -289,6 +289,19 @@ export async function sendPlayerSpawn(spawn: {
 }
 
 /**
+ * Send world time to the server
+ *
+ * @param time - World time data
+ */
+export async function sendWorldTime(time: {
+    timeOfDay: number;
+    absoluteTime: number;
+    day: number;
+}): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/time', time);
+}
+
+/**
  * Test connection to the map server
  *
  * @returns Promise resolving to true if server is reachable

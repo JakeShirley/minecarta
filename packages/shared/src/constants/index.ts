@@ -80,4 +80,6 @@ export const WS_EVENTS = {
     SPAWN_WORLD: 'spawn:world',
     SPAWN_PLAYER: 'spawn:player',
     SPAWN_STATE: 'spawn:state',
+    TIME_UPDATE: 'time:update',
+    TIME_STATE: 'time:state',
 } as const;

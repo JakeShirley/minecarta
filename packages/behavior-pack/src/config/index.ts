@@ -8,6 +8,12 @@ export interface Config {
     readonly authToken: string;
     /** Interval in ticks between player position updates (20 ticks = 1 second) */
     readonly playerUpdateInterval: number;
+    /**
+     * Interval in ticks between world time sync updates.
+     * Default: 1200 ticks = 60 seconds (1 minute).
+     * Time is also synced when a significant change is detected (e.g., /time set command).
+     */
+    readonly timeSyncInterval: number;
     /** Whether to enable debug logging */
     readonly debug: boolean;
     /**
@@ -25,6 +31,7 @@ export const config: Config = {
     serverUrl: 'http://localhost:3000',
     authToken: 'dev-token',
     playerUpdateInterval: 20, // 1 second
+    timeSyncInterval: 1200, // 60 seconds (1 minute)
     debug: true,
     sendPlayerStats: true, // Enable player stats by default for development
 };

@@ -5,6 +5,7 @@ import {
     getTileUpdateService,
     getWebSocketService,
     getSpawnStateService,
+    getTimeStateService,
 } from '../services/index.js';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { registerAuth } from './auth.js';
@@ -19,6 +20,7 @@ import {
     chatMessageSchema,
     worldSpawnSchema,
     playerSpawnSchema,
+    worldTimeSchema,
 } from './schemas.js';
 import type { Dimension, ZoomLevel, Player } from '@minecraft-map/shared';
 
@@ -362,6 +364,40 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({
             success: true,
             data: { spawn },
+        });
+    });
+
+    /**
+     * POST /world/time - Receive world time update
+     *
+     * The behavior pack sends time updates periodically (about once per minute)
+     * or when time changes significantly (e.g., due to /time set command).
+     */
+    app.post('/world/time', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = worldTimeSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const timeData = parseResult.data;
+        const timeService = getTimeStateService();
+        const wsService = getWebSocketService();
+
+        const time = timeService.updateTime(timeData);
+
+        // Emit time update to WebSocket clients
+        wsService.emitTimeUpdate(time);
+
+        request.log.debug({ timeOfDay: time.timeOfDay, day: time.day }, 'Updated world time');
+
+        return reply.send({
+            success: true,
+            data: { time },
         });
     });
 }

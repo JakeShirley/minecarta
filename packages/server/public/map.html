@@ -115,6 +115,96 @@
                 font-size: 11px;
             }
 
+            /* Minecraft World Clock */
+            .world-clock {
+                position: absolute;
+                top: 10px;
+                left: 50px;
+                background: rgba(15, 52, 96, 0.9);
+                color: #6dd5ed;
+                padding: 6px 10px;
+                border-radius: 4px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                z-index: 1000;
+                border: 1px solid #1f4068;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                user-select: none;
+                height: 62px;
+                box-sizing: border-box;
+            }
+            .clock-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                position: relative;
+                overflow: hidden;
+                border: 2px solid #1f4068;
+                flex-shrink: 0;
+            }
+            .clock-day-half {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                transition: transform 0.5s ease;
+            }
+            .clock-sky {
+                background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 100%);
+            }
+            .clock-night {
+                background: linear-gradient(to bottom, #0a1628 0%, #1a2a4a 100%);
+            }
+            .clock-sun {
+                position: absolute;
+                width: 12px;
+                height: 12px;
+                background: radial-gradient(circle, #ffe87c 0%, #ffd700 50%, #ffa500 100%);
+                border-radius: 50%;
+                box-shadow: 0 0 6px #ffd700;
+                left: 50%;
+                transform: translateX(-50%);
+                transition: top 0.5s ease;
+            }
+            .clock-moon {
+                position: absolute;
+                width: 10px;
+                height: 10px;
+                background: radial-gradient(circle at 30% 30%, #f0f0f0 0%, #c0c0c0 50%, #a0a0a0 100%);
+                border-radius: 50%;
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+                left: 50%;
+                transform: translateX(-50%);
+                transition: top 0.5s ease;
+            }
+            .clock-info {
+                display: flex;
+                flex-direction: column;
+                gap: 1px;
+            }
+            .clock-time {
+                font-size: 14px;
+                font-weight: bold;
+                color: #6dd5ed;
+                line-height: 1.1;
+            }
+            .clock-period {
+                font-size: 10px;
+                color: #888;
+                text-transform: uppercase;
+                line-height: 1.1;
+            }
+            .clock-day {
+                font-size: 9px;
+                color: #666;
+                line-height: 1.1;
+            }
+            .clock-no-data {
+                font-size: 12px;
+                color: #666;
+                font-style: italic;
+            }
+
             /* Grid line styling */
             .coord-grid-canvas {
                 position: absolute;
@@ -892,6 +982,19 @@
 
             <div class="map-container">
                 <div id="map"></div>
+                <div class="world-clock" id="world-clock">
+                    <div class="clock-icon" id="clock-icon">
+                        <div class="clock-day-half clock-sky" id="clock-sky"></div>
+                        <div class="clock-day-half clock-night" id="clock-night"></div>
+                        <div class="clock-sun" id="clock-sun"></div>
+                        <div class="clock-moon" id="clock-moon"></div>
+                    </div>
+                    <div class="clock-info">
+                        <div class="clock-time" id="clock-time">--:--</div>
+                        <div class="clock-period" id="clock-period">---</div>
+                        <div class="clock-day" id="clock-day">Day --</div>
+                    </div>
+                </div>
                 <div class="coord-display" id="coord-display">
                     <div class="label">Minecraft Coordinates</div>
                     <div id="coord-text">X: 0, Z: 0</div>
@@ -930,6 +1033,179 @@
             let currentWorldSpawn = null; // Current world spawn data
             let currentPlayerSpawns = []; // Current player spawns data
             let spawnsVisible = false;
+
+            // World clock state
+            let worldTimeData = null; // { timeOfDay, absoluteTime, day }
+            let worldTimeSyncTimestamp = null; // When we received the last sync (real-world ms)
+            let clockUpdateInterval = null; // Interval for updating the clock display
+
+            /**
+             * Minecraft time constants
+             * - 1 day = 24000 ticks
+             * - Time of day 0 = 6:00 AM (sunrise)
+             * - 1 tick = 1/20 real-world second (50ms)
+             */
+            const MC_TICKS_PER_DAY = 24000;
+            const MC_TICKS_PER_SECOND = 20;
+            const REAL_MS_PER_MC_TICK = 50; // 1000ms / 20 ticks
+
+            /**
+             * Convert Minecraft time of day (0-23999) to 12-hour format time string
+             */
+            function mcTimeToString(timeOfDay) {
+                // Minecraft time 0 = 6:00 AM
+                // So we offset by 6 hours (6000 ticks)
+                const adjustedTime = (timeOfDay + 6000) % MC_TICKS_PER_DAY;
+
+                // Convert to hours and minutes
+                // 24000 ticks = 24 hours, so 1000 ticks = 1 hour
+                const totalMinutes = Math.floor((adjustedTime / MC_TICKS_PER_DAY) * 24 * 60);
+                let hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+
+                // Convert to 12-hour format
+                const period = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                if (hours === 0) hours = 12;
+
+                return {
+                    time: `${hours}:${minutes.toString().padStart(2, '0')}`,
+                    period: period,
+                };
+            }
+
+            /**
+             * Get the time period name based on Minecraft time of day
+             */
+            function getTimePeriod(timeOfDay) {
+                // Dawn: 23000-24000, 0-1000 (5:00 AM - 7:00 AM)
+                // Day: 1000-12000 (7:00 AM - 6:00 PM)
+                // Dusk: 12000-13000 (6:00 PM - 7:00 PM)
+                // Night: 13000-23000 (7:00 PM - 5:00 AM)
+
+                if (timeOfDay >= 23000 || timeOfDay < 1000) {
+                    return { name: 'Dawn', icon: '🌅' };
+                } else if (timeOfDay >= 1000 && timeOfDay < 6000) {
+                    return { name: 'Morning', icon: '☀️' };
+                } else if (timeOfDay >= 6000 && timeOfDay < 12000) {
+                    return { name: 'Day', icon: '🌞' };
+                } else if (timeOfDay >= 12000 && timeOfDay < 13000) {
+                    return { name: 'Dusk', icon: '🌇' };
+                } else {
+                    return { name: 'Night', icon: '🌙' };
+                }
+            }
+
+            /**
+             * Check if it's currently "night" in Minecraft (mobs spawn, sleeping allowed)
+             */
+            function isNight(timeOfDay) {
+                return timeOfDay >= 12542 && timeOfDay < 23460;
+            }
+
+            /**
+             * Predict current Minecraft time based on last sync and elapsed real time
+             */
+            function predictCurrentTime() {
+                if (!worldTimeData || !worldTimeSyncTimestamp) {
+                    return null;
+                }
+
+                const elapsed = Date.now() - worldTimeSyncTimestamp;
+                const ticksElapsed = Math.floor(elapsed / REAL_MS_PER_MC_TICK);
+
+                const predictedTimeOfDay = (worldTimeData.timeOfDay + ticksElapsed) % MC_TICKS_PER_DAY;
+                const predictedAbsoluteTime = worldTimeData.absoluteTime + ticksElapsed;
+                const predictedDay =
+                    worldTimeData.day + Math.floor((worldTimeData.timeOfDay + ticksElapsed) / MC_TICKS_PER_DAY);
+
+                return {
+                    timeOfDay: predictedTimeOfDay,
+                    absoluteTime: predictedAbsoluteTime,
+                    day: predictedDay,
+                };
+            }
+
+            /**
+             * Update the clock display
+             */
+            function updateClockDisplay() {
+                const time = predictCurrentTime();
+
+                const clockTime = document.getElementById('clock-time');
+                const clockPeriod = document.getElementById('clock-period');
+                const clockDay = document.getElementById('clock-day');
+                const clockSun = document.getElementById('clock-sun');
+                const clockMoon = document.getElementById('clock-moon');
+                const clockSky = document.getElementById('clock-sky');
+                const clockNight = document.getElementById('clock-night');
+
+                if (!time) {
+                    clockTime.textContent = '--:--';
+                    clockPeriod.textContent = '⏳ Waiting';
+                    clockDay.textContent = 'Connect Minecraft';
+                    clockSun.style.display = 'none';
+                    clockMoon.style.display = 'none';
+                    // Show a dim day sky as placeholder
+                    clockSky.style.opacity = '0.3';
+                    clockNight.style.opacity = '0';
+                    return;
+                }
+
+                const { time: timeStr, period } = mcTimeToString(time.timeOfDay);
+                const timePeriod = getTimePeriod(time.timeOfDay);
+                const night = isNight(time.timeOfDay);
+
+                clockTime.textContent = timeStr;
+                clockPeriod.textContent = `${timePeriod.icon} ${timePeriod.name}`;
+                clockDay.textContent = `Day ${time.day + 1}`; // Display as 1-based
+
+                // Update sun/moon positions based on time
+                // Sun visible during day (0-12000), Moon visible during night (12000-24000)
+                if (time.timeOfDay < 12000) {
+                    // Daytime - show sun
+                    clockSun.style.display = 'block';
+                    clockMoon.style.display = 'none';
+
+                    // Sun arc: rises from bottom (0), peaks at top (6000), sets to bottom (12000)
+                    // Map 0-12000 to 100% -> 5% -> 100% (top position)
+                    const progress = time.timeOfDay / 12000; // 0 to 1
+                    const sunY = 5 + 90 * Math.abs(Math.sin(progress * Math.PI));
+                    clockSun.style.top = `${100 - sunY}%`;
+
+                    // Show sky, hide night
+                    clockSky.style.opacity = '1';
+                    clockNight.style.opacity = '0';
+                } else {
+                    // Nighttime - show moon
+                    clockSun.style.display = 'none';
+                    clockMoon.style.display = 'block';
+
+                    // Moon arc: rises from bottom (12000), peaks at top (18000), sets to bottom (24000)
+                    const nightProgress = (time.timeOfDay - 12000) / 12000; // 0 to 1
+                    const moonY = 5 + 90 * Math.abs(Math.sin(nightProgress * Math.PI));
+                    clockMoon.style.top = `${100 - moonY}%`;
+
+                    // Show night, hide sky
+                    clockSky.style.opacity = '0';
+                    clockNight.style.opacity = '1';
+                }
+            }
+
+            /**
+             * Handle world time sync from server
+             */
+            function handleTimeSync(time) {
+                worldTimeData = time;
+                worldTimeSyncTimestamp = Date.now();
+                updateClockDisplay();
+
+                // Start the clock update interval if not running
+                if (!clockUpdateInterval) {
+                    // Update every second for smooth display
+                    clockUpdateInterval = setInterval(updateClockDisplay, 1000);
+                }
+            }
 
             /**
              * Toggle collapsible section
@@ -2370,6 +2646,26 @@
                         );
                         break;
 
+                    case 'time:update':
+                        // Handle world time update
+                        if (event.time) {
+                            handleTimeSync(event.time);
+                        }
+                        break;
+
+                    case 'time:state':
+                        // Handle world time state (sent on connection)
+                        if (event.time) {
+                            handleTimeSync(event.time);
+                            console.log(
+                                '[WebSocket] Loaded time state: day',
+                                event.time.day,
+                                'timeOfDay',
+                                event.time.timeOfDay
+                            );
+                        }
+                        break;
+
                     default:
                         console.log('[WebSocket] Unknown event type:', type);
                 }
@@ -2436,6 +2732,9 @@
             // Initial fetch (before WebSocket connects)
             fetchPlayers();
             fetchSpawns();
+
+            // Initialize the clock display
+            updateClockDisplay();
 
             // Connect to WebSocket
             connectWebSocket();

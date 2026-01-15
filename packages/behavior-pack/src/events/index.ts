@@ -25,6 +25,7 @@ import {
     checkChunkExists,
     sendWorldSpawn,
     sendPlayerSpawn,
+    sendWorldTime,
 } from '../network';
 import { config } from '../config';
 import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
@@ -636,6 +637,93 @@ export async function syncPlayerSpawn(player: Player): Promise<void> {
         });
     } catch (error) {
         logError(`Failed to sync spawn for player ${player.name}`, error);
+    }
+}
+
+/**
+ * Tracks the last synced time of day to detect significant changes
+ * (e.g., from /time set commands or sleeping)
+ */
+let lastSyncedTimeOfDay: number | null = null;
+
+/**
+ * Threshold for detecting "significant" time changes (in ticks).
+ * If the actual time differs from expected by more than this, we sync immediately.
+ * 600 ticks = 30 seconds of game time, or 1.5 real-world seconds worth of drift.
+ */
+const TIME_CHANGE_THRESHOLD = 600;
+
+/**
+ * Send world time to the server.
+ * Called periodically and when significant time changes are detected.
+ *
+ * @param force - If true, always send the update regardless of change detection
+ */
+export async function syncWorldTime(force = false): Promise<void> {
+    try {
+        const timeOfDay = world.getTimeOfDay();
+        const absoluteTime = world.getAbsoluteTime();
+        const day = world.getDay();
+
+        // Check if this is a significant time change that warrants an immediate sync
+        let shouldSync = force;
+
+        if (!shouldSync && lastSyncedTimeOfDay !== null) {
+            // Calculate expected time based on elapsed ticks since last sync
+            // If the actual time differs significantly, a time change occurred
+            const timeDiff = Math.abs(timeOfDay - lastSyncedTimeOfDay);
+
+            // Handle day boundary wrapping (23999 -> 0)
+            const wrappedDiff = Math.min(timeDiff, 24000 - timeDiff);
+
+            // If time changed more than threshold, it's likely a /time set or sleep
+            if (wrappedDiff > TIME_CHANGE_THRESHOLD) {
+                shouldSync = true;
+                logDebug(`Significant time change detected: ${lastSyncedTimeOfDay} -> ${timeOfDay}`);
+            }
+        }
+
+        // On first call, always sync
+        if (lastSyncedTimeOfDay === null) {
+            shouldSync = true;
+        }
+
+        if (shouldSync) {
+            lastSyncedTimeOfDay = timeOfDay;
+
+            logDebug(`Syncing world time: day ${day}, timeOfDay ${timeOfDay}`);
+
+            await sendWorldTime({
+                timeOfDay,
+                absoluteTime,
+                day,
+            });
+        }
+    } catch (error) {
+        logError('Failed to sync world time', error);
+    }
+}
+
+/**
+ * Check world time for changes and sync if significant.
+ * Called frequently (with player updates) to detect /time set commands.
+ */
+export function checkWorldTimeChange(): void {
+    if (lastSyncedTimeOfDay === null) {
+        return;
+    }
+
+    const timeOfDay = world.getTimeOfDay();
+
+    // Calculate the difference accounting for day wrapping
+    const timeDiff = Math.abs(timeOfDay - lastSyncedTimeOfDay);
+    const wrappedDiff = Math.min(timeDiff, 24000 - timeDiff);
+
+    // If time changed more than threshold, sync immediately
+    if (wrappedDiff > TIME_CHANGE_THRESHOLD) {
+        syncWorldTime(true).catch(error => {
+            logError('Failed to sync time after change detection', error);
+        });
     }
 }
 

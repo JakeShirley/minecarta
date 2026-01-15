@@ -6,7 +6,13 @@
  */
 
 import { system, world } from '@minecraft/server';
-import { registerAllEventListeners, updatePlayerPositions, syncWorldSpawn } from './events';
+import {
+    registerAllEventListeners,
+    updatePlayerPositions,
+    syncWorldSpawn,
+    syncWorldTime,
+    checkWorldTimeChange,
+} from './events';
 import { registerCustomCommands } from './commands';
 import { testConnection } from './network';
 import { config } from './config';
@@ -36,6 +42,9 @@ async function initialize(): Promise<void> {
 
         // Sync the world spawn location on boot
         await syncWorldSpawn();
+
+        // Sync the initial world time
+        await syncWorldTime(true);
     } else {
         logStartup('Warning: Could not connect to map server. Will retry on events.');
     }
@@ -46,7 +55,14 @@ async function initialize(): Promise<void> {
     // Set up periodic player position updates
     system.runInterval(() => {
         updatePlayerPositions();
+        // Also check for time changes each player update
+        checkWorldTimeChange();
     }, config.playerUpdateInterval);
+
+    // Set up periodic world time sync (less frequent, about once per minute)
+    system.runInterval(() => {
+        syncWorldTime(true);
+    }, config.timeSyncInterval);
 
     logStartup('Initialization complete!');
 }
