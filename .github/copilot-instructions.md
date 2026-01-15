@@ -12,6 +12,10 @@ If the project/directory you are working in contains a README.md file, ensure th
 
 ## Code Style & Conventions
 
+### Formatting
+
+- Use Prettier for code formatting. You can invoke formatting of the entire project with `pnpm format`.
+
 ### TypeScript Standards
 
 - Use strict TypeScript configuration (`"strict": true`)

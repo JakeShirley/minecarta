@@ -19,14 +19,14 @@ Format: `[STATUS]` where STATUS is one of the values below.
 
 ### Overall Project Status
 
-| Component      | Status          | Notes                                      |
-| -------------- | --------------- | ------------------------------------------ |
-| Shared Package | `[COMPLETED]`   | Types and constants                        |
-| Behavior Pack  | `[IN_PROGRESS]` | Minecraft script module (Phase 1 complete) |
+| Component      | Status          | Notes                                        |
+| -------------- | --------------- | -------------------------------------------- |
+| Shared Package | `[COMPLETED]`   | Types and constants                          |
+| Behavior Pack  | `[IN_PROGRESS]` | Minecraft script module (Phase 1 complete)   |
 | Web Server     | `[IN_PROGRESS]` | Fastify + API + WebSocket (Phase 2 complete) |
-| Web Client     | `[IN_PROGRESS]` | Leaflet.js map UI with real-time updates   |
-| CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions                             |
-| Documentation  | `[NOT_STARTED]` | API docs, deployment guide                 |
+| Web Client     | `[IN_PROGRESS]` | Leaflet.js map UI with real-time updates     |
+| CI/CD Pipeline | `[NOT_STARTED]` | GitHub Actions                               |
+| Documentation  | `[NOT_STARTED]` | API docs, deployment guide                   |
 
 ---
 
