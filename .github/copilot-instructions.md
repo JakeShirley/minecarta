@@ -25,6 +25,7 @@ If the project/directory you are working in contains a README.md file, ensure th
 - Avoid `any` - use `unknown` when type is truly unknown
 - Use `readonly` for immutable properties
 - Prefer `const` assertions for literal types
+- Prefer enum types instead of union of string literals when appropriate
 
 ### Naming Conventions
 
