@@ -1115,7 +1115,7 @@
 
                         const marker = L.marker(latLng, { icon, interactive: true }).bindPopup(
                             createPlayerPopupContent(player),
-                            { className: 'player-popup-container', maxWidth: 360 }
+                            { className: 'player-popup-container', maxWidth: 360, offset: [0, -15] }
                         );
 
                         if (playersVisible) {
