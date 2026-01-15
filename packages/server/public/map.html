@@ -1548,10 +1548,9 @@
                             showAllDimensions || isOtherDimension
                                 ? `<span class="player-dimension-badge ${player.dimension}">${DIMENSION_CONFIG[player.dimension]?.icon || ''}</span>`
                                 : '';
-                        const clickAction =
-                            isOtherDimension && !showAllDimensions
-                                ? `selectDimension('${player.dimension}'); setTimeout(() => panToPlayer('${player.name}'), 100);`
-                                : `panToPlayer('${player.name}')`;
+                        const clickAction = isOtherDimension
+                            ? `selectDimension('${player.dimension}'); setTimeout(() => panToPlayer('${player.name}'), 100);`
+                            : `panToPlayer('${player.name}')`;
                         return `
           <div class="player-list-item" onclick="${clickAction}" title="${isOtherDimension ? 'Click to switch dimension and follow' : 'Click to follow'}">
             <img src="${headUrl}" alt="${player.name}" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect fill="#8B4513" width="24" height="24"/><rect fill="#F5DEB3" x="6" y="6" width="12" height="12"/></svg>')}'">
