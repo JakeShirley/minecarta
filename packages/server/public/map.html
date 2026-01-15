@@ -495,14 +495,159 @@
                 font-size: 0.85rem;
                 padding: 20px;
             }
+
+            /* Dimension Toggle Buttons */
+            .dimension-toggle {
+                display: flex;
+                gap: 4px;
+                margin-bottom: 10px;
+            }
+            .dimension-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                padding: 10px 8px;
+                background: #0f3460;
+                border: 2px solid transparent;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: #888;
+            }
+            .dimension-btn:hover {
+                background: #1f4068;
+                color: #aaa;
+            }
+            .dimension-btn.active {
+                border-color: var(--dimension-color, #6dd5ed);
+                color: var(--dimension-color, #6dd5ed);
+                background: rgba(15, 52, 96, 0.8);
+            }
+            .dimension-btn .dim-icon {
+                font-size: 1.5rem;
+            }
+            .dimension-btn .dim-label {
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .dimension-btn[data-dim='overworld'] {
+                --dimension-color: #4ade80;
+            }
+            .dimension-btn[data-dim='nether'] {
+                --dimension-color: #f87171;
+            }
+            .dimension-btn[data-dim='the_end'] {
+                --dimension-color: #c084fc;
+            }
+
+            /* Dimension-specific theming */
+            body.dim-overworld {
+                --accent-color: #4ade80;
+                --accent-bg: rgba(74, 222, 128, 0.1);
+            }
+            body.dim-nether {
+                --accent-color: #f87171;
+                --accent-bg: rgba(248, 113, 113, 0.1);
+            }
+            body.dim-the_end {
+                --accent-color: #c084fc;
+                --accent-bg: rgba(192, 132, 252, 0.1);
+            }
+
+            body.dim-overworld .coord-display,
+            body.dim-overworld .grid-label {
+                border-color: rgba(74, 222, 128, 0.5);
+                color: #4ade80;
+            }
+            body.dim-nether .coord-display,
+            body.dim-nether .grid-label {
+                border-color: rgba(248, 113, 113, 0.5);
+                color: #f87171;
+            }
+            body.dim-the_end .coord-display,
+            body.dim-the_end .grid-label {
+                border-color: rgba(192, 132, 252, 0.5);
+                color: #c084fc;
+            }
+
+            body.dim-overworld #ws-status.connected {
+                background: rgba(74, 222, 128, 0.9) !important;
+            }
+            body.dim-nether #ws-status.connected {
+                background: rgba(248, 113, 113, 0.9) !important;
+            }
+            body.dim-the_end #ws-status.connected {
+                background: rgba(192, 132, 252, 0.9) !important;
+            }
+
+            /* Current dimension indicator in header */
+            .current-dimension {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                background: var(--accent-bg, rgba(109, 213, 237, 0.1));
+                border: 1px solid var(--accent-color, #6dd5ed);
+                border-radius: 4px;
+                font-size: 0.9rem;
+            }
+            .current-dimension .dim-icon {
+                font-size: 1.2rem;
+            }
+            .current-dimension .dim-name {
+                color: var(--accent-color, #6dd5ed);
+                font-weight: 500;
+            }
+
+            /* Player dimension badge in list */
+            .player-dimension-badge {
+                font-size: 0.65rem;
+                padding: 2px 4px;
+                border-radius: 3px;
+                margin-left: 4px;
+            }
+            .player-dimension-badge.overworld {
+                background: rgba(74, 222, 128, 0.2);
+                color: #4ade80;
+            }
+            .player-dimension-badge.nether {
+                background: rgba(248, 113, 113, 0.2);
+                color: #f87171;
+            }
+            .player-dimension-badge.the_end {
+                background: rgba(192, 132, 252, 0.2);
+                color: #c084fc;
+            }
+
+            /* All players toggle */
+            .player-filter-toggle {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 8px;
+                font-size: 0.8rem;
+                color: #888;
+            }
+            .player-filter-toggle input {
+                width: auto;
+            }
         </style>
     </head>
     <body>
         <header>
             <h1>🗺️ Map Viewer</h1>
-            <div style="display: flex; gap: 10px">
-                <a href="api-tester.html" class="nav-btn">API Tester</a>
-                <a href="index.html" class="nav-btn">Home</a>
+            <div style="display: flex; align-items: center; gap: 15px">
+                <div class="current-dimension" id="current-dimension-display">
+                    <span class="dim-icon">🌍</span>
+                    <span class="dim-name">Overworld</span>
+                </div>
+                <div style="display: flex; gap: 10px">
+                    <a href="api-tester.html" class="nav-btn">API Tester</a>
+                    <a href="index.html" class="nav-btn">Home</a>
+                </div>
             </div>
         </header>
 
@@ -510,7 +655,26 @@
             <div class="sidebar">
                 <div class="control-group">
                     <label>Dimension</label>
-                    <select id="tile-dim">
+                    <div class="dimension-toggle" id="dimension-toggle">
+                        <button
+                            class="dimension-btn active"
+                            data-dim="overworld"
+                            onclick="selectDimension('overworld')"
+                        >
+                            <span class="dim-icon">🌍</span>
+                            <span class="dim-label">Overworld</span>
+                        </button>
+                        <button class="dimension-btn" data-dim="nether" onclick="selectDimension('nether')">
+                            <span class="dim-icon">🔥</span>
+                            <span class="dim-label">Nether</span>
+                        </button>
+                        <button class="dimension-btn" data-dim="the_end" onclick="selectDimension('the_end')">
+                            <span class="dim-icon">🌌</span>
+                            <span class="dim-label">The End</span>
+                        </button>
+                    </div>
+                    <!-- Hidden select for compatibility -->
+                    <select id="tile-dim" style="display: none">
                         <option value="overworld">Overworld</option>
                         <option value="nether">Nether</option>
                         <option value="the_end">The End</option>
@@ -518,7 +682,7 @@
                 </div>
 
                 <div class="control-group">
-                    <button onclick="updateMapLayer()">Refresh Map Layer</button>
+                    <button onclick="updateMapLayer()">Refresh Map</button>
                 </div>
 
                 <div class="control-group">
@@ -535,6 +699,12 @@
 
                 <div class="control-group">
                     <label>Online Players</label>
+                    <div class="player-filter-toggle">
+                        <input type="checkbox" id="show-all-dimensions" />
+                        <label for="show-all-dimensions" style="margin: 0; font-size: 0.8rem"
+                            >Show players from all dimensions</label
+                        >
+                    </div>
                     <div class="player-count" id="player-count">0 players</div>
                     <div class="player-list" id="player-list"></div>
                 </div>
@@ -587,6 +757,71 @@
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
             const API_BASE = '/api/v1';
+
+            // Dimension configuration
+            const DIMENSION_CONFIG = {
+                overworld: { icon: '🌍', name: 'Overworld', color: '#4ade80' },
+                nether: { icon: '🔥', name: 'Nether', color: '#f87171' },
+                the_end: { icon: '🌌', name: 'The End', color: '#c084fc' },
+            };
+
+            // Current dimension (load from localStorage or default to overworld)
+            let currentDimension = localStorage.getItem('map-dimension') || 'overworld';
+
+            // Player state (declared early so selectDimension can reference them)
+            let playerMarkers = new Map(); // Map of player name -> { marker, currentPos, targetPos, startPos, lerpStartTime }
+            let playersVisible = true;
+            let currentPlayers = []; // Store current player data
+            let playerAnimationFrame = null; // Animation frame ID for player lerping
+            let chatBubbleTimeouts = new Map(); // Map of player name -> timeout ID for hiding chat bubbles
+
+            /**
+             * Select and apply a dimension
+             */
+            function selectDimension(dimension) {
+                currentDimension = dimension;
+                localStorage.setItem('map-dimension', dimension);
+
+                // Update hidden select for compatibility
+                document.getElementById('tile-dim').value = dimension;
+
+                // Update toggle button states
+                document.querySelectorAll('.dimension-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.dim === dimension);
+                });
+
+                // Update body theme class
+                document.body.classList.remove('dim-overworld', 'dim-nether', 'dim-the_end');
+                document.body.classList.add(`dim-${dimension}`);
+
+                // Update header display
+                const config = DIMENSION_CONFIG[dimension];
+                const display = document.getElementById('current-dimension-display');
+                display.querySelector('.dim-icon').textContent = config.icon;
+                display.querySelector('.dim-name').textContent = config.name;
+
+                // Update map and players
+                updateMapLayer();
+                loadTile();
+
+                // Refresh player display
+                for (const data of playerMarkers.values()) {
+                    map.removeLayer(data.marker);
+                }
+                playerMarkers.clear();
+                // Only update if functions are defined (during initial load they may not be yet)
+                if (typeof updatePlayerMarkers === 'function') {
+                    updatePlayerMarkers(currentPlayers);
+                    updatePlayerList(currentPlayers);
+                }
+            }
+
+            /**
+             * Initialize dimension on page load
+             */
+            function initializeDimension() {
+                selectDimension(currentDimension);
+            }
 
             // Server zoom levels: 0 (16 blocks/tile, highest detail) to 7 (2048 blocks/tile)
             // Leaflet: higher zoom = more zoomed in (bigger tiles visually)
@@ -988,11 +1223,7 @@
             });
 
             // Initial Load
-            updateMapLayer();
-            loadTile();
-            gridOverlay = new CoordGridOverlay(map); // Create grid overlay
-            updateZoomDisplay(); // Initial zoom display
-            loadTile();
+            initializeDimension(); // This calls updateMapLayer() and loadTile()
             gridOverlay = new CoordGridOverlay(map); // Create grid overlay
             updateZoomDisplay(); // Initial zoom display
 
@@ -1004,12 +1235,6 @@
             const PLAYER_HEAD_API = `${API_BASE}/players`;
             const PLAYER_REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
             const PLAYER_LERP_DURATION = 1000; // Duration for smooth position transitions (ms)
-
-            let playerMarkers = new Map(); // Map of player name -> { marker, currentPos, targetPos, startPos, lerpStartTime }
-            let playersVisible = true;
-            let currentPlayers = []; // Store current player data
-            let playerAnimationFrame = null; // Animation frame ID for player lerping
-            let chatBubbleTimeouts = new Map(); // Map of player name -> timeout ID for hiding chat bubbles
             const CHAT_BUBBLE_DURATION = 10000; // How long chat bubbles stay visible (ms)
 
             /**
@@ -1300,23 +1525,38 @@
              * Update the player list in the sidebar
              */
             function updatePlayerList(players) {
-                const currentDimension = document.getElementById('tile-dim').value;
+                const selectedDimension = document.getElementById('tile-dim').value;
+                const showAllDimensions = document.getElementById('show-all-dimensions').checked;
                 const listEl = document.getElementById('player-list');
                 const countEl = document.getElementById('player-count');
 
-                const dimensionPlayers = players.filter(p => p.dimension === currentDimension);
+                const dimensionPlayers = players.filter(p => p.dimension === selectedDimension);
+                const displayPlayers = showAllDimensions ? players : dimensionPlayers;
                 const totalPlayers = players.length;
 
-                countEl.textContent = `${dimensionPlayers.length} in dimension (${totalPlayers} total)`;
+                if (showAllDimensions) {
+                    countEl.textContent = `${totalPlayers} player${totalPlayers !== 1 ? 's' : ''} online`;
+                } else {
+                    countEl.textContent = `${dimensionPlayers.length} in ${DIMENSION_CONFIG[selectedDimension].name} (${totalPlayers} total)`;
+                }
 
-                listEl.innerHTML = dimensionPlayers
+                listEl.innerHTML = displayPlayers
                     .map(player => {
                         const headUrl = getPlayerHeadUrl(player.playfabId);
+                        const isOtherDimension = player.dimension !== selectedDimension;
+                        const dimBadge =
+                            showAllDimensions || isOtherDimension
+                                ? `<span class="player-dimension-badge ${player.dimension}">${DIMENSION_CONFIG[player.dimension]?.icon || ''}</span>`
+                                : '';
+                        const clickAction =
+                            isOtherDimension && !showAllDimensions
+                                ? `selectDimension('${player.dimension}'); setTimeout(() => panToPlayer('${player.name}'), 100);`
+                                : `panToPlayer('${player.name}')`;
                         return `
-          <div class="player-list-item" onclick="panToPlayer('${player.name}')">
+          <div class="player-list-item" onclick="${clickAction}" title="${isOtherDimension ? 'Click to switch dimension and follow' : 'Click to follow'}">
             <img src="${headUrl}" alt="${player.name}" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect fill="#8B4513" width="24" height="24"/><rect fill="#F5DEB3" x="6" y="6" width="12" height="12"/></svg>')}'">
             <div class="player-info">
-              <div>${player.name}</div>
+              <div>${player.name}${dimBadge}</div>
               <div class="player-coords">X: ${Math.floor(player.x)}, Z: ${Math.floor(player.z)}</div>
             </div>
           </div>
@@ -1382,6 +1622,11 @@
                 }
                 playerMarkers.clear();
                 updatePlayerMarkers(currentPlayers);
+                updatePlayerList(currentPlayers);
+            });
+
+            // Show all dimensions toggle
+            document.getElementById('show-all-dimensions').addEventListener('change', () => {
                 updatePlayerList(currentPlayers);
             });
 
