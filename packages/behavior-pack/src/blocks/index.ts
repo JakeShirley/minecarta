@@ -47,7 +47,7 @@ export function getMaxHeight(dimensionId: string): number {
     switch (dimensionId) {
         case 'minecraft:nether':
         case 'nether':
-            return 128;
+            return 127;
         case 'minecraft:the_end':
         case 'the_end':
             return 256;
@@ -107,6 +107,78 @@ export interface RaycastOptions {
     readonly includeLiquidBlocks?: boolean;
     /** Include passable blocks like tall grass (default: true) */
     readonly includePassableBlocks?: boolean;
+}
+
+/**
+ * Strategy for finding the starting Y position for surface scanning.
+ * Different dimensions may need different approaches.
+ */
+export enum ScanStartStrategy {
+    /** Start scanning from the maximum build height (standard top-down) */
+    FromMaxHeight = 'FromMaxHeight',
+    /** Find the first air block from top before scanning (for Nether ceiling) */
+    FromFirstAir = 'FromFirstAir',
+}
+
+/**
+ * Get the scan start strategy for a dimension.
+ * - Nether uses FromFirstAir to skip the bedrock ceiling
+ * - Other dimensions use FromMaxHeight for standard top-down scanning
+ *
+ * @param dimensionId - The Minecraft dimension ID
+ * @returns The scan start strategy to use
+ */
+export function getScanStrategy(dimensionId: string): ScanStartStrategy {
+    if (dimensionId.includes('nether')) {
+        return ScanStartStrategy.FromFirstAir;
+    }
+
+    return ScanStartStrategy.FromMaxHeight;
+}
+
+/**
+ * Check if a block is considered "air" or empty for scanning purposes.
+ * This includes air, cave_air, and void_air.
+ *
+ * @param typeId - The block type ID
+ * @returns True if the block is considered air
+ */
+function isAirBlock(typeId: string | undefined): boolean {
+    if (!typeId) return true;
+    return typeId.includes('air');
+}
+
+/**
+ * Find the starting Y position for scanning in the Nether.
+ * Walks down from max height until it finds the first air block,
+ * which should be below the bedrock ceiling.
+ *
+ * @param dimension - The Minecraft dimension
+ * @param worldX - World X coordinate
+ * @param worldZ - World Z coordinate
+ * @param maxHeight - Maximum height to start from
+ * @param minHeight - Minimum height to search to
+ * @returns The Y coordinate to start scanning from, or null if no air found
+ */
+function findFirstAirFromTop(
+    dimension: MinecraftDimension,
+    worldX: number,
+    worldZ: number,
+    maxHeight: number,
+    minHeight: number
+): number | null {
+    for (let y = maxHeight; y >= minHeight; y--) {
+        try {
+            const block = dimension.getBlock({ x: worldX, y, z: worldZ });
+            if (isAirBlock(block?.typeId)) {
+                return y;
+            }
+        } catch {
+            // Block in unloaded chunk, continue searching
+            continue;
+        }
+    }
+    return null;
 }
 
 /**
@@ -180,6 +252,9 @@ function calculateWaterDepth(
  * Uses raycasting to find the first solid block, then iterates downward
  * until a block with a BlockMapColorComponent is found.
  *
+ * For the Nether, uses a special strategy that first finds the first air block
+ * below the bedrock ceiling before starting the raycast.
+ *
  * @param dimension - The Minecraft dimension to scan
  * @param worldX - World X coordinate
  * @param worldZ - World Z coordinate
@@ -195,15 +270,29 @@ export function getSurfaceBlock(
     const { includeLiquidBlocks = true, includePassableBlocks = true } = options;
     const maxHeight = getMaxHeight(dimension.id);
     const minHeight = getMinHeight(dimension.id);
+    const scanStrategy = getScanStrategy(dimension.id);
 
-    // Start from max height and cast downward to find the first block
+    // Determine the starting Y position based on the scan strategy
+    let startY = maxHeight;
+
+    if (scanStrategy === ScanStartStrategy.FromFirstAir) {
+        // For Nether: find the first air block from the top (below bedrock ceiling)
+        const firstAirY = findFirstAirFromTop(dimension, worldX, worldZ, maxHeight, minHeight);
+        if (firstAirY === null) {
+            // No air found in the column, nothing to render
+            return null;
+        }
+        startY = firstAirY;
+    }
+
+    // Start from determined height and cast downward to find the first block
     const raycastResult = dimension.getBlockFromRay(
-        { x: worldX + 0.5, y: maxHeight, z: worldZ + 0.5 }, // Start from max height, center of block
+        { x: worldX + 0.5, y: startY, z: worldZ + 0.5 }, // Start from determined height, center of block
         { x: 0, y: -1, z: 0 }, // Cast downward
         {
             includeLiquidBlocks,
             includePassableBlocks,
-            maxDistance: maxHeight + 64, // Account for negative Y in overworld
+            maxDistance: startY - minHeight + 1, // Distance from start to min height
         }
     );
 
