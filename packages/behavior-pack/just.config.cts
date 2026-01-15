@@ -22,6 +22,7 @@ const bundleParams = {
     entryPoint: './src/index.ts',
     outfile: './scripts/index.js',
     external: ['@minecraft/server', '@minecraft/server-admin', '@minecraft/server-net'],
+    sourcemap: 'inline',
 };
 
 // Deployment configuration
