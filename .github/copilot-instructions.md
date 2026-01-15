@@ -26,6 +26,7 @@ If the project/directory you are working in contains a README.md file, ensure th
 - Use `readonly` for immutable properties
 - Prefer `const` assertions for literal types
 - Prefer enum types instead of union of string literals when appropriate
+- Don't use in-line imports, use top-level imports instead
 
 ### Naming Conventions
 
