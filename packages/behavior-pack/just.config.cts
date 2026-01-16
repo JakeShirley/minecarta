@@ -27,7 +27,7 @@ const bundleParams = {
 
 // Deployment configuration
 const copyParams = {
-    copyToBehaviorPacks: ['./manifest.json'],
+    copyToBehaviorPacks: ['./manifest.json', './utilities/Setup-BdsConfig.ps1'],
     copyToScripts: ['./scripts/index.js'],
 };
 

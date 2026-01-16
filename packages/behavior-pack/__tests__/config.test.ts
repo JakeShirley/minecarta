@@ -4,16 +4,16 @@
 
 import { describe, it, expect } from 'vitest';
 import { config, getApiUrl } from '../src/config';
+import { SecretString } from '../__mocks__/@minecraft/server-admin';
 
 describe('Config', () => {
-    describe('config defaults', () => {
-        it('should have a default server URL', () => {
+    describe('config values', () => {
+        it('should load server URL from variables', () => {
             expect(config.serverUrl).toBe('http://localhost:3000');
         });
 
-        it('should have a default auth token', () => {
-            expect(config.authToken).toBeDefined();
-            expect(typeof config.authToken).toBe('string');
+        it('should load auth token from secrets as SecretString', () => {
+            expect(config.authToken).toBeInstanceOf(SecretString);
         });
 
         it('should have a default player update interval', () => {

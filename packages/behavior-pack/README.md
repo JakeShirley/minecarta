@@ -57,16 +57,73 @@ Copy `.env.example` to `.env` and configure:
 
 ### Runtime Configuration
 
-The pack connects to the map server using settings in `config/index.ts`:
+The pack loads configuration from the `@minecraft/server-admin` module when running on Bedrock Dedicated Server (BDS). This allows you to configure the pack without modifying code.
 
-| Setting                | Description                                                    | Default                 |
-| ---------------------- | -------------------------------------------------------------- | ----------------------- |
-| `serverUrl`            | Base URL of the map server                                     | `http://localhost:3000` |
-| `authToken`            | Authentication token for server communication                  | `dev-token`             |
-| `playerUpdateInterval` | Interval in ticks between player position updates (20 = 1 sec) | `20`                    |
-| `timeSyncInterval`     | Interval in ticks between world time syncs                     | `1200`                  |
-| `logLevel`             | Log level (Debug, Info, Warning, Error, None)                  | `Warning`               |
-| `sendPlayerStats`      | Whether to send player stats (health, hunger, armor)           | `true`                  |
+#### Server Variables (variables.json)
+
+Create a `variables.json` file in your BDS `config` directory:
+
+```json
+{
+    "serverUrl": "http://your-map-server:3000",
+    "playerUpdateInterval": 20,
+    "timeSyncInterval": 1200,
+    "logLevel": "warning",
+    "sendPlayerStats": true
+}
+```
+
+#### Server Secrets (secrets.json)
+
+Create a `secrets.json` file in your BDS `config` directory for sensitive values:
+
+```json
+{
+    "authToken": "your-secure-auth-token"
+}
+```
+
+#### Configuration Options
+
+| Setting                | Source    | Required | Description                                                    | Default   |
+| ---------------------- | --------- | -------- | -------------------------------------------------------------- | --------- |
+| `serverUrl`            | variables | **Yes**  | Base URL of the map server                                     | -         |
+| `authToken`            | secrets   | **Yes**  | Authentication token for server communication                  | -         |
+| `playerUpdateInterval` | variables | No       | Interval in ticks between player position updates (20 = 1 sec) | `20`      |
+| `timeSyncInterval`     | variables | No       | Interval in ticks between world time syncs                     | `1200`    |
+| `logLevel`             | variables | No       | Log level (debug, info, warning, error, none)                  | `warning` |
+| `sendPlayerStats`      | variables | No       | Whether to send player stats (health, hunger, armor)           | `true`    |
+
+> **Important:** The pack will fail to start if `serverUrl` or `authToken` are not configured. Make sure to set up these required values before starting BDS.
+
+#### Quick Setup Script
+
+The behavior pack includes a PowerShell utility script to quickly set up the configuration files. After deploying the pack to BDS, run:
+
+```powershell
+# From within the deployed behavior pack directory:
+.\utilities\Setup-BdsConfig.ps1
+
+# With custom values:
+.\utilities\Setup-BdsConfig.ps1 -ServerUrl "http://myserver:3000" -AuthToken "my-secret-token"
+
+# Overwrite existing files without prompting:
+.\utilities\Setup-BdsConfig.ps1 -Force
+```
+
+The script automatically detects the BDS root directory and creates the config files in the correct location (`config/<pack-uuid>/`).
+
+**Script Parameters:**
+
+| Parameter               | Required | Description                                       | Default   |
+| ----------------------- | -------- | ------------------------------------------------- | --------- |
+| `-ServerUrl`            | **Yes**  | URL of the MineCarta map server                   | -         |
+| `-AuthToken`            | **Yes**  | Authentication token for server communication     | -         |
+| `-PlayerUpdateInterval` | No       | Interval in ticks between player position updates | `20`      |
+| `-TimeSyncInterval`     | No       | Interval in ticks between world time syncs        | `1200`    |
+| `-LogLevel`             | No       | Log level (debug, info, warning, error, none)     | `warning` |
+| `-SendPlayerStats`      | No       | Whether to send player stats                      | `$true`   |
+| `-Force`                | No       | Overwrite existing files without prompting        | `$false`  |
 
 ### Log Levels
 
@@ -87,25 +144,28 @@ The `logLevel` setting controls which messages are displayed in the console:
 
 ```
 behavior-pack/
-├── manifest.json          # Behavior pack manifest
-├── pack_icon.png          # Pack icon (optional)
-├── just.config.cts        # Build task configuration
-├── .env                   # Local deployment settings (gitignored)
-├── .env.example           # Example environment configuration
-├── scripts/               # Compiled JavaScript (output)
+├── manifest.json             # Behavior pack manifest
+├── pack_icon.png             # Pack icon (optional)
+├── just.config.cts           # Build task configuration
+├── .env                      # Local deployment settings (gitignored)
+├── .env.example              # Example environment configuration
+├── scripts/                  # Compiled JavaScript (build output)
 │   └── index.js
-├── src/                   # TypeScript source
-│   ├── index.ts           # Entry point
-│   ├── blocks/            # Block scanning and color utilities
-│   ├── chunk-queue/       # Chunk generation job queue
-│   ├── commands/          # Custom commands
-│   ├── config/            # Configuration
-│   ├── events/            # World event listeners
-│   ├── logging/           # Centralized logging
-│   ├── network/           # HTTP client wrapper
-│   ├── serializers/       # Data transformation
-│   └── types/             # Type definitions
-└── __tests__/             # Unit tests
+├── utilities/                # Utility scripts for BDS setup
+│   └── Setup-BdsConfig.ps1   # BDS configuration setup script
+├── src/                      # TypeScript source
+│   ├── index.ts              # Entry point
+│   ├── blocks/               # Block scanning and color utilities
+│   ├── chunk-queue/          # Chunk generation job queue
+│   ├── commands/             # Custom commands
+│   ├── config/               # Configuration
+│   ├── events/               # World event listeners
+│   ├── logging/              # Centralized logging
+│   ├── network/              # HTTP client wrapper
+│   ├── serializers/          # Data transformation
+│   └── types/                # Type definitions
+├── __tests__/                # Unit tests
+└── __mocks__/                # Mock modules for testing
 ```
 
 ## Development
