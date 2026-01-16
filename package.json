@@ -3,6 +3,7 @@
     "private": true,
     "version": "0.0.0-semantically-versioned",
     "description": "Minecraft World Map - Real-time map visualization for Minecraft worlds",
+    "license": "MIT",
     "scripts": {
         "build": "pnpm -r build",
         "build:pack": "pnpm --filter @minecraft-map/behavior-pack build",
