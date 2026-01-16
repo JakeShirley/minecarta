@@ -30,3 +30,7 @@ packages/
 - Real-time player position tracking
 - Layer controls for terrain and players
 - WebSocket-based live updates
+
+## Screenshots
+
+![MineCarta Map View](assets/docs/screenshot1.png)
