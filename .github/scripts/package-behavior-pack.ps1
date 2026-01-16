@@ -63,8 +63,9 @@ foreach ($file in $filesToInclude) {
     }
 }
 
-# Create a temporary directory for staging
-$stagingDir = Join-Path $env:TEMP "minecarta-behavior-pack-$(Get-Random)"
+# Create a temporary directory for staging (cross-platform: use TEMP on Windows, TMPDIR or /tmp on Linux/macOS)
+$tempDir = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { "/tmp" }
+$stagingDir = Join-Path $tempDir "minecarta-behavior-pack-$(Get-Random)"
 New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
 try {
