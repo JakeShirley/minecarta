@@ -22,21 +22,20 @@ Write-Host "  Output: $outputDir"
 if ($Version -and $Version -ne "") {
     Write-Host "  Version: $Version"
     
-    # Parse semantic version (e.g., "1.2.3" -> [1, 2, 3])
+    # Validate semantic version format (e.g., "1.2.3" or "1.2.3-beta")
     $versionParts = $Version -split '\.'
     if ($versionParts.Length -ge 3) {
-        $major = [int]$versionParts[0]
-        $minor = [int]$versionParts[1]
-        $patch = [int]$versionParts[2] -replace '-.*$', '' # Remove any prerelease suffix
+        # Remove any prerelease suffix for the version string
+        $cleanVersion = $Version -replace '-.*$', ''
         
         # Read and update manifest.json
         $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
-        $manifest.header.version = @($major, $minor, $patch)
-        $manifest.modules[0].version = @($major, $minor, $patch)
+        $manifest.header.version = $cleanVersion
+        $manifest.modules[0].version = $cleanVersion
         
         # Write back with proper formatting
         $manifest | ConvertTo-Json -Depth 10 | Set-Content $manifestPath -Encoding UTF8
-        Write-Host "  Updated manifest.json version to [$major, $minor, $patch]"
+        Write-Host "  Updated manifest.json version to `"$cleanVersion`""
     }
     else {
         Write-Warning "Invalid version format: $Version (expected x.y.z)"

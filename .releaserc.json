@@ -22,7 +22,7 @@
                     {
                         "path": "dist/MineCarta-BehaviorPack.mcpack",
                         "name": "MineCarta-${nextRelease.version}.mcpack",
-                        "label": "Minecraft Behavior Pack (v${nextRelease.version})"
+                        "label": "MineCarta-${nextRelease.version}.mcpack"
                     }
                 ]
             }
