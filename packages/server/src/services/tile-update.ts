@@ -32,7 +32,21 @@ interface TileInvalidationTask {
     blockUpdates: BlockUpdateData[];
 }
 
+/**
+ * Creates a unique key for a tile to be used for locking.
+ * Format: "dimension:mapType:zoom:x:z"
+ */
+function createTileLockKey(dimension: Dimension, mapType: string, zoom: ZoomLevel, x: number, z: number): string {
+    return `${dimension}:${mapType}:${zoom}:${x}:${z}`;
+}
+
 export class TileUpdateService {
+    /**
+     * Map of tile lock keys to their current lock promise.
+     * When a tile is being updated, its key maps to a promise that resolves when the update completes.
+     * Subsequent updates to the same tile will wait for this promise before starting.
+     */
+    private tileLocks = new Map<string, Promise<void>>();
     /**
      * Process a batch of chunks and update tiles
      */
@@ -130,39 +144,96 @@ export class TileUpdateService {
         // that the behavior pack sends after block changes
     }
 
-    private async processTasks(tasks: TileUpdateTask[]): Promise<void> {
+    /**
+     * Acquire a lock for a specific tile, ensuring only one update runs at a time.
+     * Returns a release function that must be called when the update is complete.
+     *
+     * This prevents race conditions where multiple concurrent updates to the same
+     * zoomed-out tile could cause data loss (read-modify-write race).
+     */
+    private async acquireTileLock(lockKey: string): Promise<() => void> {
+        // Wait for any existing lock to be released
+        while (this.tileLocks.has(lockKey)) {
+            await this.tileLocks.get(lockKey);
+        }
+
+        // Create a new lock with a resolver we control
+        let releaseLock: () => void;
+        const lockPromise = new Promise<void>(resolve => {
+            releaseLock = resolve;
+        });
+
+        this.tileLocks.set(lockKey, lockPromise);
+
+        // Return the release function
+        return () => {
+            this.tileLocks.delete(lockKey);
+            releaseLock!();
+        };
+    }
+
+    /**
+     * Process a single tile update with proper locking.
+     * Ensures the read-modify-write cycle is atomic per tile.
+     */
+    private async processSingleTileUpdate(
+        dimension: Dimension,
+        zoom: ZoomLevel,
+        x: number,
+        z: number,
+        mapType: string,
+        blocks: ChunkBlock[]
+    ): Promise<TileCoordinates> {
         const storage = getTileStorageService();
         const generator = getTileGeneratorService();
+
+        const lockKey = createTileLockKey(dimension, mapType, zoom, x, z);
+        const releaseLock = await this.acquireTileLock(lockKey);
+
+        try {
+            // Read existing tile for this map type
+            const existingBuffer = storage.readTile(dimension, zoom, x, z, mapType as 'block' | 'height');
+
+            // Generate updated tile
+            const newTileBuffer = await generator.generateTile(
+                blocks,
+                { dimension, zoom, x, z, mapType: mapType as 'block' | 'height' },
+                existingBuffer ?? undefined,
+                mapType as 'block' | 'height'
+            );
+
+            // Save tile
+            storage.writeTile(dimension, zoom, x, z, newTileBuffer, mapType as 'block' | 'height');
+
+            return { dimension, zoom, x, z, mapType: mapType as 'block' | 'height' };
+        } finally {
+            releaseLock();
+        }
+    }
+
+    private async processTasks(tasks: TileUpdateTask[]): Promise<void> {
         const wsService = getWebSocketService();
 
         // Track updated tiles to emit WebSocket events
         const updatedTiles: TileCoordinates[] = [];
 
-        // Process sequentially for now to avoid race conditions on same file
-        // (Though map splitting handles most contentions)
+        // Process all tile updates with per-tile locking
+        // Tasks can run concurrently as long as they target different tiles
+        // The locking mechanism ensures same-tile updates are serialized
+        const updatePromises: Promise<TileCoordinates>[] = [];
+
         for (const task of tasks) {
             const { dimension, zoom, x, z, blocks } = task;
 
             // Generate and save tiles for both map types
             for (const mapType of MAP_TYPES) {
-                // Read existing tile for this map type
-                const existingBuffer = storage.readTile(dimension, zoom, x, z, mapType);
-
-                // Generate updated tile
-                const newTileBuffer = await generator.generateTile(
-                    blocks,
-                    { dimension, zoom, x, z, mapType },
-                    existingBuffer ?? undefined,
-                    mapType
-                );
-
-                // Save tile
-                storage.writeTile(dimension, zoom, x, z, newTileBuffer, mapType);
-
-                // Track for WebSocket notification
-                updatedTiles.push({ dimension, zoom, x, z, mapType });
+                updatePromises.push(this.processSingleTileUpdate(dimension, zoom, x, z, mapType, blocks));
             }
         }
+
+        // Wait for all updates to complete
+        const results = await Promise.all(updatePromises);
+        updatedTiles.push(...results);
 
         // Emit tile update events to WebSocket clients
         if (updatedTiles.length > 0) {
