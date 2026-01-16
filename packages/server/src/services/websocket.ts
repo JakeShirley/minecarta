@@ -27,6 +27,7 @@ import { getChatHistoryService } from './chat-history.js';
 import { getSpawnStateService } from './spawn-state.js';
 import { getTimeStateService } from './time-state.js';
 import { getWeatherStateService } from './weather-state.js';
+import { logDebug } from '../logging/index.js';
 
 /**
  * WebSocket service for managing real-time client connections and broadcasting events.
@@ -116,9 +117,9 @@ export class WebSocketService {
     emitTileUpdate(tiles: TileCoordinates[]): void {
         if (tiles.length === 0) return;
 
-        console.log(
-            `[WebSocketService] Emitting tile:update for ${tiles.length} tiles to ${this.clients.size} clients:`,
-            tiles.map(t => `${t.dimension}:z${t.zoom}:(${t.x},${t.z})`).join(', ')
+        logDebug(
+            'WebSocketService',
+            `Emitting tile:update for ${tiles.length} tiles to ${this.clients.size} clients: ${tiles.map(t => `${t.dimension}:z${t.zoom}:(${t.x},${t.z})`).join(', ')}`
         );
 
         const event: TileUpdateEvent = {
@@ -133,7 +134,7 @@ export class WebSocketService {
      * Emit a chat message event
      */
     emitChatMessage(chat: ChatMessage): void {
-        console.log(`[WebSocketService] Emitting chat:message from ${chat.playerName} to ${this.clients.size} clients`);
+        logDebug('WebSocketService', `Emitting chat:message from ${chat.playerName} to ${this.clients.size} clients`);
 
         // Add to chat history
         const chatHistoryService = getChatHistoryService();
@@ -166,7 +167,7 @@ export class WebSocketService {
 
         if (socket.readyState === 1) {
             socket.send(JSON.stringify(event));
-            console.log(`[WebSocketService] Sent ${messages.length} chat history messages to client`);
+            logDebug('WebSocketService', `Sent ${messages.length} chat history messages to client`);
         }
     }
 
@@ -174,7 +175,7 @@ export class WebSocketService {
      * Emit a world spawn update event
      */
     emitWorldSpawnUpdate(spawn: WorldSpawn): void {
-        console.log(`[WebSocketService] Emitting spawn:world to ${this.clients.size} clients`);
+        logDebug('WebSocketService', `Emitting spawn:world to ${this.clients.size} clients`);
 
         const event: WorldSpawnUpdateEvent = {
             type: WS_EVENTS.SPAWN_WORLD,
@@ -188,7 +189,7 @@ export class WebSocketService {
      * Emit a player spawn update event
      */
     emitPlayerSpawnUpdate(spawn: PlayerSpawn): void {
-        console.log(`[WebSocketService] Emitting spawn:player for ${spawn.playerName} to ${this.clients.size} clients`);
+        logDebug('WebSocketService', `Emitting spawn:player for ${spawn.playerName} to ${this.clients.size} clients`);
 
         const event: PlayerSpawnUpdateEvent = {
             type: WS_EVENTS.SPAWN_PLAYER,
@@ -215,8 +216,9 @@ export class WebSocketService {
 
         if (socket.readyState === 1) {
             socket.send(JSON.stringify(event));
-            console.log(
-                `[WebSocketService] Sent spawn state to client (world: ${worldSpawn ? 'yes' : 'no'}, players: ${playerSpawns.length})`
+            logDebug(
+                'WebSocketService',
+                `Sent spawn state to client (world: ${worldSpawn ? 'yes' : 'no'}, players: ${playerSpawns.length})`
             );
         }
     }
@@ -250,8 +252,9 @@ export class WebSocketService {
         if (socket.readyState === 1) {
             socket.send(JSON.stringify(event));
             if (time) {
-                console.log(
-                    `[WebSocketService] Sent time state to client (day: ${time.day}, timeOfDay: ${time.timeOfDay})`
+                logDebug(
+                    'WebSocketService',
+                    `Sent time state to client (day: ${time.day}, timeOfDay: ${time.timeOfDay})`
                 );
             }
         }
@@ -261,7 +264,7 @@ export class WebSocketService {
      * Emit a world weather update event
      */
     emitWeatherUpdate(weather: WorldWeather): void {
-        console.log(`[WebSocketService] Emitting weather:update (${weather.weather}) to ${this.clients.size} clients`);
+        logDebug('WebSocketService', `Emitting weather:update (${weather.weather}) to ${this.clients.size} clients`);
 
         const event: WorldWeatherUpdateEvent = {
             type: WS_EVENTS.WEATHER_UPDATE,
@@ -287,7 +290,7 @@ export class WebSocketService {
         if (socket.readyState === 1) {
             socket.send(JSON.stringify(event));
             if (weather) {
-                console.log(`[WebSocketService] Sent weather state to client (${weather.weather})`);
+                logDebug('WebSocketService', `Sent weather state to client (${weather.weather})`);
             }
         }
     }

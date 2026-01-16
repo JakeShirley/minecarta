@@ -10,7 +10,7 @@ export function loadConfig(): ServerConfig {
         host: process.env.HOST ?? DEFAULT_HOST,
         authToken: process.env.AUTH_TOKEN ?? 'dev-token',
         dataDir: process.env.DATA_DIR ?? './data',
-        logLevel: (process.env.LOG_LEVEL as ServerConfig['logLevel']) ?? 'info',
+        logLevel: (process.env.LOG_LEVEL as ServerConfig['logLevel']) ?? 'warn',
     };
 }
 

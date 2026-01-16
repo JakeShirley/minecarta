@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import { TILE_SIZE, BLOCKS_PER_TILE } from '@minecarta/shared';
 import type { ZoomLevel, TileCoordinates, ChunkBlock, RGBA, MapType } from '@minecarta/shared';
+import { logWarning } from '../logging/index.js';
 
 /**
  * Minecraft map shade multipliers.
@@ -376,8 +377,9 @@ export class TileGeneratorService {
             // Use mapColor from block data if provided, otherwise fall back to lookup
             const baseColor = block.mapColor;
             if (baseColor == null) {
-                console.error(
-                    `[TileGenerator] Missing map color for block at (${block.x}, ${block.z}) of type ${block.type}`
+                logWarning(
+                    'TileGenerator',
+                    `Missing map color for block at (${block.x}, ${block.z}) of type ${block.type}`
                 );
                 continue;
             }
