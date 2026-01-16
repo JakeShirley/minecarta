@@ -242,3 +242,10 @@ Follow conventional commits:
 - Use parameterized queries for database operations
 - Keep dependencies updated for security patches
 - Follow the principle of least privilege
+
+## GitHub Pipelines/Workflows
+
+### Scripts
+
+- Use Powershell for cross-platform scripting in CI/CD pipelines
+- Use external scripts, don't invoke in-line script from YAML
