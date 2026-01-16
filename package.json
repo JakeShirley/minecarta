@@ -1,7 +1,7 @@
 {
     "name": "minecraft-map",
     "private": true,
-    "version": "1.0.0",
+    "version": "0.0.0-semantically-versioned",
     "description": "Minecraft World Map - Real-time map visualization for Minecraft worlds",
     "scripts": {
         "build": "pnpm -r build",
@@ -19,7 +19,8 @@
         "format:check": "prettier --check \"**/*.{ts,js,json,md}\""
     },
     "devDependencies": {
-        "prettier": "^3.5.3"
+        "prettier": "^3.5.3",
+        "semantic-release": "^24.0.0"
     },
     "engines": {
         "node": ">=20.0.0"
