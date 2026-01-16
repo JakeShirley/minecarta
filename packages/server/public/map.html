@@ -1476,11 +1476,6 @@
                 7: 2048,
             };
 
-            // Base server zoom level used for tiles
-            const BASE_SERVER_ZOOM = 4;
-            // Blocks per tile at base server zoom
-            const BASE_BLOCKS_PER_TILE = BLOCKS_PER_TILE[BASE_SERVER_ZOOM];
-
             // Map Init
             const map = L.map('map', {
                 crs: L.CRS.Simple,
@@ -1498,20 +1493,24 @@
             /**
              * Convert Leaflet coordinates to Minecraft world coordinates
              *
-             * In Leaflet CRS.Simple at native zoom 3:
-             * - 1 tile = 256 pixels = 32 latlng units (since pixel = latlng * 2^zoom)
-             * - 1 tile = 256 blocks (BASE_BLOCKS_PER_TILE at server zoom 4)
-             * - Therefore: 32 latlng units = 256 blocks, so 1 latlng = 8 blocks
+             * With the inverted zoom mapping:
+             * - Leaflet zoom 7 = Server zoom 0 (16 blocks/tile, highest detail)
+             * - Leaflet zoom 0 = Server zoom 7 (2048 blocks/tile, lowest detail)
              *
-             * This is zoom-independent - Minecraft coords should be the same at any zoom level.
+             * In CRS.Simple, at any zoom level z, the latlng to pixel scale is 2^z.
+             * A tile is always 256x256 pixels.
+             * At Leaflet zoom z, a tile covers (256 / 2^z) latlng units.
+             * At Leaflet zoom z, server zoom = MAX_ZOOM - z, so blocks per tile = BLOCKS_PER_TILE[serverZoom].
+             *
+             * We use Leaflet zoom 0 as our reference for coordinate mapping:
+             * - At Leaflet zoom 0: 1 tile = 256 latlng units = 2048 blocks (server zoom 7)
+             * - So: 1 latlng unit = 2048/256 = 8 blocks
              */
-            function leafletToMinecraft(latlng) {
-                // At native zoom 3: 32 latlng units = 256 blocks
-                // So blocksPerLatlngUnit = 256 / 32 = 8
-                const blocksPerLatlngUnit = BASE_BLOCKS_PER_TILE / 32;
+            const BLOCKS_PER_LATLNG_UNIT = BLOCKS_PER_TILE[MAX_ZOOM] / 256; // 2048/256 = 8
 
-                const mcX = Math.floor(latlng.lng * blocksPerLatlngUnit);
-                const mcZ = Math.floor(-latlng.lat * blocksPerLatlngUnit);
+            function leafletToMinecraft(latlng) {
+                const mcX = Math.floor(latlng.lng * BLOCKS_PER_LATLNG_UNIT);
+                const mcZ = Math.floor(-latlng.lat * BLOCKS_PER_LATLNG_UNIT);
 
                 return { x: mcX, z: mcZ };
             }
@@ -1521,10 +1520,8 @@
              * This is zoom-independent.
              */
             function minecraftToLeaflet(mcX, mcZ) {
-                const blocksPerLatlngUnit = BASE_BLOCKS_PER_TILE / 32;
-
-                const lat = -(mcZ / blocksPerLatlngUnit);
-                const lng = mcX / blocksPerLatlngUnit;
+                const lat = -(mcZ / BLOCKS_PER_LATLNG_UNIT);
+                const lng = mcX / BLOCKS_PER_LATLNG_UNIT;
 
                 return L.latLng(lat, lng);
             }
@@ -1577,9 +1574,8 @@
              */
             function updateZoomDisplay() {
                 const leafletZoom = map.getZoom();
-                const nativeLeafletZoom = 3;
-                const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
-                const blocksPerTile = Math.round(BASE_BLOCKS_PER_TILE / scale);
+                const serverZoom = MAX_ZOOM - leafletZoom;
+                const blocksPerTile = BLOCKS_PER_TILE[serverZoom];
                 document.getElementById('zoom-text').textContent =
                     `Zoom: ${leafletZoom} (${blocksPerTile} blocks/tile)`;
             }
@@ -1643,9 +1639,11 @@
                  */
                 _getGridSpacing() {
                     const leafletZoom = this.map.getZoom();
-                    const nativeLeafletZoom = 3;
-                    const scale = Math.pow(2, leafletZoom - nativeLeafletZoom);
-                    const blocksPerPixel = BASE_BLOCKS_PER_TILE / (256 * scale);
+                    // Get the server zoom and blocks per tile at current zoom
+                    const serverZoom = MAX_ZOOM - leafletZoom;
+                    const blocksPerTile = BLOCKS_PER_TILE[serverZoom];
+                    // At any zoom, a tile is 256 pixels
+                    const blocksPerPixel = blocksPerTile / 256;
 
                     // Approximate pixels per 1000 blocks
                     const pixelsPer1000Blocks = 1000 / blocksPerPixel;
@@ -1783,8 +1781,9 @@
                     options: {
                         minZoom: 0,
                         maxZoom: MAX_ZOOM,
-                        minNativeZoom: 3,
-                        maxNativeZoom: 3,
+                        // Allow native tile fetching at all zoom levels
+                        minNativeZoom: 0,
+                        maxNativeZoom: MAX_ZOOM,
                         tileSize: 256,
                         noWrap: true,
                     },
@@ -1812,7 +1811,11 @@
                     },
 
                     getTileUrl: function (coords) {
-                        return `${API_BASE}/tiles/${this._currentDim}/${this._currentMapType}/${BASE_SERVER_ZOOM}/${coords.x}/${coords.y}.png`;
+                        // Server zoom levels are inverted from Leaflet:
+                        // Leaflet zoom 7 (most zoomed in) = Server zoom 0 (highest detail, 16 blocks/tile)
+                        // Leaflet zoom 0 (most zoomed out) = Server zoom 7 (lowest detail, 2048 blocks/tile)
+                        const serverZoom = MAX_ZOOM - coords.z;
+                        return `${API_BASE}/tiles/${this._currentDim}/${this._currentMapType}/${serverZoom}/${coords.x}/${coords.y}.png`;
                     },
 
                     getAttribution: function () {
@@ -2868,12 +2871,14 @@
             function handleTileUpdates(tiles) {
                 const currentDimension = document.getElementById('tile-dim').value;
                 const currentMapType = document.getElementById('tile-map-type').value;
+                // Get the current server zoom level based on Leaflet zoom
+                const currentServerZoom = MAX_ZOOM - Math.round(map.getZoom());
 
                 // Filter to tiles in current dimension, map type, and at our display zoom level
                 const relevantTiles = tiles.filter(
                     tile =>
                         tile.dimension === currentDimension &&
-                        tile.zoom === BASE_SERVER_ZOOM &&
+                        tile.zoom === currentServerZoom &&
                         (tile.mapType === currentMapType || tile.mapType === undefined)
                 );
 
