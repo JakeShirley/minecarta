@@ -17,7 +17,7 @@ import { registerCustomCommands } from './commands';
 import { testConnection } from './network';
 import { config } from './config';
 import { startQueueProcessor, resortQueue } from './chunk-queue';
-import { logInfo, logWarning, logError, LogLevel } from './logging';
+import { logInfo, logWarning, logError, LogLevel, logDebug } from './logging';
 
 // Register custom commands during startup (must be done in early-execution mode)
 registerCustomCommands();
@@ -74,7 +74,7 @@ async function initialize(): Promise<void> {
 
     // Start the chunk generation queue processor
     startQueueProcessor();
-    logInfo(LOG_TAG, 'Chunk generation queue processor started');
+    logDebug(LOG_TAG, 'Chunk generation queue processor started');
 
     // Set up periodic player position updates
     system.runInterval(() => {

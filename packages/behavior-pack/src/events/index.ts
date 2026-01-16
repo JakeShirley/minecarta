@@ -791,5 +791,5 @@ export function registerAllEventListeners(): void {
     registerChatListener();
     registerWeatherChangeListener();
 
-    logInfo(LOG_TAG, 'All event listeners registered');
+    logDebug(LOG_TAG, 'All event listeners registered');
 }
