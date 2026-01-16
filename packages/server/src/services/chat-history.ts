@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@minecraft-map/shared';
+import type { ChatMessage } from '@minecarta/shared';
 
 /**
  * Default maximum number of messages to keep in history
@@ -65,3 +65,4 @@ export function getChatHistoryService(): ChatHistoryService {
     }
     return _chatHistoryService;
 }
+

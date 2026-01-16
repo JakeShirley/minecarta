@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TileGeneratorService } from '../src/tiles/tile-generator.js';
 import { TileUpdateService } from '../src/services/tile-update.js'; // This assumes internal access or I should export it from tile-update directly
 import { TileStorageService } from '../src/tiles/tile-storage.js';
-import type { ChunkData, ChunkBlock, RGBA } from '@minecraft-map/shared';
+import type { ChunkData, ChunkBlock, RGBA } from '@minecarta/shared';
 import sharp from 'sharp';
 
 // Mocks
@@ -487,3 +487,4 @@ describe('TileGeneratorService', () => {
         });
     });
 });
+

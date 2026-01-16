@@ -1,7 +1,7 @@
 {
     "format_version": 2,
     "header": {
-        "name": "World Map Sync",
+        "name": "MineCarta Sync",
         "description": "Syncs world state to external map server for real-time visualization",
         "uuid": "a1b2c3d4-e5f6-4789-abcd-ef0123456789",
         "version": [1, 0, 0],

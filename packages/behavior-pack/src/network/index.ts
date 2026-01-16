@@ -4,8 +4,8 @@
 
 import { http, HttpRequest, HttpRequestMethod, HttpHeader } from '@minecraft/server-net';
 import { config, getApiUrl } from '../config';
-import { AUTH_HEADER } from '@minecraft-map/shared';
-import type { ChunkData, Dimension } from '@minecraft-map/shared';
+import { AUTH_HEADER } from '@minecarta/shared';
+import type { ChunkData, Dimension } from '@minecarta/shared';
 import type { ApiResponse, BlockChange, Entity, Player } from '../types';
 
 /**
@@ -328,3 +328,4 @@ export async function testConnection(): Promise<boolean> {
         return false;
     }
 }
+

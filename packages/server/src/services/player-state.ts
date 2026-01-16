@@ -1,4 +1,4 @@
-import type { Player, Dimension } from '@minecraft-map/shared';
+import type { Player, Dimension } from '@minecarta/shared';
 
 /**
  * In-memory player state service
@@ -73,3 +73,4 @@ export function getPlayerStateService(): PlayerStateService {
     }
     return _playerStateService;
 }
+

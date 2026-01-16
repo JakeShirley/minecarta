@@ -2,7 +2,7 @@
  * Data serialization utilities for converting Minecraft data to API format
  */
 
-import type { BlockChange, Player, Entity, ChunkData, ChunkBlock, PlayerStats } from '@minecraft-map/shared';
+import type { BlockChange, Player, Entity, ChunkData, ChunkBlock, PlayerStats } from '@minecarta/shared';
 import type {
     MinecraftBlockEvent,
     MinecraftPlayer,
@@ -169,3 +169,4 @@ export function serializeChunkData(chunk: MinecraftChunkData): ChunkData {
         blocks: chunk.blocks.map(serializeChunkBlock),
     };
 }
+

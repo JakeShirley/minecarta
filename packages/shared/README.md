@@ -1,4 +1,4 @@
-# @minecraft-map/shared
+# @minecarta/shared
 
 Shared types and constants for the Minecraft Map project.
 
@@ -7,7 +7,7 @@ Shared types and constants for the Minecraft Map project.
 This package is part of the monorepo and is automatically linked via pnpm workspaces.
 
 ```typescript
-import { Player, BlockChange, API_BASE_PATH } from '@minecraft-map/shared';
+import { Player, BlockChange, API_BASE_PATH } from '@minecarta/shared';
 ```
 
 ## Types
@@ -109,3 +109,4 @@ pnpm dev
 # Clean build output
 pnpm clean
 ```
+

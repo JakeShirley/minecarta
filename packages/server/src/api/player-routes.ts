@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { Dimension } from '@minecraft-map/shared';
+import type { Dimension } from '@minecarta/shared';
 import { getPlayerStateService, getSpawnStateService } from '../services/index.js';
 
 interface DimensionQuery {
@@ -104,3 +104,4 @@ export async function registerPlayerRoutes(app: FastifyInstance): Promise<void> 
         });
     });
 }
+

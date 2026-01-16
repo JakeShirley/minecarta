@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { API_BASE_PATH } from '@minecraft-map/shared';
+import { API_BASE_PATH } from '@minecarta/shared';
 import { registerWorldRoutes } from './world-routes.js';
 import { registerPlayerRoutes } from './player-routes.js';
 import { registerTileRoutes } from './tile-routes.js';
@@ -36,3 +36,4 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         { prefix: API_BASE_PATH }
     );
 }
+

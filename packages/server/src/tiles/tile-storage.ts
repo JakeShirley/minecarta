@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { DIMENSIONS, ZOOM_LEVELS, BLOCKS_PER_TILE, MAP_TYPES } from '@minecraft-map/shared';
-import type { Dimension, ZoomLevel, MapType } from '@minecraft-map/shared';
+import { DIMENSIONS, ZOOM_LEVELS, BLOCKS_PER_TILE, MAP_TYPES } from '@minecarta/shared';
+import type { Dimension, ZoomLevel, MapType } from '@minecarta/shared';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -158,3 +158,4 @@ export function getTileStorageService(): TileStorageService {
     }
     return _tileStorageService;
 }
+

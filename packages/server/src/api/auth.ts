@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { AUTH_HEADER } from '@minecraft-map/shared';
+import { AUTH_HEADER } from '@minecarta/shared';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -23,3 +23,4 @@ export async function authHook(request: FastifyRequest, reply: FastifyReply): Pr
 export function registerAuth(app: FastifyInstance): void {
     app.addHook('preHandler', authHook);
 }
+

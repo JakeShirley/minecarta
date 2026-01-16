@@ -1,4 +1,4 @@
-import type { WorldTime } from '@minecraft-map/shared';
+import type { WorldTime } from '@minecarta/shared';
 
 /**
  * In-memory world time state service
@@ -68,3 +68,4 @@ export function getTimeStateService(): TimeStateService {
     }
     return _timeStateService;
 }
+

@@ -17,7 +17,7 @@ importers:
 
   packages/behavior-pack:
     dependencies:
-      '@minecraft-map/shared':
+      '@minecarta/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -63,7 +63,7 @@ importers:
       '@fastify/websocket':
         specifier: ^10.0.1
         version: 10.0.1
-      '@minecraft-map/shared':
+      '@minecarta/shared':
         specifier: workspace:*
         version: link:../shared
       fastify:

@@ -1,123 +1,136 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft Map Hub</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #1a1a2e;
-      color: #eee;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .container {
-      text-align: center;
-      background: #16213e;
-      padding: 40px;
-      border-radius: 12px;
-      border: 1px solid #0f3460;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      max-width: 600px;
-      width: 90%;
-    }
-    h1 { color: #6dd5ed; margin-bottom: 10px; }
-    p { color: #8ab4c9; margin-bottom: 30px; }
-    
-    .menu {
-      display: grid;
-      gap: 15px;
-    }
-    
-    .menu-item {
-      display: block;
-      background: #0f3460;
-      padding: 20px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: white;
-      border: 1px solid #1f4068;
-      transition: transform 0.2s, background 0.2s;
-    }
-    .menu-item:hover {
-      background: #1f4068;
-      transform: translateY(-2px);
-      border-color: #6dd5ed;
-    }
-    .menu-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #6dd5ed;
-      display: block;
-      margin-bottom: 5px;
-    }
-    .menu-desc {
-      font-size: 0.9rem;
-      color: #ccc;
-    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Minecraft Map Hub</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #1a1a2e;
+                color: #eee;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+            }
+            .container {
+                text-align: center;
+                background: #16213e;
+                padding: 40px;
+                border-radius: 12px;
+                border: 1px solid #0f3460;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+                max-width: 600px;
+                width: 90%;
+            }
+            h1 {
+                color: #6dd5ed;
+                margin-bottom: 10px;
+            }
+            p {
+                color: #8ab4c9;
+                margin-bottom: 30px;
+            }
 
-    .status-box {
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid #0f3460;
-        font-size: 0.9rem;
-        color: #666;
-    }
-    .status-indicator {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #666;
-        margin-right: 5px;
-    }
-    .online .status-indicator { background: #49cc90; }
-    .offline .status-indicator { background: #e94560; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Minecraft Map Server</h1>
-    <p>Development Hub</p>
-    
-    <div class="menu">
-      <a href="api-tester.html" class="menu-item">
-        <span class="menu-title">🛠️ API Manager (Legacy)</span>
-        <span class="menu-desc">Create players, blocks, and chunks using the visual builder.</span>
-      </a>
-      
-      <a href="map.html" class="menu-item">
-        <span class="menu-title">🗺️ Map Viewer</span>
-        <span class="menu-desc">Explore the generated map tiles in a Leaflet interface.</span>
-      </a>
-    </div>
+            .menu {
+                display: grid;
+                gap: 15px;
+            }
 
-    <div class="status-box" id="status-box">
-        <span class="status-indicator"></span>
-        <span id="status-text">Checking server connection...</span>
-    </div>
-  </div>
+            .menu-item {
+                display: block;
+                background: #0f3460;
+                padding: 20px;
+                border-radius: 8px;
+                text-decoration: none;
+                color: white;
+                border: 1px solid #1f4068;
+                transition:
+                    transform 0.2s,
+                    background 0.2s;
+            }
+            .menu-item:hover {
+                background: #1f4068;
+                transform: translateY(-2px);
+                border-color: #6dd5ed;
+            }
+            .menu-title {
+                font-size: 1.2rem;
+                font-weight: bold;
+                color: #6dd5ed;
+                display: block;
+                margin-bottom: 5px;
+            }
+            .menu-desc {
+                font-size: 0.9rem;
+                color: #ccc;
+            }
 
-  <script>
-    fetch('/api/v1/health')
-        .then(res => res.json())
-        .then(data => {
-            const box = document.getElementById('status-box');
-            const text = document.getElementById('status-text');
-            box.classList.add('online');
-            text.innerText = 'Server Online';
-        })
-        .catch(() => {
-            const box = document.getElementById('status-box');
-            const text = document.getElementById('status-text');
-            box.classList.add('offline');
-            text.innerText = 'Server Connect Failed';
-        });
-  </script>
-</body>
+            .status-box {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #0f3460;
+                font-size: 0.9rem;
+                color: #666;
+            }
+            .status-indicator {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #666;
+                margin-right: 5px;
+            }
+            .online .status-indicator {
+                background: #49cc90;
+            }
+            .offline .status-indicator {
+                background: #e94560;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <img src="logo.png" alt="MineCarta Logo" style="width: 120px; margin-bottom: 20px" />
+            <h1>MineCarta</h1>
+            <p>Development Hub</p>
+
+            <div class="menu">
+                <a href="api-tester.html" class="menu-item">
+                    <span class="menu-title">🛠️ API Manager (Legacy)</span>
+                    <span class="menu-desc">Create players, blocks, and chunks using the visual builder.</span>
+                </a>
+
+                <a href="map.html" class="menu-item">
+                    <span class="menu-title">🗺️ Map Viewer</span>
+                    <span class="menu-desc">Explore the generated map tiles in a Leaflet interface.</span>
+                </a>
+            </div>
+
+            <div class="status-box" id="status-box">
+                <span class="status-indicator"></span>
+                <span id="status-text">Checking server connection...</span>
+            </div>
+        </div>
+
+        <script>
+            fetch('/api/v1/health')
+                .then(res => res.json())
+                .then(data => {
+                    const box = document.getElementById('status-box');
+                    const text = document.getElementById('status-text');
+                    box.classList.add('online');
+                    text.innerText = 'Server Online';
+                })
+                .catch(() => {
+                    const box = document.getElementById('status-box');
+                    const text = document.getElementById('status-text');
+                    box.classList.add('offline');
+                    text.innerText = 'Server Connect Failed';
+                });
+        </script>
+    </body>
 </html>

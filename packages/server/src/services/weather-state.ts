@@ -1,4 +1,4 @@
-import type { WorldWeather, WeatherType, Dimension } from '@minecraft-map/shared';
+import type { WorldWeather, WeatherType, Dimension } from '@minecarta/shared';
 
 /**
  * In-memory world weather state service
@@ -66,3 +66,4 @@ export function getWeatherStateService(): WeatherStateService {
     }
     return _weatherStateService;
 }
+

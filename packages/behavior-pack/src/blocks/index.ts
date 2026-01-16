@@ -7,7 +7,7 @@
 
 import { BlockMapColorComponent, TintMethod } from '@minecraft/server';
 import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/server';
-import type { Dimension } from '@minecraft-map/shared';
+import type { Dimension } from '@minecarta/shared';
 import type { MinecraftChunkBlock, MinecraftChunkData } from '../types';
 
 /**
@@ -447,3 +447,4 @@ export function scanArea(
         blocks,
     };
 }
+

@@ -1,5 +1,5 @@
-import type { ChunkData, ChunkBlock, BlockChange, Dimension, ZoomLevel, TileCoordinates } from '@minecraft-map/shared';
-import { ZOOM_LEVELS, MAP_TYPES } from '@minecraft-map/shared';
+import type { ChunkData, ChunkBlock, BlockChange, Dimension, ZoomLevel, TileCoordinates } from '@minecarta/shared';
+import { ZOOM_LEVELS, MAP_TYPES } from '@minecarta/shared';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { getTileGeneratorService } from '../tiles/tile-generator.js';
 import { getWebSocketService } from './websocket.js';
@@ -179,3 +179,4 @@ export function getTileUpdateService(): TileUpdateService {
     }
     return _tileUpdateService;
 }
+

@@ -1,4 +1,4 @@
-import type { Entity, Dimension } from '@minecraft-map/shared';
+import type { Entity, Dimension } from '@minecarta/shared';
 
 /**
  * In-memory entity state service
@@ -82,3 +82,4 @@ export function getEntityStateService(): EntityStateService {
     }
     return _entityStateService;
 }
+

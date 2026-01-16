@@ -409,3 +409,4 @@ export type WebSocketEvent =
     | WorldTimeStateEvent
     | WorldWeatherUpdateEvent
     | WorldWeatherStateEvent;
+

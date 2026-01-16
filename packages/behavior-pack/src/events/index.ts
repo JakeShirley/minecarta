@@ -13,7 +13,7 @@ import {
 } from '@minecraft/server';
 import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
-import type { PlayerStats } from '@minecraft-map/shared';
+import type { PlayerStats } from '@minecarta/shared';
 import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
 import {
     sendBlockChanges,
@@ -816,3 +816,4 @@ export function registerAllEventListeners(): void {
 
     console.log('[MapSync] All event listeners registered');
 }
+

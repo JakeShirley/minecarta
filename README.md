@@ -1,4 +1,8 @@
-# Minecraft World Map
+# MineCarta
+
+<p align="center">
+  <img src="packages/server/public/logo.png" alt="MineCarta Logo" width="200">
+</p>
 
 > ⚠️ **Work in Progress** - This project is under active development. Most features are not yet implemented.
 

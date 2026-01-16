@@ -1,4 +1,4 @@
-import type { WorldSpawn, PlayerSpawn, Dimension } from '@minecraft-map/shared';
+import type { WorldSpawn, PlayerSpawn, Dimension } from '@minecarta/shared';
 
 /**
  * In-memory spawn state service
@@ -86,3 +86,4 @@ export function getSpawnStateService(): SpawnStateService {
     }
     return _spawnStateService;
 }
+

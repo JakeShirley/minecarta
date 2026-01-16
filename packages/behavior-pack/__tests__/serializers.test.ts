@@ -15,7 +15,7 @@ import {
     serializeEntities,
 } from '../src/serializers';
 import type { MinecraftBlockEvent, MinecraftPlayer, MinecraftEntity } from '../src/types';
-import type { PlayerStats } from '@minecraft-map/shared';
+import type { PlayerStats } from '@minecarta/shared';
 
 describe('Serializers', () => {
     describe('normalizeBlockType', () => {
@@ -317,3 +317,4 @@ describe('Serializers', () => {
         });
     });
 });
+

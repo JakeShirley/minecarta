@@ -1,4 +1,4 @@
-# Minecraft World Map Project
+# MineCarta Project
 
 ---
 

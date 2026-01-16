@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { Dimension, ZoomLevel, MapType } from '@minecraft-map/shared';
-import { DIMENSIONS, ZOOM_LEVELS, MAP_TYPES } from '@minecraft-map/shared';
+import type { Dimension, ZoomLevel, MapType } from '@minecarta/shared';
+import { DIMENSIONS, ZOOM_LEVELS, MAP_TYPES } from '@minecarta/shared';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getConfig } from '../config/index.js';
@@ -104,3 +104,4 @@ export async function registerTileRoutes(app: FastifyInstance): Promise<void> {
         });
     });
 }
+

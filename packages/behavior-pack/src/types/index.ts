@@ -2,7 +2,7 @@
  * Type definitions specific to the behavior pack
  */
 
-import type { Dimension, BlockChange, Player, Entity, PlayerStats } from '@minecraft-map/shared';
+import type { Dimension, BlockChange, Player, Entity, PlayerStats } from '@minecarta/shared';
 import { RGBA } from '@minecraft/server';
 
 /**
@@ -105,4 +105,5 @@ export interface ApiResponse {
 /**
  * Re-export shared types for convenience
  */
-export type { Dimension, BlockChange, Player, Entity } from '@minecraft-map/shared';
+export type { Dimension, BlockChange, Player, Entity } from '@minecarta/shared';
+

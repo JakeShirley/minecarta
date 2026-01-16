@@ -1,4 +1,4 @@
-# Contributing to Minecraft World Map
+# Contributing to MineCarta
 
 Thank you for your interest in contributing to this project! This guide will help you set up your development environment and understand our contribution workflow.
 
@@ -49,9 +49,9 @@ pnpm install
 This will install dependencies for:
 
 - Root workspace
-- `@minecraft-map/shared` - Shared types and constants
-- `@minecraft-map/behavior-pack` - Minecraft behavior pack
-- `@minecraft-map/server` - Web server
+- `@minecarta/shared` - Shared types and constants
+- `@minecarta/behavior-pack` - Minecraft behavior pack
+- `@minecarta/server` - Web server
 
 ### 3. Build All Packages
 

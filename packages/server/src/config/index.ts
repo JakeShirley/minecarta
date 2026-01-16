@@ -1,4 +1,4 @@
-import { DEFAULT_HOST, DEFAULT_PORT } from '@minecraft-map/shared';
+import { DEFAULT_HOST, DEFAULT_PORT } from '@minecarta/shared';
 import type { ServerConfig } from '../types/index.js';
 
 /**
@@ -33,3 +33,4 @@ export function getConfig(): ServerConfig {
 export function resetConfig(): void {
     _config = null;
 }
+

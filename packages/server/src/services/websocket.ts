@@ -21,8 +21,8 @@ import type {
     WorldWeather,
     WorldWeatherUpdateEvent,
     WorldWeatherStateEvent,
-} from '@minecraft-map/shared';
-import { WS_EVENTS } from '@minecraft-map/shared';
+} from '@minecarta/shared';
+import { WS_EVENTS } from '@minecarta/shared';
 import { getChatHistoryService } from './chat-history.js';
 import { getSpawnStateService } from './spawn-state.js';
 import { getTimeStateService } from './time-state.js';
@@ -312,3 +312,4 @@ export function getWebSocketService(): WebSocketService {
     }
     return _webSocketService;
 }
+

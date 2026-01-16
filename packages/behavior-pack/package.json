@@ -1,5 +1,5 @@
 {
-    "name": "@minecraft-map/behavior-pack",
+    "name": "@minecarta/behavior-pack",
     "version": "1.0.0",
     "description": "Minecraft behavior pack that syncs world state to map server",
     "type": "module",
@@ -14,7 +14,7 @@
         "clean:deploy": "just-scripts clean:deploy"
     },
     "dependencies": {
-        "@minecraft-map/shared": "workspace:*"
+        "@minecarta/shared": "workspace:*"
     },
     "devDependencies": {
         "@minecraft/core-build-tasks": "^5.5.0",

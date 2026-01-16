@@ -24,7 +24,7 @@ import {
     worldTimeSchema,
     worldWeatherSchema,
 } from './schemas.js';
-import type { Dimension, ZoomLevel, Player } from '@minecraft-map/shared';
+import type { Dimension, ZoomLevel, Player } from '@minecarta/shared';
 
 /**
  * Register world data ingestion routes
@@ -437,3 +437,4 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         });
     });
 }
+

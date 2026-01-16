@@ -1,6 +1,6 @@
 import sharp from 'sharp';
-import { TILE_SIZE, BLOCKS_PER_TILE } from '@minecraft-map/shared';
-import type { ZoomLevel, TileCoordinates, ChunkBlock, RGBA, MapType } from '@minecraft-map/shared';
+import { TILE_SIZE, BLOCKS_PER_TILE } from '@minecarta/shared';
+import type { ZoomLevel, TileCoordinates, ChunkBlock, RGBA, MapType } from '@minecarta/shared';
 
 /**
  * Minecraft map shade multipliers.
@@ -450,3 +450,4 @@ export function getTileGeneratorService(): TileGeneratorService {
     }
     return _tileGeneratorService;
 }
+
