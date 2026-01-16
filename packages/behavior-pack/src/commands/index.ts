@@ -4,9 +4,9 @@
 
 import { system, world, CommandPermissionLevel, CustomCommandParamType, CustomCommandStatus } from '@minecraft/server';
 import type { CustomCommandOrigin, CustomCommandResult, Player, Dimension } from '@minecraft/server';
-import { config } from '../config';
 import { toDimension } from '../blocks';
 import { queueChunks, ChunkJobPriority, getQueueStats, resortQueue, clearQueue } from '../chunk-queue';
+import { logDebug, logInfo } from '../logging';
 
 /**
  * State for auto-generation mode per player
@@ -23,13 +23,9 @@ interface AutoGenState {
 const autoGenPlayers: Map<string, AutoGenState> = new Map();
 
 /**
- * Log debug messages
+ * Logging tag for this module
  */
-function logDebug(message: string, data?: unknown): void {
-    if (config.debug) {
-        console.log(`[MapSync Commands] ${message}`, data ? JSON.stringify(data) : '');
-    }
-}
+const LOG_TAG = 'Commands';
 
 /**
  * Scan and send tiles around a player's current position
@@ -64,12 +60,12 @@ async function scanAroundPlayer(player: Player, radiusBlocks: number): Promise<v
             sourcePlayer: player.name,
         });
 
-        logDebug(`Auto-gen queued ${chunksToQueue.length} chunks for ${player.name}`, {
+        logDebug(LOG_TAG, `Auto-gen queued ${chunksToQueue.length} chunks for ${player.name}`, {
             location: { x: location.x, z: location.z },
             chunkRadius,
         });
     } catch (error) {
-        logDebug(`Auto-gen scan failed for ${player.name}`, error);
+        logDebug(LOG_TAG, `Auto-gen scan failed for ${player.name}`, error);
     }
 }
 
@@ -98,7 +94,7 @@ function startAutoGen(player: Player, radiusBlocks: number, intervalSeconds: num
         }
 
         scanAroundPlayer(currentPlayer, radiusBlocks).catch(error => {
-            logDebug(`Auto-gen error for ${playerName}`, error);
+            logDebug(LOG_TAG, `Auto-gen error for ${playerName}`, error);
         });
     }, intervalTicks);
 
@@ -108,9 +104,7 @@ function startAutoGen(player: Player, radiusBlocks: number, intervalSeconds: num
         runId,
     });
 
-    console.log(
-        `[MapSync] Auto-gen started for ${playerName}: radius=${radiusBlocks} blocks, interval=${intervalSeconds}s`
-    );
+    logInfo(LOG_TAG, `Auto-gen started for ${playerName}: radius=${radiusBlocks} blocks, interval=${intervalSeconds}s`);
 }
 
 /**
@@ -124,7 +118,7 @@ function stopAutoGen(playerName: string): boolean {
     if (state?.runId !== null && state?.runId !== undefined) {
         system.clearRun(state.runId);
         autoGenPlayers.delete(playerName);
-        console.log(`[MapSync] Auto-gen stopped for ${playerName}`);
+        logInfo(LOG_TAG, `Auto-gen stopped for ${playerName}`);
         return true;
     }
     return false;
@@ -176,8 +170,9 @@ function forceScanRange(
     const totalChunksZ = maxChunkZ - minChunkZ + 1;
     const totalChunks = totalChunksX * totalChunksZ;
 
-    console.log(
-        `[MapSync] Queueing ${totalChunks} chunks for scan from (${minChunkX}, ${minChunkZ}) to (${maxChunkX}, ${maxChunkZ}), spiraling from (${originChunkX}, ${originChunkZ})`
+    logInfo(
+        LOG_TAG,
+        `Queueing ${totalChunks} chunks for scan from (${minChunkX}, ${minChunkZ}) to (${maxChunkX}, ${maxChunkZ}), spiraling from (${originChunkX}, ${originChunkZ})`
     );
 
     // Build list of chunks to queue
@@ -206,7 +201,7 @@ function forceScanRange(
         }
     );
 
-    console.log(`[MapSync] Queued ${totalChunks} chunks. Current queue stats:`, getQueueStats());
+    logInfo(LOG_TAG, `Queued ${totalChunks} chunks`, getQueueStats());
 }
 
 /**
@@ -246,8 +241,9 @@ export function registerCustomCommands(): void {
                 const playerX = sourceEntity.location.x;
                 const playerZ = sourceEntity.location.z;
 
-                console.log(
-                    `[MapSync] Scan command received: (${min.x}, ${min.z}) to (${max.x}, ${max.z}) in ${dimension.id}, spiraling from player at (${playerX}, ${playerZ})`
+                logInfo(
+                    LOG_TAG,
+                    `Scan command received: (${min.x}, ${min.z}) to (${max.x}, ${max.z}) in ${dimension.id}, spiraling from player at (${playerX}, ${playerZ})`
                 );
 
                 // Queue chunks for generation, sorted by distance from player
@@ -375,6 +371,6 @@ export function registerCustomCommands(): void {
             }
         );
 
-        console.log('[MapSync] Custom commands registered');
+        logInfo(LOG_TAG, 'Custom commands registered');
     });
 }

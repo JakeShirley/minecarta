@@ -9,11 +9,17 @@ import { BlockMapColorComponent, TintMethod } from '@minecraft/server';
 import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/server';
 import type { Dimension } from '@minecarta/shared';
 import type { MinecraftChunkBlock, MinecraftChunkData } from '../types';
+import { logDebug } from '../logging';
 
 /**
  * Default color returned when block color cannot be determined
  */
 const DEFAULT_BLOCK_COLOR: RGBA = { red: 0, green: 0, blue: 0, alpha: 0 };
+
+/**
+ * Logging tag for this module
+ */
+const LOG_TAG = 'Blocks';
 
 /**
  * Convert Minecraft dimension ID to our Dimension type
@@ -332,13 +338,14 @@ export function getSurfaceBlock(
                         waterDepth,
                     };
                 } else {
-                    console.log(
-                        `[SurfaceBlock] Block at (${worldX}, ${currentY}, ${worldZ}) of type ${block.typeId} has no valid map color`
+                    logDebug(
+                        LOG_TAG,
+                        `Block at (${worldX}, ${currentY}, ${worldZ}) of type ${block.typeId} has no valid map color`
                     );
                 }
             }
         } catch {
-            console.log(`[SurfaceBlock] Failed to get block at (${worldX}, ${currentY}, ${worldZ})`);
+            logDebug(LOG_TAG, `Failed to get block at (${worldX}, ${currentY}, ${worldZ})`);
             // Block might be in unloaded chunk, continue searching
         }
 

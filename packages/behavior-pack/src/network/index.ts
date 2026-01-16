@@ -4,6 +4,7 @@
 
 import { http, HttpRequest, HttpRequestMethod, HttpHeader } from '@minecraft/server-net';
 import { config, getApiUrl } from '../config';
+import { logDebug, logError } from '../logging';
 import { AUTH_HEADER } from '@minecarta/shared';
 import type { ChunkData, Dimension } from '@minecarta/shared';
 import type { ApiResponse, BlockChange, Entity, Player } from '../types';
@@ -13,6 +14,11 @@ import type { ApiResponse, BlockChange, Entity, Player } from '../types';
  */
 const requestQueue: Array<() => Promise<void>> = [];
 let isProcessingQueue = false;
+
+/**
+ * Logging tag for this module
+ */
+const LOG_TAG = 'Network';
 
 /**
  * Process the request queue sequentially
@@ -27,28 +33,12 @@ async function processQueue(): Promise<void> {
             try {
                 await request();
             } catch (error) {
-                logError('Queue processing error', error);
+                logError(LOG_TAG, 'Queue processing error', error);
             }
         }
     }
 
     isProcessingQueue = false;
-}
-
-/**
- * Log debug messages if debug mode is enabled
- */
-function logDebug(message: string, data?: unknown): void {
-    if (config.debug) {
-        console.log(`[MapSync] ${message}`, data ? JSON.stringify(data) : '');
-    }
-}
-
-/**
- * Log error messages
- */
-function logError(message: string, error?: unknown): void {
-    console.error(`[MapSync Error] ${message}`, error);
 }
 
 /**
@@ -67,7 +57,7 @@ function createHeaders(): HttpHeader[] {
 export async function getFromServer<T>(endpoint: string): Promise<T | null> {
     const url = getApiUrl(endpoint);
 
-    logDebug(`GET ${endpoint}`);
+    logDebug(LOG_TAG, `GET ${endpoint}`);
 
     try {
         const request = new HttpRequest(url);
@@ -77,19 +67,19 @@ export async function getFromServer<T>(endpoint: string): Promise<T | null> {
         const response = await http.request(request);
 
         if (response.status >= 200 && response.status < 300) {
-            logDebug(`Response ${response.status} from ${endpoint}`);
+            logDebug(LOG_TAG, `Response ${response.status} from ${endpoint}`);
             try {
                 return JSON.parse(response.body) as T;
             } catch {
-                logError(`Failed to parse response from ${endpoint}`, response.body);
+                logError(LOG_TAG, `Failed to parse response from ${endpoint}`, response.body);
                 return null;
             }
         } else {
-            logError(`HTTP ${response.status} from ${endpoint}`, response.body);
+            logError(LOG_TAG, `HTTP ${response.status} from ${endpoint}`, response.body);
             return null;
         }
     } catch (error) {
-        logError(`Request failed: ${endpoint}`, error);
+        logError(LOG_TAG, `Request failed: ${endpoint}`, error);
         return null;
     }
 }
@@ -105,7 +95,7 @@ export async function postToServer<T>(endpoint: string, data: T): Promise<ApiRes
     const url = getApiUrl(endpoint);
     const body = JSON.stringify(data);
 
-    logDebug(`POST ${endpoint}`, { dataSize: body.length });
+    logDebug(LOG_TAG, `POST ${endpoint}`, { dataSize: body.length });
 
     try {
         const request = new HttpRequest(url);
@@ -116,17 +106,17 @@ export async function postToServer<T>(endpoint: string, data: T): Promise<ApiRes
         const response = await http.request(request);
 
         if (response.status >= 200 && response.status < 300) {
-            logDebug(`Response ${response.status} from ${endpoint}`);
+            logDebug(LOG_TAG, `Response ${response.status} from ${endpoint}`);
             return { success: true };
         } else {
-            logError(`HTTP ${response.status} from ${endpoint}`, response.body);
+            logError(LOG_TAG, `HTTP ${response.status} from ${endpoint}`, response.body);
             return {
                 success: false,
                 error: `HTTP ${response.status}: ${response.body}`,
             };
         }
     } catch (error) {
-        logError(`Request failed: ${endpoint}`, error);
+        logError(LOG_TAG, `Request failed: ${endpoint}`, error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -318,13 +308,13 @@ export async function testConnection(): Promise<boolean> {
         const response = await http.request(request);
         const isConnected = response.status >= 200 && response.status < 300;
 
-        logDebug(`Connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}`, {
+        logDebug(LOG_TAG, `Connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}`, {
             status: response.status,
         });
 
         return isConnected;
     } catch (error) {
-        logError('Connection test failed', error);
+        logError(LOG_TAG, 'Connection test failed', error);
         return false;
     }
 }

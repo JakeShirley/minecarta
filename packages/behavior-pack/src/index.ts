@@ -5,7 +5,7 @@
  * map server for real-time visualization.
  */
 
-import { system, world } from '@minecraft/server';
+import { system } from '@minecraft/server';
 import {
     registerAllEventListeners,
     updatePlayerPositions,
@@ -17,29 +17,48 @@ import { registerCustomCommands } from './commands';
 import { testConnection } from './network';
 import { config } from './config';
 import { startQueueProcessor, resortQueue } from './chunk-queue';
+import { logInfo, logWarning, logError, LogLevel } from './logging';
 
 // Register custom commands during startup (must be done in early-execution mode)
 registerCustomCommands();
 
 /**
- * Log a startup message
+ * Logging tag for the main module
  */
-function logStartup(message: string): void {
-    console.log(`[MapSync] ${message}`);
+const LOG_TAG = 'MapSync';
+
+/**
+ * Get human-readable log level name
+ */
+function getLogLevelName(level: LogLevel): string {
+    switch (level) {
+        case LogLevel.Debug:
+            return 'Debug';
+        case LogLevel.Info:
+            return 'Info';
+        case LogLevel.Warning:
+            return 'Warning';
+        case LogLevel.Error:
+            return 'Error';
+        case LogLevel.None:
+            return 'None';
+        default:
+            return 'Unknown';
+    }
 }
 
 /**
  * Initialize the behavior pack
  */
 async function initialize(): Promise<void> {
-    logStartup('World Map Sync initializing...');
-    logStartup(`Server URL: ${config.serverUrl}`);
-    logStartup(`Debug mode: ${config.debug}`);
+    logInfo(LOG_TAG, 'World Map Sync initializing...');
+    logInfo(LOG_TAG, `Server URL: ${config.serverUrl}`);
+    logInfo(LOG_TAG, `Log level: ${getLogLevelName(config.logLevel)}`);
 
     // Test connection to the server
     const connected = await testConnection();
     if (connected) {
-        logStartup('Successfully connected to map server!');
+        logInfo(LOG_TAG, 'Successfully connected to map server!');
 
         // Sync the world spawn location on boot
         await syncWorldSpawn();
@@ -47,7 +66,7 @@ async function initialize(): Promise<void> {
         // Sync the initial world time
         await syncWorldTime(true);
     } else {
-        logStartup('Warning: Could not connect to map server. Will retry on events.');
+        logWarning(LOG_TAG, 'Could not connect to map server. Will retry on events.');
     }
 
     // Register event listeners
@@ -55,7 +74,7 @@ async function initialize(): Promise<void> {
 
     // Start the chunk generation queue processor
     startQueueProcessor();
-    logStartup('Chunk generation queue processor started');
+    logInfo(LOG_TAG, 'Chunk generation queue processor started');
 
     // Set up periodic player position updates
     system.runInterval(() => {
@@ -71,7 +90,7 @@ async function initialize(): Promise<void> {
         syncWorldTime(true);
     }, config.timeSyncInterval);
 
-    logStartup('Initialization complete!');
+    logInfo(LOG_TAG, 'Initialization complete!');
 }
 
 /**
@@ -79,7 +98,7 @@ async function initialize(): Promise<void> {
  */
 system.runTimeout(() => {
     initialize().catch(error => {
-        console.error('[MapSync] Initialization failed:', error);
+        logError(LOG_TAG, 'Initialization failed', error);
     });
 }, 20); // Wait 1 second (20 ticks) for world to stabilize
 

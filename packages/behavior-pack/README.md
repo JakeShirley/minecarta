@@ -59,7 +59,24 @@ Copy `.env.example` to `.env` and configure:
 
 The pack connects to the map server using settings in `config/index.ts`:
 
-- Server URL: `http://localhost:3000`
+| Setting                | Description                                                    | Default                 |
+| ---------------------- | -------------------------------------------------------------- | ----------------------- |
+| `serverUrl`            | Base URL of the map server                                     | `http://localhost:3000` |
+| `authToken`            | Authentication token for server communication                  | `dev-token`             |
+| `playerUpdateInterval` | Interval in ticks between player position updates (20 = 1 sec) | `20`                    |
+| `timeSyncInterval`     | Interval in ticks between world time syncs                     | `1200`                  |
+| `logLevel`             | Log level (Debug, Info, Warning, Error, None)                  | `Warning`               |
+| `sendPlayerStats`      | Whether to send player stats (health, hunger, armor)           | `true`                  |
+
+### Log Levels
+
+The `logLevel` setting controls which messages are displayed in the console:
+
+- **Debug** - Most verbose, includes detailed debugging information
+- **Info** - General informational messages (initialization, events)
+- **Warning** - Warning messages for potentially problematic situations
+- **Error** - Error messages for failures and exceptions
+- **None** - No logging at all
 
 ## API Dependencies
 
@@ -79,9 +96,12 @@ behavior-pack/
 │   └── index.js
 ├── src/                   # TypeScript source
 │   ├── index.ts           # Entry point
+│   ├── blocks/            # Block scanning and color utilities
 │   ├── chunk-queue/       # Chunk generation job queue
+│   ├── commands/          # Custom commands
 │   ├── config/            # Configuration
 │   ├── events/            # World event listeners
+│   ├── logging/           # Centralized logging
 │   ├── network/           # HTTP client wrapper
 │   ├── serializers/       # Data transformation
 │   └── types/             # Type definitions

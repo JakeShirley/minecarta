@@ -1,3 +1,5 @@
+import { LogLevel } from '../logging';
+
 /**
  * Configuration for the behavior pack
  */
@@ -14,8 +16,12 @@ export interface Config {
      * Time is also synced when a significant change is detected (e.g., /time set command).
      */
     readonly timeSyncInterval: number;
-    /** Whether to enable debug logging */
-    readonly debug: boolean;
+    /**
+     * Log level for the behavior pack.
+     * Controls which log messages are displayed.
+     * Default: Warning (only warnings and errors are logged)
+     */
+    readonly logLevel: LogLevel;
     /**
      * Whether to send player stats (health, hunger, armor) with position updates.
      * Set to true to enable displaying player vitals on the web map.
@@ -32,7 +38,7 @@ export const config: Config = {
     authToken: 'dev-token',
     playerUpdateInterval: 20, // 1 second
     timeSyncInterval: 1200, // 60 seconds (1 minute)
-    debug: true,
+    logLevel: LogLevel.Warning, // Default to warning level
     sendPlayerStats: true, // Enable player stats by default for development
 };
 

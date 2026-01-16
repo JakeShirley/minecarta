@@ -28,6 +28,7 @@ import {
     sendWorldWeather,
 } from '../network';
 import { config } from '../config';
+import { logDebug, logError, logInfo } from '../logging';
 import { toDimension, getChunkCoordinates } from '../blocks';
 import { queueAreaScan, queueChunk, ChunkJobPriority } from '../chunk-queue';
 
@@ -36,6 +37,11 @@ import { queueAreaScan, queueChunk, ChunkJobPriority } from '../chunk-queue';
  * This persists across script reloads (e.g., /reload command).
  */
 const PLAYFAB_ID_PROPERTY = 'mapsync:playfabId';
+
+/**
+ * Logging tag for this module
+ */
+const LOG_TAG = 'Events';
 
 /**
  * Map of player names to their PlayFab IDs.
@@ -67,9 +73,9 @@ function getPlayfabId(player: Player): string | undefined {
 function cachePlayfabIdToPlayer(player: Player, playfabId: string): void {
     try {
         player.setDynamicProperty(PLAYFAB_ID_PROPERTY, playfabId);
-        logDebug(`Cached playfabId ${playfabId} to dynamic property for player ${player.name}`);
+        logDebug(LOG_TAG, `Cached playfabId ${playfabId} to dynamic property for player ${player.name}`);
     } catch (error) {
-        logError(`Failed to set dynamic property for player ${player.name}`, error);
+        logError(LOG_TAG, `Failed to set dynamic property for player ${player.name}`, error);
     }
 }
 
@@ -130,7 +136,7 @@ function getPlayerStats(player: Player): PlayerStats | undefined {
             armor: Math.min(armor, 20), // Cap at 20
         };
     } catch (error) {
-        logDebug(`Failed to get stats for player ${player.name}`, error);
+        logDebug(LOG_TAG, `Failed to get stats for player ${player.name}`, error);
         return undefined;
     }
 }
@@ -234,19 +240,6 @@ function getBlockType(block: Block | BlockPermutation | undefined): string {
 }
 
 /**
- * Log debug messages
- */
-function logDebug(message: string, data?: unknown): void {
-    if (config.debug) {
-        console.log(`[MapSync Events] ${message}`, data ? JSON.stringify(data) : '');
-    }
-}
-
-function logError(message: string, data?: unknown): void {
-    console.error(`[MapSync Events] ${message}`, data ? JSON.stringify(data) : '');
-}
-
-/**
  * Pending block changes to be batched
  */
 const pendingBlockChanges: MinecraftBlockEvent[] = [];
@@ -261,7 +254,7 @@ async function flushBlockChanges(): Promise<void> {
     const changes = pendingBlockChanges.splice(0, pendingBlockChanges.length);
     const serialized = changes.map(serializeBlockChange);
 
-    logDebug(`Flushing ${serialized.length} block changes`);
+    logDebug(LOG_TAG, `Flushing ${serialized.length} block changes`);
     await sendBlockChanges(serialized);
 }
 
@@ -297,7 +290,7 @@ export function registerBlockPlaceListener(): void {
             playerName: player.name,
         };
 
-        logDebug('Block placed', blockEvent);
+        logDebug(LOG_TAG, 'Block placed', blockEvent);
         queueBlockChange(blockEvent);
         flushBlockChanges();
 
@@ -308,10 +301,10 @@ export function registerBlockPlaceListener(): void {
             sourcePlayer: player.name,
         });
 
-        logDebug(`Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
+        logDebug(LOG_TAG, `Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
     });
 
-    logDebug('Block place listener registered');
+    logDebug(LOG_TAG, 'Block place listener registered');
 }
 
 /**
@@ -333,7 +326,7 @@ export function registerBlockBreakListener(): void {
             playerName: player.name,
         };
 
-        logDebug('Block broken', blockEvent);
+        logDebug(LOG_TAG, 'Block broken', blockEvent);
         queueBlockChange(blockEvent);
         flushBlockChanges();
 
@@ -344,10 +337,10 @@ export function registerBlockBreakListener(): void {
             sourcePlayer: player.name,
         });
 
-        logDebug(`Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
+        logDebug(LOG_TAG, `Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
     });
 
-    logDebug('Block break listener registered');
+    logDebug(LOG_TAG, 'Block break listener registered');
 }
 
 /**
@@ -359,13 +352,13 @@ export function registerBlockBreakListener(): void {
 export function registerAsyncPlayerJoinListener(): void {
     beforeEvents.asyncPlayerJoin.subscribe(async event => {
         const { name, persistentId } = event;
-        logDebug(`Async player join: ${name} with playfabId: ${persistentId}`);
+        logDebug(LOG_TAG, `Async player join: ${name} with playfabId: ${persistentId}`);
 
         // Store the PlayFab ID temporarily until player fully joins
         pendingPlayfabIds.set(name, persistentId);
     });
 
-    logDebug('Async player join listener registered');
+    logDebug(LOG_TAG, 'Async player join listener registered');
 }
 
 /**
@@ -404,23 +397,23 @@ export function registerPlayerJoinListener(): void {
                 stats,
             };
 
-            logDebug(`Sending player join: ${playerName}`, playerData);
+            logDebug(LOG_TAG, `Sending player join: ${playerName}`, playerData);
             sendPlayerJoin(playerData).catch(error => {
-                logError('Failed to send player join', error);
+                logError(LOG_TAG, 'Failed to send player join', error);
             });
 
             // Sync the player's spawn point (bed location)
             syncPlayerSpawn(player).catch(error => {
-                logError('Failed to sync player spawn point', error);
+                logError(LOG_TAG, 'Failed to sync player spawn point', error);
             });
         } catch (error) {
-            logError(`Failed to get player data for join event: ${playerName}`, error);
+            logError(LOG_TAG, `Failed to get player data for join event: ${playerName}`, error);
             // Fall back to updating all player positions
             updatePlayerPositions();
         }
     });
 
-    logDebug('Player join listener registered');
+    logDebug(LOG_TAG, 'Player join listener registered');
 }
 
 /**
@@ -429,18 +422,18 @@ export function registerPlayerJoinListener(): void {
 export function registerPlayerLeaveListener(): void {
     world.afterEvents.playerLeave.subscribe(event => {
         const { playerName } = event;
-        logDebug(`Player left: ${playerName}`);
+        logDebug(LOG_TAG, `Player left: ${playerName}`);
 
         // Clean up the pending PlayFab ID mapping (dynamic property persists with the player)
         pendingPlayfabIds.delete(playerName);
 
         // Send player leave event to the server
         sendPlayerLeave(playerName).catch(error => {
-            logError('Failed to send player leave', error);
+            logError(LOG_TAG, 'Failed to send player leave', error);
         });
     });
 
-    logDebug('Player leave listener registered');
+    logDebug(LOG_TAG, 'Player leave listener registered');
 }
 
 /**
@@ -506,7 +499,7 @@ async function checkAndGeneratePlayerChunk(player: MinecraftPlayer): Promise<voi
     const exists = await checkChunkExists(player.dimension, chunkX, chunkZ);
 
     if (!exists) {
-        logDebug(`Chunk (${chunkX}, ${chunkZ}) in ${player.dimension} needs generation, queueing...`);
+        logDebug(LOG_TAG, `Chunk (${chunkX}, ${chunkZ}) in ${player.dimension} needs generation, queueing...`);
 
         // Queue the chunk with high priority since it's the player's current chunk
         queueChunk(player.dimension, chunkX, chunkZ, {
@@ -544,7 +537,7 @@ function getAllPlayers(): MinecraftPlayer[] {
             });
         } catch (error) {
             // Player may be in an invalid state, skip
-            logDebug(`Failed to get player data for ${player.name}`, error);
+            logDebug(LOG_TAG, `Failed to get player data for ${player.name}`, error);
         }
     }
 
@@ -558,7 +551,7 @@ export async function updatePlayerPositions(): Promise<void> {
     const players = getAllPlayers();
 
     if (players.length === 0) {
-        logDebug('No players to update');
+        logDebug(LOG_TAG, 'No players to update');
         return;
     }
 
@@ -580,7 +573,7 @@ export async function syncWorldSpawn(): Promise<void> {
     try {
         const spawnLocation = world.getDefaultSpawnLocation();
 
-        logDebug(`World spawn location: (${spawnLocation.x}, ${spawnLocation.y}, ${spawnLocation.z})`);
+        logDebug(LOG_TAG, `World spawn location: (${spawnLocation.x}, ${spawnLocation.y}, ${spawnLocation.z})`);
 
         await sendWorldSpawn({
             x: spawnLocation.x,
@@ -589,7 +582,7 @@ export async function syncWorldSpawn(): Promise<void> {
             dimension: 'overworld', // World spawn is always in overworld
         });
     } catch (error) {
-        logError('Failed to sync world spawn', error);
+        logError(LOG_TAG, 'Failed to sync world spawn', error);
     }
 }
 
@@ -602,13 +595,14 @@ export async function syncPlayerSpawn(player: Player): Promise<void> {
         const spawnPoint = player.getSpawnPoint();
 
         if (!spawnPoint) {
-            logDebug(`Player ${player.name} has no spawn point set`);
+            logDebug(LOG_TAG, `Player ${player.name} has no spawn point set`);
             return;
         }
 
         const dimension = toDimension(spawnPoint.dimension.id);
 
         logDebug(
+            LOG_TAG,
             `Player ${player.name} spawn point: (${spawnPoint.x}, ${spawnPoint.y}, ${spawnPoint.z}) in ${dimension}`
         );
 
@@ -620,7 +614,7 @@ export async function syncPlayerSpawn(player: Player): Promise<void> {
             dimension,
         });
     } catch (error) {
-        logError(`Failed to sync spawn for player ${player.name}`, error);
+        logError(LOG_TAG, `Failed to sync spawn for player ${player.name}`, error);
     }
 }
 
@@ -663,7 +657,7 @@ export async function syncWorldTime(force = false): Promise<void> {
             // If time changed more than threshold, it's likely a /time set or sleep
             if (wrappedDiff > TIME_CHANGE_THRESHOLD) {
                 shouldSync = true;
-                logDebug(`Significant time change detected: ${lastSyncedTimeOfDay} -> ${timeOfDay}`);
+                logDebug(LOG_TAG, `Significant time change detected: ${lastSyncedTimeOfDay} -> ${timeOfDay}`);
             }
         }
 
@@ -675,7 +669,7 @@ export async function syncWorldTime(force = false): Promise<void> {
         if (shouldSync) {
             lastSyncedTimeOfDay = timeOfDay;
 
-            logDebug(`Syncing world time: day ${day}, timeOfDay ${timeOfDay}`);
+            logDebug(LOG_TAG, `Syncing world time: day ${day}, timeOfDay ${timeOfDay}`);
 
             await sendWorldTime({
                 timeOfDay,
@@ -684,7 +678,7 @@ export async function syncWorldTime(force = false): Promise<void> {
             });
         }
     } catch (error) {
-        logError('Failed to sync world time', error);
+        logError(LOG_TAG, 'Failed to sync world time', error);
     }
 }
 
@@ -706,7 +700,7 @@ export function checkWorldTimeChange(): void {
     // If time changed more than threshold, sync immediately
     if (wrappedDiff > TIME_CHANGE_THRESHOLD) {
         syncWorldTime(true).catch(error => {
-            logError('Failed to sync time after change detection', error);
+            logError(LOG_TAG, 'Failed to sync time after change detection', error);
         });
     }
 }
@@ -727,14 +721,14 @@ let currentWeather: 'Clear' | 'Rain' | 'Thunder' = 'Clear';
  */
 export async function syncWorldWeather(): Promise<void> {
     try {
-        logDebug(`Syncing world weather: ${currentWeather}`);
+        logDebug(LOG_TAG, `Syncing world weather: ${currentWeather}`);
 
         await sendWorldWeather({
             weather: currentWeather,
             dimension: 'overworld', // Weather is global, we report from overworld
         });
     } catch (error) {
-        logError('Failed to sync world weather', error);
+        logError(LOG_TAG, 'Failed to sync world weather', error);
     }
 }
 
@@ -749,15 +743,15 @@ export function registerWeatherChangeListener(): void {
         // Update our tracked weather state
         currentWeather = newWeather as 'Clear' | 'Rain' | 'Thunder';
 
-        logDebug(`Weather changed to ${newWeather} in ${dimension}`);
+        logDebug(LOG_TAG, `Weather changed to ${newWeather} in ${dimension}`);
 
         // Sync to server immediately on weather change
         syncWorldWeather().catch(error => {
-            logError('Failed to sync weather after change', error);
+            logError(LOG_TAG, 'Failed to sync weather after change', error);
         });
     });
 
-    logDebug('Weather change listener registered');
+    logDebug(LOG_TAG, 'Weather change listener registered');
 }
 
 /**
@@ -772,17 +766,17 @@ export function registerChatListener(): void {
         try {
             const dimension = toDimension(sender.dimension.id);
 
-            logDebug(`Chat message from ${sender.name}: ${message}`);
+            logDebug(LOG_TAG, `Chat message from ${sender.name}: ${message}`);
 
             sendChatMessage(sender.name, message, dimension).catch(error => {
-                logError('Failed to send chat message', error);
+                logError(LOG_TAG, 'Failed to send chat message', error);
             });
         } catch (error) {
-            logError(`Failed to process chat message from ${sender.name}`, error);
+            logError(LOG_TAG, `Failed to process chat message from ${sender.name}`, error);
         }
     });
 
-    logDebug('Chat listener registered');
+    logDebug(LOG_TAG, 'Chat listener registered');
 }
 
 /**
@@ -797,5 +791,5 @@ export function registerAllEventListeners(): void {
     registerChatListener();
     registerWeatherChangeListener();
 
-    console.log('[MapSync] All event listeners registered');
+    logInfo(LOG_TAG, 'All event listeners registered');
 }

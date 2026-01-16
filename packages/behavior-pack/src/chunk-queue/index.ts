@@ -11,7 +11,7 @@ import type { Dimension as MinecraftDimension } from '@minecraft/server';
 import { scanChunk, scanArea, toDimension } from '../blocks';
 import { serializeChunkData } from '../serializers';
 import { sendChunkData } from '../network';
-import { config } from '../config';
+import { logDebug, logWarning } from '../logging';
 import type { Dimension } from '@minecarta/shared';
 
 // ==========================================
@@ -184,22 +184,10 @@ let currentTickingAreaId: string | null = null;
  */
 let tickingAreaCounter = 0;
 
-// ==========================================
-// Logging
-// ==========================================
-
 /**
- * Log debug messages if debug mode is enabled
+ * Logging tag for this module
  */
-function logDebug(message: string, data?: unknown): void {
-    if (config.debug) {
-        if (data !== undefined) {
-            console.log(`[ChunkQueue] ${message}`, JSON.stringify(data));
-        } else {
-            console.log(`[ChunkQueue] ${message}`);
-        }
-    }
-}
+const LOG_TAG = 'ChunkQueue';
 
 // ==========================================
 // Job Key Generation
@@ -254,7 +242,7 @@ function insertJob(job: ChunkJob): void {
             jobQueue[existingIndex] = { ...jobQueue[existingIndex], priority: job.priority };
             // Re-sort to maintain order
             jobQueue.sort(compareJobs);
-            logDebug(`Upgraded job priority: ${key} to ${ChunkJobPriority[job.priority]}`);
+            logDebug(LOG_TAG, `Upgraded job priority: ${key} to ${ChunkJobPriority[job.priority]}`);
         }
         return;
     }
@@ -276,7 +264,10 @@ function insertJob(job: ChunkJob): void {
     }
 
     jobQueue.splice(low, 0, job);
-    logDebug(`Added job: ${key} at position ${low}/${jobQueue.length}, priority=${ChunkJobPriority[job.priority]}`);
+    logDebug(
+        LOG_TAG,
+        `Added job: ${key} at position ${low}/${jobQueue.length}, priority=${ChunkJobPriority[job.priority]}`
+    );
 }
 
 /**
@@ -464,7 +455,7 @@ export function resortQueue(): void {
     // Re-sort the queue
     jobQueue.sort(compareJobs);
 
-    logDebug(`Queue resorted with ${jobQueue.length} jobs`);
+    logDebug(LOG_TAG, `Queue resorted with ${jobQueue.length} jobs`);
 }
 
 // ==========================================
@@ -500,9 +491,9 @@ function cleanupTickingArea(): void {
         try {
             // Remove the ticking area
             world.tickingAreaManager.removeTickingArea(currentTickingAreaId);
-            logDebug(`Removed ticking area: ${currentTickingAreaId}`);
+            logDebug(LOG_TAG, `Removed ticking area: ${currentTickingAreaId}`);
         } catch (error) {
-            logDebug(`Failed to remove ticking area: ${currentTickingAreaId}`, error);
+            logWarning(LOG_TAG, `Failed to remove ticking area: ${currentTickingAreaId}`, error);
         }
         currentTickingAreaId = null;
     }
@@ -544,7 +535,7 @@ async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnType<type
 
     try {
         // Create a ticking area to load the chunk
-        logDebug(`Creating ticking area for job ${job.id}: ${tickingAreaId}`);
+        logDebug(LOG_TAG, `Creating ticking area for job ${job.id}: ${tickingAreaId}`);
 
         // Create the ticking area - this loads the chunks
         // Only set currentTickingAreaId AFTER successful creation to avoid
@@ -575,7 +566,8 @@ async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnType<type
 
         // Check if the chunk is now loaded
         if (!dimension.isChunkLoaded(checkLocation)) {
-            logDebug(
+            logWarning(
+                LOG_TAG,
                 `Chunk at (${checkLocation.x}, ${checkLocation.z}) not loaded after ${MAX_CHUNK_LOAD_ATTEMPTS} attempts, will retry`
             );
             // Re-queue this job with low priority to try again later
@@ -588,7 +580,7 @@ async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnType<type
             return null;
         }
 
-        logDebug(`Chunk loaded after ${attempts} attempts`);
+        logDebug(LOG_TAG, `Chunk loaded after ${attempts} attempts`);
 
         // Now scan the chunk/area
         let result: ReturnType<typeof serializeChunkData> | null = null;
@@ -598,7 +590,8 @@ async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnType<type
 
             // Validate that we got enough blocks - if not, the chunk wasn't fully loaded
             if (chunkData.blocks.length < MIN_BLOCKS_THRESHOLD) {
-                logDebug(
+                logWarning(
+                    LOG_TAG,
                     `Chunk (${job.chunkX}, ${job.chunkZ}) only has ${chunkData.blocks.length} blocks (threshold: ${MIN_BLOCKS_THRESHOLD}), will retry`
                 );
                 // Re-queue this job to try again later
@@ -610,16 +603,19 @@ async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnType<type
             }
 
             result = serializeChunkData(chunkData);
-            logDebug(`Scanned chunk (${job.chunkX}, ${job.chunkZ}) with ${chunkData.blocks.length} blocks`);
+            logDebug(LOG_TAG, `Scanned chunk (${job.chunkX}, ${job.chunkZ}) with ${chunkData.blocks.length} blocks`);
         } else {
             const areaData = scanArea(dimension, job.centerX, job.centerZ, job.radius);
             result = serializeChunkData(areaData);
-            logDebug(`Scanned area around (${job.centerX}, ${job.centerZ}) with ${areaData.blocks.length} blocks`);
+            logDebug(
+                LOG_TAG,
+                `Scanned area around (${job.centerX}, ${job.centerZ}) with ${areaData.blocks.length} blocks`
+            );
         }
 
         return result;
     } catch (error) {
-        logDebug(`Failed to process job ${job.id} with ticking area`, error);
+        logWarning(LOG_TAG, `Failed to process job ${job.id} with ticking area`, error);
         return null;
     } finally {
         // Always clean up the ticking area
@@ -642,7 +638,7 @@ function processJobDirect(job: ChunkJob): ReturnType<typeof serializeChunkData> 
             return serializeChunkData(areaData);
         }
     } catch (error) {
-        logDebug(`Failed to process job ${job.id} directly`, error);
+        logWarning(LOG_TAG, `Failed to process job ${job.id} directly`, error);
         return null;
     }
 }
@@ -687,9 +683,9 @@ async function processQueue(): Promise<void> {
     if (chunkDataBatch.length > 0) {
         try {
             await sendChunkData(chunkDataBatch);
-            logDebug(`Sent batch of ${chunkDataBatch.length} chunks`);
+            logDebug(LOG_TAG, `Sent batch of ${chunkDataBatch.length} chunks`);
         } catch (error) {
-            logDebug('Failed to send chunk batch', error);
+            logWarning(LOG_TAG, 'Failed to send chunk batch', error);
         }
     }
 
@@ -709,18 +705,18 @@ async function processQueue(): Promise<void> {
  */
 export function startQueueProcessor(): void {
     if (processorRunId !== null) {
-        logDebug('Queue processor already running');
+        logDebug(LOG_TAG, 'Queue processor already running');
         return;
     }
 
     isProcessing = true;
     processorRunId = system.runInterval(() => {
         processQueue().catch(error => {
-            logDebug('Queue processor error', error);
+            logWarning(LOG_TAG, 'Queue processor error', error);
         });
     }, PROCESS_INTERVAL_TICKS);
 
-    logDebug('Queue processor started');
+    logDebug(LOG_TAG, 'Queue processor started');
 }
 
 /**
@@ -733,7 +729,7 @@ export function stopQueueProcessor(): void {
         isProcessing = false;
         // Clean up any pending ticking area
         cleanupTickingArea();
-        logDebug('Queue processor stopped');
+        logDebug(LOG_TAG, 'Queue processor stopped');
     }
 }
 
@@ -743,7 +739,7 @@ export function stopQueueProcessor(): void {
 export function clearQueue(): void {
     jobQueue = [];
     pendingJobs.clear();
-    logDebug('Queue cleared');
+    logDebug(LOG_TAG, 'Queue cleared');
 }
 
 /**
