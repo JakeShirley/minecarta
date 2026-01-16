@@ -51,7 +51,7 @@ This will install dependencies for:
 - Root workspace
 - `@minecarta/shared` - Shared types and constants
 - `@minecarta/behavior-pack` - Minecraft behavior pack
-- `@minecarta/server` - Web server
+- `minecarta` - Web server
 
 ### 3. Build All Packages
 

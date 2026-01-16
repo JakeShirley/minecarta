@@ -1,5 +1,5 @@
 {
-    "name": "@minecarta/server",
+    "name": "minecarta",
     "version": "1.0.0",
     "description": "MineCarta Web Server",
     "type": "module",

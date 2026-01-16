@@ -1,0 +1,12 @@
+node_modules
+dist
+*.log
+.env
+.env.*
+data/tiles
+test-data
+__tests__
+*.test.ts
+vitest.config.ts
+tsconfig.json
+README.md

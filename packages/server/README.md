@@ -1,6 +1,6 @@
-# @minecraft-map/server
+# minecarta
 
-Fastify-based web server for the Minecraft Map project. Receives world data from the Minecraft behavior pack and serves map tiles to the web client.
+Fastify-based web server for the MineCarta project. Receives world data from the Minecraft behavior pack and serves map tiles to the web client.
 
 ## Features
 
@@ -28,6 +28,32 @@ pnpm start
 
 # Run tests
 pnpm test
+```
+
+## Docker
+
+The server is available as a Docker image from GitHub Container Registry:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/JakeShirley/minecarta/server:latest
+
+# Run the container
+docker run -d \
+  -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  -e AUTH_TOKEN=your-secret-token \
+  ghcr.io/JakeShirley/minecarta/server:latest
+```
+
+### Build Locally
+
+```bash
+# From the repository root
+docker build -t minecarta-server -f packages/server/Dockerfile .
+
+# Run locally
+docker run -d -p 3000:3000 -v $(pwd)/data:/app/data/minecarta
 ```
 
 ## Configuration
