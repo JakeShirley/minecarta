@@ -9,6 +9,23 @@
                 "npmPublish": false
             }
         ],
-        "@semantic-release/github"
+        [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "pwsh -File ./.github/scripts/package-behavior-pack.ps1 -Version ${nextRelease.version}"
+            }
+        ],
+        [
+            "@semantic-release/github",
+            {
+                "assets": [
+                    {
+                        "path": "dist/MineCarta-BehaviorPack.mcpack",
+                        "name": "MineCarta-${nextRelease.version}.mcpack",
+                        "label": "Minecraft Behavior Pack (v${nextRelease.version})"
+                    }
+                ]
+            }
+        ]
     ]
 }
