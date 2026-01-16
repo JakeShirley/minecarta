@@ -20,15 +20,13 @@ The project consists of two main components:
 ```
 packages/
 ├── behavior-pack/    # Minecraft Behavior Pack (TypeScript)
-├── server/           # Web Server (Express/Fastify + WebSocket)
+├── server/           # Web Server (Fastify + WebSocket)
 └── shared/           # Shared types & utilities
-e2e/                  # End-to-end tests (Playwright)
 ```
 
 ## Features
 
 - Pan/zoom map navigation
 - Real-time player position tracking
-- Layer controls for terrain, structures, and players
-- Block and structure overlays
+- Layer controls for terrain and players
 - WebSocket-based live updates
