@@ -179,4 +179,3 @@ export function getTileUpdateService(): TileUpdateService {
     }
     return _tileUpdateService;
 }
-

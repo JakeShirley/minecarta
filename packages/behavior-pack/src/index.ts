@@ -78,4 +78,3 @@ system.runTimeout(() => {
 
 // Export for testing
 export { initialize };
-

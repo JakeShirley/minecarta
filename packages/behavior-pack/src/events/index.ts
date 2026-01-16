@@ -816,4 +816,3 @@ export function registerAllEventListeners(): void {
 
     console.log('[MapSync] All event listeners registered');
 }
-

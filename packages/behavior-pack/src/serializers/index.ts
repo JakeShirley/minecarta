@@ -169,4 +169,3 @@ export function serializeChunkData(chunk: MinecraftChunkData): ChunkData {
         blocks: chunk.blocks.map(serializeChunkBlock),
     };
 }
-

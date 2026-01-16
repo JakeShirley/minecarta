@@ -487,4 +487,3 @@ describe('TileGeneratorService', () => {
         });
     });
 });
-

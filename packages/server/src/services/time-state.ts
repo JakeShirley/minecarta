@@ -68,4 +68,3 @@ export function getTimeStateService(): TimeStateService {
     }
     return _timeStateService;
 }
-

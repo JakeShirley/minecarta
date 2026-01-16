@@ -85,4 +85,3 @@ export const WS_EVENTS = {
     WEATHER_UPDATE: 'weather:update',
     WEATHER_STATE: 'weather:state',
 } as const;
-

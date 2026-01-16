@@ -13,4 +13,3 @@ const tileStorage = new TileStorageService();
 tileStorage.clearAllTiles();
 
 console.log('✅ Tile data cleared successfully!');
-

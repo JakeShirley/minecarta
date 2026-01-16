@@ -106,4 +106,3 @@ export interface ApiResponse {
  * Re-export shared types for convenience
  */
 export type { Dimension, BlockChange, Player, Entity } from '@minecarta/shared';
-

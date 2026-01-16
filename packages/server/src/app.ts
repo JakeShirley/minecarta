@@ -64,4 +64,3 @@ export async function createApp(config: ServerConfig): Promise<FastifyInstance> 
 
     return app;
 }
-

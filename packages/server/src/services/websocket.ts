@@ -312,4 +312,3 @@ export function getWebSocketService(): WebSocketService {
     }
     return _webSocketService;
 }
-

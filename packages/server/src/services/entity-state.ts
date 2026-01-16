@@ -82,4 +82,3 @@ export function getEntityStateService(): EntityStateService {
     }
     return _entityStateService;
 }
-

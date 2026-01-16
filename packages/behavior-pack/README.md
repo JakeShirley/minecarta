@@ -206,4 +206,3 @@ In addition to the manual `/mapsync:autogen` command, the behavior pack includes
 4. **A cache** prevents repeated checks for the same chunk (1 minute TTL)
 
 This ensures that as players explore the world, the map is automatically populated without requiring manual commands.
-

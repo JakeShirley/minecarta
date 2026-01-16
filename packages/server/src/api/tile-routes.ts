@@ -104,4 +104,3 @@ export async function registerTileRoutes(app: FastifyInstance): Promise<void> {
         });
     });
 }
-

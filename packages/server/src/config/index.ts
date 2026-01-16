@@ -33,4 +33,3 @@ export function getConfig(): ServerConfig {
 export function resetConfig(): void {
     _config = null;
 }
-

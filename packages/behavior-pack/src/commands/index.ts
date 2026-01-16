@@ -503,4 +503,3 @@ export function registerCustomCommands(): void {
         console.log('[MapSync] Custom commands registered');
     });
 }
-

@@ -52,4 +52,3 @@ export async function registerWebSocketRoutes(app: FastifyInstance): Promise<voi
         wsService.sendWeatherState(socket);
     });
 }
-

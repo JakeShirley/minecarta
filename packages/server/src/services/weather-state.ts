@@ -66,4 +66,3 @@ export function getWeatherStateService(): WeatherStateService {
     }
     return _weatherStateService;
 }
-

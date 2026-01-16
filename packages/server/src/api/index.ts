@@ -36,4 +36,3 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         { prefix: API_BASE_PATH }
     );
 }
-

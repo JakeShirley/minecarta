@@ -23,4 +23,3 @@ export async function authHook(request: FastifyRequest, reply: FastifyReply): Pr
 export function registerAuth(app: FastifyInstance): void {
     app.addHook('preHandler', authHook);
 }
-

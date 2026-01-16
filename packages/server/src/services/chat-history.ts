@@ -65,4 +65,3 @@ export function getChatHistoryService(): ChatHistoryService {
     }
     return _chatHistoryService;
 }
-

@@ -158,4 +158,3 @@ export function getTileStorageService(): TileStorageService {
     }
     return _tileStorageService;
 }
-

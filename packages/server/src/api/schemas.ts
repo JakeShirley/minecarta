@@ -236,4 +236,3 @@ export const worldWeatherSchema = z.object({
 });
 
 export type WorldWeatherRequest = z.infer<typeof worldWeatherSchema>;
-

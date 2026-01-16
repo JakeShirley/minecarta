@@ -437,4 +437,3 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         });
     });
 }
-

@@ -104,4 +104,3 @@ export async function registerPlayerRoutes(app: FastifyInstance): Promise<void> 
         });
     });
 }
-

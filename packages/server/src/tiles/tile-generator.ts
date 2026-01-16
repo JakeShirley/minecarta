@@ -450,4 +450,3 @@ export function getTileGeneratorService(): TileGeneratorService {
     }
     return _tileGeneratorService;
 }
-

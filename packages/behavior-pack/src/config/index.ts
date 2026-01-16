@@ -47,4 +47,3 @@ export function getApiUrl(endpoint: string): string {
     const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     return `${base}${path}`;
 }
-

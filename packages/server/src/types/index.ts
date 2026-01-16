@@ -33,4 +33,3 @@ export interface HealthCheckResponse {
     readonly uptime: number;
     readonly timestamp: number;
 }
-

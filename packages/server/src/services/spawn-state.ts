@@ -86,4 +86,3 @@ export function getSpawnStateService(): SpawnStateService {
     }
     return _spawnStateService;
 }
-
