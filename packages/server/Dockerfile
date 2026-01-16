@@ -51,13 +51,13 @@ COPY --from=builder /app/packages/server/dist ./packages/server/dist
 COPY packages/server/public ./packages/server/public
 
 # Create data directory for tile storage
-RUN mkdir -p /app/data
+RUN mkdir -p /data
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
-ENV DATA_DIR=/app/data
+ENV DATA_DIR=/data
 
 # Expose the default port
 EXPOSE 3000

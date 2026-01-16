@@ -53,7 +53,7 @@ docker run -d \
 docker build -t minecarta-server -f packages/server/Dockerfile .
 
 # Run locally
-docker run -d -p 3000:3000 -v $(pwd)/data:/app/data/minecarta
+docker run -d -p 3000:3000 -v $(pwd)/data:/data
 ```
 
 ## Configuration
