@@ -20,8 +20,8 @@ describe('Config', () => {
             expect(config.playerUpdateInterval).toBe(20);
         });
 
-        it('should have debug enabled by default', () => {
-            expect(config.debug).toBe(true);
+        it('should have a default log level', () => {
+            expect(config.logLevel).toBeDefined();
         });
     });
 
