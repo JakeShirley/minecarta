@@ -14,13 +14,12 @@ import {
 import { beforeEvents } from '@minecraft/server-admin';
 import type { MinecraftBlockEvent, MinecraftPlayer } from '../types';
 import type { PlayerStats } from '@minecarta/shared';
-import { serializeBlockChange, serializePlayers, serializeChunkData } from '../serializers';
+import { serializeBlockChange, serializePlayers } from '../serializers';
 import {
     sendBlockChanges,
     sendPlayerPositions,
     sendPlayerJoin,
     sendPlayerLeave,
-    sendChunkData,
     sendChatMessage,
     checkChunkExists,
     sendWorldSpawn,
@@ -29,7 +28,8 @@ import {
     sendWorldWeather,
 } from '../network';
 import { config } from '../config';
-import { toDimension, scanArea, scanChunk, getChunkCoordinates } from '../blocks';
+import { toDimension, getChunkCoordinates } from '../blocks';
+import { queueAreaScan, queueChunk, ChunkJobPriority } from '../chunk-queue';
 
 /**
  * Dynamic property key for storing the player's PlayFab ID (PDIF).
@@ -301,16 +301,14 @@ export function registerBlockPlaceListener(): void {
         queueBlockChange(blockEvent);
         flushBlockChanges();
 
-        // Scan and send a 3x3 area around the placed block (radius=1 for 3x3)
-        const chunkData = scanArea(block.dimension, block.location.x, block.location.z, 1);
-        const serialized = serializeChunkData(chunkData);
+        // Queue a 3x3 area scan around the placed block with immediate priority
+        const dimension = toDimension(block.dimension.id);
+        queueAreaScan(dimension, block.location.x, block.location.z, 1, {
+            priority: ChunkJobPriority.Immediate,
+            sourcePlayer: player.name,
+        });
 
-        logDebug(`Sending 3x3 area update around (${block.location.x}, ${block.location.z})`, {
-            blockCount: chunkData.blocks.length,
-        });
-        sendChunkData([serialized]).catch(error => {
-            logDebug('Failed to send area update', error);
-        });
+        logDebug(`Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
     });
 
     logDebug('Block place listener registered');
@@ -339,16 +337,14 @@ export function registerBlockBreakListener(): void {
         queueBlockChange(blockEvent);
         flushBlockChanges();
 
-        // Scan and send a 3x3 area around the broken block (radius=1 for 3x3)
-        const chunkData = scanArea(block.dimension, block.location.x, block.location.z, 1);
-        const serialized = serializeChunkData(chunkData);
+        // Queue a 3x3 area scan around the broken block with immediate priority
+        const dimension = toDimension(block.dimension.id);
+        queueAreaScan(dimension, block.location.x, block.location.z, 1, {
+            priority: ChunkJobPriority.Immediate,
+            sourcePlayer: player.name,
+        });
 
-        logDebug(`Sending 3x3 area update around (${block.location.x}, ${block.location.z})`, {
-            blockCount: chunkData.blocks.length,
-        });
-        sendChunkData([serialized]).catch(error => {
-            logDebug('Failed to send area update', error);
-        });
+        logDebug(`Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
     });
 
     logDebug('Block break listener registered');
@@ -510,26 +506,13 @@ async function checkAndGeneratePlayerChunk(player: MinecraftPlayer): Promise<voi
     const exists = await checkChunkExists(player.dimension, chunkX, chunkZ);
 
     if (!exists) {
-        logDebug(`Chunk (${chunkX}, ${chunkZ}) in ${player.dimension} needs generation, scanning...`);
+        logDebug(`Chunk (${chunkX}, ${chunkZ}) in ${player.dimension} needs generation, queueing...`);
 
-        // Get the Minecraft dimension object
-        const dimensionId =
-            player.dimension === 'overworld'
-                ? 'minecraft:overworld'
-                : player.dimension === 'nether'
-                  ? 'minecraft:nether'
-                  : 'minecraft:the_end';
-
-        try {
-            const dimension = world.getDimension(dimensionId);
-            const chunkData = scanChunk(dimension, chunkX, chunkZ);
-            const serialized = serializeChunkData(chunkData);
-
-            logDebug(`Sending chunk (${chunkX}, ${chunkZ}) with ${chunkData.blocks.length} blocks`);
-            await sendChunkData([serialized]);
-        } catch (error) {
-            logDebug(`Failed to scan chunk (${chunkX}, ${chunkZ})`, error);
-        }
+        // Queue the chunk with high priority since it's the player's current chunk
+        queueChunk(player.dimension, chunkX, chunkZ, {
+            priority: ChunkJobPriority.High,
+            sourcePlayer: player.name,
+        });
     }
 }
 

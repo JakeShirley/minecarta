@@ -16,6 +16,7 @@ import {
 import { registerCustomCommands } from './commands';
 import { testConnection } from './network';
 import { config } from './config';
+import { startQueueProcessor, resortQueue } from './chunk-queue';
 
 // Register custom commands during startup (must be done in early-execution mode)
 registerCustomCommands();
@@ -52,11 +53,17 @@ async function initialize(): Promise<void> {
     // Register event listeners
     registerAllEventListeners();
 
+    // Start the chunk generation queue processor
+    startQueueProcessor();
+    logStartup('Chunk generation queue processor started');
+
     // Set up periodic player position updates
     system.runInterval(() => {
         updatePlayerPositions();
         // Also check for time changes each player update
         checkWorldTimeChange();
+        // Periodically resort the queue based on player positions
+        resortQueue();
     }, config.playerUpdateInterval);
 
     // Set up periodic world time sync (less frequent, about once per minute)

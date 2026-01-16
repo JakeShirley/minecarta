@@ -4,10 +4,9 @@
 
 import { system, world, CommandPermissionLevel, CustomCommandParamType, CustomCommandStatus } from '@minecraft/server';
 import type { CustomCommandOrigin, CustomCommandResult, Player, Dimension } from '@minecraft/server';
-import { serializeChunkData } from '../serializers';
-import { sendChunkData } from '../network';
 import { config } from '../config';
-import { scanChunk } from '../blocks';
+import { toDimension } from '../blocks';
+import { queueChunks, ChunkJobPriority, getQueueStats, resortQueue, clearQueue } from '../chunk-queue';
 
 /**
  * State for auto-generation mode per player
@@ -48,35 +47,24 @@ async function scanAroundPlayer(player: Player, radiusBlocks: number): Promise<v
         const centerChunkX = Math.floor(location.x / 16);
         const centerChunkZ = Math.floor(location.z / 16);
 
-        const chunkDataBatch: ReturnType<typeof serializeChunkData>[] = [];
+        const chunksToQueue: Array<{ chunkX: number; chunkZ: number }> = [];
 
         for (let dx = -chunkRadius; dx <= chunkRadius; dx++) {
             for (let dz = -chunkRadius; dz <= chunkRadius; dz++) {
                 const chunkX = centerChunkX + dx;
                 const chunkZ = centerChunkZ + dz;
-
-                try {
-                    const chunkData = scanChunk(dimension, chunkX, chunkZ);
-                    const serialized = serializeChunkData(chunkData);
-                    chunkDataBatch.push(serialized);
-
-                    // Send in batches of 10 chunks
-                    if (chunkDataBatch.length >= 10) {
-                        await sendChunkData(chunkDataBatch);
-                        chunkDataBatch.length = 0;
-                    }
-                } catch (error) {
-                    logDebug(`Failed to scan chunk (${chunkX}, ${chunkZ})`, error);
-                }
+                chunksToQueue.push({ chunkX, chunkZ });
             }
         }
 
-        // Send remaining chunks
-        if (chunkDataBatch.length > 0) {
-            await sendChunkData(chunkDataBatch);
-        }
+        // Queue all chunks with low priority (auto-gen background work)
+        const dimensionType = toDimension(dimension.id);
+        queueChunks(dimensionType, chunksToQueue, {
+            priority: ChunkJobPriority.Low,
+            sourcePlayer: player.name,
+        });
 
-        logDebug(`Auto-gen scan complete for ${player.name}`, {
+        logDebug(`Auto-gen queued ${chunksToQueue.length} chunks for ${player.name}`, {
             location: { x: location.x, z: location.z },
             chunkRadius,
         });
@@ -153,68 +141,17 @@ function getAutoGenState(playerName: string): AutoGenState | undefined {
 }
 
 /**
- * Maximum chunks per ticking area to stay well under the 300 chunk limit
- * Using 10x10 = 100 chunks per area for safety margin
- */
-const TICKING_AREA_CHUNK_SIZE = 10;
-
-/**
- * Tracking state for scan jobs
- */
-interface ScanJobState {
-    chunksScanned: number;
-    blocksSent: number;
-    chunkDataBatch: ReturnType<typeof serializeChunkData>[];
-}
-
-/**
- * Generator function to scan a section of chunks
- * Yields after each chunk to spread work across ticks
- */
-function* scanSectionGenerator(
-    dimension: Dimension,
-    sectionStartX: number,
-    sectionStartZ: number,
-    sectionEndX: number,
-    sectionEndZ: number,
-    state: ScanJobState
-): Generator<void, void, void> {
-    for (let chunkX = sectionStartX; chunkX <= sectionEndX; chunkX++) {
-        for (let chunkZ = sectionStartZ; chunkZ <= sectionEndZ; chunkZ++) {
-            try {
-                const chunkData = scanChunk(dimension, chunkX, chunkZ);
-                state.chunksScanned++;
-                state.blocksSent += chunkData.blocks.length;
-
-                const serialized = serializeChunkData(chunkData);
-                state.chunkDataBatch.push(serialized);
-
-                // Send in batches of 10 chunks to avoid overwhelming the server
-                if (state.chunkDataBatch.length >= 10) {
-                    sendChunkData(state.chunkDataBatch).catch(error => {
-                        logDebug('Failed to send chunk data batch', error);
-                    });
-                    state.chunkDataBatch.length = 0;
-                }
-            } catch (error) {
-                logDebug(`Failed to scan chunk (${chunkX}, ${chunkZ})`, error);
-            }
-            // Yield after each chunk to spread work across ticks
-            yield;
-        }
-    }
-}
-
-/**
- * Force scan a block range and submit all chunk tiles to the server
- * Uses system.runJob with generators to spread work across server ticks
+ * Force scan a block range and queue all chunks for generation.
+ * Chunks are sorted by distance from the origin point (spiraling outward).
+ * The queue processor handles batching and rate limiting.
  *
  * @param dimension - The dimension to scan
  * @param minX - Minimum X coordinate (world coords)
  * @param minZ - Minimum Z coordinate (world coords)
  * @param maxX - Maximum X coordinate (world coords)
  * @param maxZ - Maximum Z coordinate (world coords)
- * @param forceLoad - Whether to force load chunks using ticking areas
+ * @param originX - Origin X coordinate for distance sorting (world coords)
+ * @param originZ - Origin Z coordinate for distance sorting (world coords)
  */
 function forceScanRange(
     dimension: Dimension,
@@ -222,7 +159,8 @@ function forceScanRange(
     minZ: number,
     maxX: number,
     maxZ: number,
-    forceLoad: boolean = false
+    originX: number,
+    originZ: number
 ): void {
     // Calculate chunk boundaries
     const minChunkX = Math.floor(minX / 16);
@@ -230,149 +168,45 @@ function forceScanRange(
     const maxChunkX = Math.floor(maxX / 16);
     const maxChunkZ = Math.floor(maxZ / 16);
 
+    // Origin chunk for distance calculations
+    const originChunkX = Math.floor(originX / 16);
+    const originChunkZ = Math.floor(originZ / 16);
+
     const totalChunksX = maxChunkX - minChunkX + 1;
     const totalChunksZ = maxChunkZ - minChunkZ + 1;
     const totalChunks = totalChunksX * totalChunksZ;
 
     console.log(
-        `[MapSync] Force scanning ${totalChunks} chunks from (${minChunkX}, ${minChunkZ}) to (${maxChunkX}, ${maxChunkZ})${forceLoad ? ' with force loading' : ''}`
+        `[MapSync] Queueing ${totalChunks} chunks for scan from (${minChunkX}, ${minChunkZ}) to (${maxChunkX}, ${maxChunkZ}), spiraling from (${originChunkX}, ${originChunkZ})`
     );
 
-    // Create state object to track progress across generator yields
-    const state: ScanJobState = {
-        chunksScanned: 0,
-        blocksSent: 0,
-        chunkDataBatch: [],
-    };
+    // Build list of chunks to queue
+    const chunksToQueue: Array<{ chunkX: number; chunkZ: number; distance: number }> = [];
 
-    // Build list of sections to process
-    const sections: Array<{
-        startX: number;
-        startZ: number;
-        endX: number;
-        endZ: number;
-    }> = [];
-
-    for (let sectionStartX = minChunkX; sectionStartX <= maxChunkX; sectionStartX += TICKING_AREA_CHUNK_SIZE) {
-        for (let sectionStartZ = minChunkZ; sectionStartZ <= maxChunkZ; sectionStartZ += TICKING_AREA_CHUNK_SIZE) {
-            sections.push({
-                startX: sectionStartX,
-                startZ: sectionStartZ,
-                endX: Math.min(sectionStartX + TICKING_AREA_CHUNK_SIZE - 1, maxChunkX),
-                endZ: Math.min(sectionStartZ + TICKING_AREA_CHUNK_SIZE - 1, maxChunkZ),
-            });
+    for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+        for (let chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+            // Calculate squared distance from origin (no need for sqrt for sorting)
+            const dx = chunkX - originChunkX;
+            const dz = chunkZ - originChunkZ;
+            const distance = dx * dx + dz * dz;
+            chunksToQueue.push({ chunkX, chunkZ, distance });
         }
     }
 
-    // Process sections sequentially, handling ticking areas for force load
-    let currentSectionIndex = 0;
-    let currentTickingAreaId: string | null = null;
+    // Sort by distance (closest first) to create spiral effect
+    chunksToQueue.sort((a, b) => a.distance - b.distance);
 
-    /**
-     * Generator that processes all sections
-     */
-    function* mainScanGenerator(): Generator<void, void, void> {
-        while (currentSectionIndex < sections.length) {
-            const section = sections[currentSectionIndex];
-            const tickingAreaId = `mapsync_scan_${Date.now()}_${section.startX}_${section.startZ}`;
-
-            // If force loading, create ticking area for this section
-            if (forceLoad) {
-                const tickingAreaOptions = {
-                    dimension,
-                    from: { x: section.startX * 16, y: 0, z: section.startZ * 16 },
-                    to: { x: (section.endX + 1) * 16 - 1, y: 0, z: (section.endZ + 1) * 16 - 1 },
-                };
-
-                logDebug(
-                    `Creating ticking area for section (${section.startX}, ${section.startZ}) to (${section.endX}, ${section.endZ})`
-                );
-
-                currentTickingAreaId = tickingAreaId;
-
-                // Create ticking area and wait for it to load
-                // We use a promise-based approach with runJob continuation
-                world.tickingAreaManager
-                    .createTickingArea(tickingAreaId, tickingAreaOptions)
-                    .then(() => {
-                        // Once loaded, run the section scan job
-                        system.runJob(sectionScanGenerator(section));
-                    })
-                    .catch(error => {
-                        logDebug(`Failed to create ticking area: ${error}`);
-                        // Move to next section even on failure
-                        currentSectionIndex++;
-                        system.runJob(mainScanGenerator());
-                    });
-
-                // Exit this generator - continuation happens in promise callbacks
-                return;
-            } else {
-                // No force loading - scan section directly
-                yield* scanSectionGenerator(
-                    dimension,
-                    section.startX,
-                    section.startZ,
-                    section.endX,
-                    section.endZ,
-                    state
-                );
-                currentSectionIndex++;
-            }
+    // Queue all chunks with normal priority (already sorted by distance)
+    const dimensionType = toDimension(dimension.id);
+    queueChunks(
+        dimensionType,
+        chunksToQueue.map(c => ({ chunkX: c.chunkX, chunkZ: c.chunkZ })),
+        {
+            priority: ChunkJobPriority.Normal,
         }
+    );
 
-        // All sections done - send remaining data and log completion
-        if (state.chunkDataBatch.length > 0) {
-            sendChunkData(state.chunkDataBatch).catch(error => {
-                logDebug('Failed to send final chunk data batch', error);
-            });
-        }
-
-        console.log(
-            `[MapSync] Force scan complete: ${state.chunksScanned} chunks scanned, ${state.blocksSent} blocks sent`
-        );
-    }
-
-    /**
-     * Generator to scan a section and then clean up/continue to next
-     */
-    function* sectionScanGenerator(section: (typeof sections)[0]): Generator<void, void, void> {
-        // Scan the section
-        yield* scanSectionGenerator(dimension, section.startX, section.startZ, section.endX, section.endZ, state);
-
-        // Clean up ticking area
-        if (currentTickingAreaId) {
-            try {
-                world.tickingAreaManager.removeTickingArea(currentTickingAreaId);
-                logDebug(`Removed ticking area ${currentTickingAreaId}`);
-            } catch (error) {
-                logDebug(`Failed to remove ticking area ${currentTickingAreaId}`, error);
-            }
-            currentTickingAreaId = null;
-        }
-
-        // Move to next section and continue
-        currentSectionIndex++;
-
-        if (currentSectionIndex < sections.length) {
-            // Continue with next section
-            system.runJob(mainScanGenerator());
-        } else {
-            // All done - send remaining data
-            if (state.chunkDataBatch.length > 0) {
-                sendChunkData(state.chunkDataBatch).catch(error => {
-                    logDebug('Failed to send final chunk data batch', error);
-                });
-            }
-
-            console.log(
-                `[MapSync] Force scan complete: ${state.chunksScanned} chunks scanned, ${state.blocksSent} blocks sent`
-            );
-        }
-    }
-
-    // Start the scan job
-    system.runJob(mainScanGenerator());
+    console.log(`[MapSync] Queued ${totalChunks} chunks. Current queue stats:`, getQueueStats());
 }
 
 /**
@@ -386,41 +220,42 @@ export function registerCustomCommands(): void {
         registry.registerCommand(
             {
                 name: 'mapsync:scan',
-                description: 'Force scan a block range and submit tiles to the map server',
+                description: 'Queue a block range for tile generation',
                 permissionLevel: CommandPermissionLevel.GameDirectors,
                 mandatoryParameters: [
                     { name: 'min', type: CustomCommandParamType.Location },
                     { name: 'max', type: CustomCommandParamType.Location },
                 ],
-                optionalParameters: [{ name: 'forceLoad', type: CustomCommandParamType.Boolean }],
             },
             (
                 origin: CustomCommandOrigin,
                 min: { x: number; y: number; z: number },
-                max: { x: number; y: number; z: number },
-                forceLoad?: boolean
+                max: { x: number; y: number; z: number }
             ): CustomCommandResult => {
                 // Command must be run by a player or entity with a dimension
-                const dimension = origin.sourceEntity?.dimension;
-                if (!dimension) {
+                const sourceEntity = origin.sourceEntity;
+                const dimension = sourceEntity?.dimension;
+                if (!dimension || !sourceEntity) {
                     return {
                         status: CustomCommandStatus.Failure,
                         message: 'This command must be run from a dimension context (e.g., by a player)',
                     };
                 }
 
-                const shouldForceLoad = forceLoad ?? false;
+                // Get player position for spiral sorting (chunks near player are processed first)
+                const playerX = sourceEntity.location.x;
+                const playerZ = sourceEntity.location.z;
 
                 console.log(
-                    `[MapSync] Scan command received: (${min.x}, ${min.z}) to (${max.x}, ${max.z}) in ${dimension.id}${shouldForceLoad ? ' with force loading' : ''}`
+                    `[MapSync] Scan command received: (${min.x}, ${min.z}) to (${max.x}, ${max.z}) in ${dimension.id}, spiraling from player at (${playerX}, ${playerZ})`
                 );
 
-                // Start the force scan job using runJob with generators
-                forceScanRange(dimension, min.x, min.z, max.x, max.z, shouldForceLoad);
+                // Queue chunks for generation, sorted by distance from player
+                forceScanRange(dimension, min.x, min.z, max.x, max.z, playerX, playerZ);
 
                 return {
                     status: CustomCommandStatus.Success,
-                    message: `Starting force scan from (${min.x}, ${min.z}) to (${max.x}, ${max.z}) in ${dimension.id}${shouldForceLoad ? ' with force loading' : ''}`,
+                    message: `Queued chunks from (${min.x}, ${min.z}) to (${max.x}, ${max.z}) for generation (spiraling from your position)`,
                 };
             }
         );
@@ -496,6 +331,46 @@ export function registerCustomCommands(): void {
                 return {
                     status: CustomCommandStatus.Success,
                     message: `Auto-generation enabled: radius=${radius} blocks, interval=${interval}s`,
+                };
+            }
+        );
+
+        // Register the mapsync:queue command for queue management
+        registry.registerCommand(
+            {
+                name: 'mapsync:queue',
+                description: 'Manage the chunk generation queue (stats, clear, resort)',
+                permissionLevel: CommandPermissionLevel.GameDirectors,
+                optionalParameters: [{ name: 'action', type: CustomCommandParamType.String }],
+            },
+            (_origin: CustomCommandOrigin, action?: string): CustomCommandResult => {
+                const stats = getQueueStats();
+
+                if (action === 'clear') {
+                    clearQueue();
+                    return {
+                        status: CustomCommandStatus.Success,
+                        message: 'Queue cleared',
+                    };
+                }
+
+                if (action === 'resort') {
+                    resortQueue();
+                    return {
+                        status: CustomCommandStatus.Success,
+                        message: `Queue resorted. ${stats.queueSize} jobs pending.`,
+                    };
+                }
+
+                // Default: show stats
+                const priorityNames = ['Immediate', 'High', 'Normal', 'Low'];
+                const priorityInfo = priorityNames
+                    .map((name, i) => `${name}: ${stats.byPriority[i as 0 | 1 | 2 | 3]}`)
+                    .join(', ');
+
+                return {
+                    status: CustomCommandStatus.Success,
+                    message: `Queue: ${stats.queueSize} jobs (${priorityInfo}). Processed: ${stats.jobsProcessed}`,
                 };
             }
         );

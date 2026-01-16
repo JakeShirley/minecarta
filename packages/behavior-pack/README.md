@@ -79,6 +79,7 @@ behavior-pack/
 │   └── index.js
 ├── src/                   # TypeScript source
 │   ├── index.ts           # Entry point
+│   ├── chunk-queue/       # Chunk generation job queue
 │   ├── config/            # Configuration
 │   ├── events/            # World event listeners
 │   ├── network/           # HTTP client wrapper
@@ -147,21 +148,20 @@ The behavior pack registers custom commands for map operations:
 
 ### `/mapsync:scan`
 
-Force scan a block range and submit tiles to the map server.
+Queue a block range for tile generation.
 
 ```
-/mapsync:scan <min> <max> [dimension]
+/mapsync:scan <min> <max>
 ```
 
-| Parameter   | Type              | Description                                   |
-| ----------- | ----------------- | --------------------------------------------- |
-| `min`       | Location          | Minimum corner coordinates                    |
-| `max`       | Location          | Maximum corner coordinates                    |
-| `dimension` | String (optional) | Dimension ID (defaults to player's dimension) |
+| Parameter | Type     | Description                |
+| --------- | -------- | -------------------------- |
+| `min`     | Location | Minimum corner coordinates |
+| `max`     | Location | Maximum corner coordinates |
 
 ### `/mapsync:autogen`
 
-Toggle automatic tile generation around the player. When enabled, the pack will periodically scan and send tiles within the specified radius around the player.
+Toggle automatic tile generation around the player. When enabled, the pack will periodically queue chunks within the specified radius around the player for generation.
 
 ```
 /mapsync:autogen [radius] [interval]
@@ -178,6 +178,24 @@ Toggle automatic tile generation around the player. When enabled, the pack will 
 - `/mapsync:autogen 64 10` - Enable with 64-block radius, scanning every 10 seconds
 - `/mapsync:autogen 128 30` - Enable with 128-block radius, scanning every 30 seconds
 
+### `/mapsync:queue`
+
+Manage the chunk generation queue.
+
+```
+/mapsync:queue [action]
+```
+
+| Parameter | Type              | Description                                    |
+| --------- | ----------------- | ---------------------------------------------- |
+| `action`  | String (optional) | `clear` to clear queue, `resort` to re-sort it |
+
+**Usage:**
+
+- `/mapsync:queue` - Show queue statistics
+- `/mapsync:queue clear` - Clear all pending jobs
+- `/mapsync:queue resort` - Re-sort queue based on player positions
+
 ## Data Flow
 
 ```
@@ -185,6 +203,9 @@ Minecraft World Events
         │
         ▼
   Event Listeners (events/)
+        │
+        ▼
+  Chunk Generation Queue (chunk-queue/)
         │
         ▼
   Data Serialization (serializers/)
@@ -196,13 +217,54 @@ Minecraft World Events
   Map Web Server
 ```
 
+## Chunk Generation Queue
+
+All chunk generation work goes through a centralized job queue system that provides:
+
+### Priority Levels
+
+Jobs are processed in priority order:
+
+| Priority    | Use Case                                |
+| ----------- | --------------------------------------- |
+| `Immediate` | Player interactions (block place/break) |
+| `High`      | Player's current chunk                  |
+| `Normal`    | Chunks near players, manual scans       |
+| `Low`       | Background generation (auto-gen)        |
+
+### Queue Re-sorting
+
+The queue automatically re-sorts based on player positions:
+
+- Jobs closer to players get higher priority within their level
+- Jobs within 2 chunks of a player are upgraded to `High` priority
+- Jobs within 5 chunks are upgraded to `Normal` priority
+- Re-sorting happens on each player position update
+
+### Deduplication
+
+Duplicate chunk requests are automatically merged. If a chunk is already queued, subsequent requests only upgrade its priority if the new request has higher priority.
+
+### Chunk Loading with Ticking Areas
+
+For jobs with priority `High`, `Normal`, or `Low`, the queue processor creates a temporary **ticking area** to force-load the chunk before scanning. This ensures that chunks not currently loaded by players can still be scanned for map generation.
+
+- `Immediate` priority jobs (player interactions) skip ticking areas since the chunk is already loaded
+- Ticking areas are automatically cleaned up after each job completes
+- One job is processed at a time to avoid exceeding ticking area limits
+
+### Rate Limiting
+
+The queue processor limits how many chunks are processed per game tick to avoid server lag, with configurable batch sizes for network requests.
+
 ## Automatic Chunk Generation
 
 In addition to the manual `/mapsync:autogen` command, the behavior pack includes **automatic chunk generation** based on player movement:
 
 1. **On each player position update** (every ~1 second by default), the pack checks if the player's current chunk exists on the map server
 2. **The server checks** if a tile exists at zoom level 0 (where 1 chunk = 1 tile) for the chunk coordinates
-3. **If the tile doesn't exist**, the behavior pack automatically scans and sends the chunk data
+3. **If the tile doesn't exist**, the chunk is added to the generation queue with `High` priority
 4. **A cache** prevents repeated checks for the same chunk (1 minute TTL)
+5. **The queue processor** handles the actual scanning and sending to the server
 
-This ensures that as players explore the world, the map is automatically populated without requiring manual commands.
+This ensures that as players explore the world, the map is automatically populated without requiring manual commands, while the queue system prevents overwhelming the game or server during heavy exploration.
