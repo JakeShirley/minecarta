@@ -108,7 +108,7 @@
                 font-size: 14px;
                 z-index: 1000;
                 border: 1px solid #1f4068;
-                pointer-events: none;
+                pointer-events: auto;
             }
             .coord-display .label {
                 color: #888;
@@ -1065,8 +1065,13 @@
                         <div class="weather-desc" id="weather-desc">Waiting...</div>
                     </div>
                 </div>
-                <div class="coord-display" id="coord-display">
-                    <div class="label">Minecraft Coordinates</div>
+                <div
+                    class="coord-display"
+                    id="coord-display"
+                    style="cursor: pointer"
+                    title="Click to toggle between block and chunk coordinates"
+                >
+                    <div class="label" id="coord-label">Block Coordinates</div>
                     <div id="coord-text">X: 0, Z: 0</div>
                     <div id="zoom-text" style="font-size: 11px; color: #888; margin-top: 4px">Zoom: 3</div>
                 </div>
@@ -1525,12 +1530,47 @@
             }
 
             /**
+             * Coordinate display mode: 'block' or 'chunk'
+             */
+            let coordDisplayMode = localStorage.getItem('coord-display-mode') || 'block';
+            let lastMouseCoords = { x: 0, z: 0 };
+
+            /**
              * Update coordinate display with mouse position
              */
             function updateCoordDisplay(e) {
                 const coords = leafletToMinecraft(e.latlng);
-                document.getElementById('coord-text').textContent = `X: ${coords.x}, Z: ${coords.z}`;
+                lastMouseCoords = coords;
+                renderCoordDisplay();
             }
+
+            /**
+             * Render the coordinate display based on current mode
+             */
+            function renderCoordDisplay() {
+                const coords = lastMouseCoords;
+                if (coordDisplayMode === 'chunk') {
+                    const chunkX = Math.floor(coords.x / 16);
+                    const chunkZ = Math.floor(coords.z / 16);
+                    document.getElementById('coord-text').textContent = `X: ${chunkX}, Z: ${chunkZ}`;
+                    document.getElementById('coord-label').textContent = 'Chunk Coordinates';
+                } else {
+                    document.getElementById('coord-text').textContent = `X: ${coords.x}, Z: ${coords.z}`;
+                    document.getElementById('coord-label').textContent = 'Block Coordinates';
+                }
+            }
+
+            /**
+             * Toggle between block and chunk coordinate display modes
+             */
+            function toggleCoordDisplayMode() {
+                coordDisplayMode = coordDisplayMode === 'block' ? 'chunk' : 'block';
+                localStorage.setItem('coord-display-mode', coordDisplayMode);
+                renderCoordDisplay();
+            }
+
+            // Add click handler for coordinate display toggle
+            document.getElementById('coord-display').addEventListener('click', toggleCoordDisplayMode);
 
             /**
              * Update zoom display
