@@ -30,6 +30,7 @@ export interface ApiResponse<T = unknown> {
  */
 export interface HealthCheckResponse {
     readonly status: 'ok';
+    readonly version: string;
     readonly uptime: number;
     readonly timestamp: number;
 }

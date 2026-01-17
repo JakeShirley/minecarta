@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { API_BASE_PATH } from '@minecarta/shared';
+import { API_BASE_PATH, PROTOCOL_VERSION } from '@minecarta/shared';
 import { registerWorldRoutes } from './world-routes.js';
 import { registerPlayerRoutes } from './player-routes.js';
 import { registerTileRoutes } from './tile-routes.js';
@@ -15,6 +15,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     app.get('/health', async (_request: FastifyRequest, reply: FastifyReply) => {
         const response: HealthCheckResponse = {
             status: 'ok',
+            version: PROTOCOL_VERSION,
             uptime: Date.now() - startTime,
             timestamp: Date.now(),
         };

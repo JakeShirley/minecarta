@@ -3,7 +3,7 @@
  * Increment this when making breaking changes to the API or data formats.
  * Both the behavior pack and server should use the same protocol version.
  */
-export const PROTOCOL_VERSION = '1.0.0';
+export const PROTOCOL_VERSION = '0.0.0-semantically-versioned';
 
 /**
  * API version for endpoints

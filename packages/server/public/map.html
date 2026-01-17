@@ -902,6 +902,17 @@
                 border-color: #f87171;
                 color: #000;
             }
+            .version-badge {
+                color: #6dd5ed;
+                font-size: 11px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                margin-top: 8px;
+                text-decoration: none;
+                display: block;
+            }
+            .version-badge:hover {
+                text-decoration: underline;
+            }
         </style>
     </head>
     <body>
@@ -1040,6 +1051,7 @@
                 <div style="margin-top: auto; font-size: 0.8rem; color: #666">
                     <p>Pan: Drag</p>
                     <p>Zoom: Scroll</p>
+                    <a class="version-badge" id="version-badge" href="#" target="_blank">v...</a>
                 </div>
             </div>
 
@@ -2924,6 +2936,18 @@
                     statusEl.textContent = '○ Reconnecting...';
                 }
             }
+
+            // Fetch version from health endpoint
+            fetch('/health')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.version) {
+                        const badge = document.getElementById('version-badge');
+                        badge.textContent = 'v' + data.version;
+                        badge.href = 'https://github.com/JakeShirley/minecarta/releases/tag/v' + data.version;
+                    }
+                })
+                .catch(() => {});
 
             // Initial fetch (before WebSocket connects)
             fetchPlayers();

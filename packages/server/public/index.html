@@ -90,6 +90,23 @@
             .offline .status-indicator {
                 background: #e94560;
             }
+            .version-badge {
+                position: fixed;
+                bottom: 10px;
+                left: 10px;
+                background: rgba(15, 52, 96, 0.8);
+                color: #6dd5ed;
+                padding: 6px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                border: 1px solid #1f4068;
+                text-decoration: none;
+            }
+            .version-badge:hover {
+                text-decoration: underline;
+                background: rgba(15, 52, 96, 0.95);
+            }
         </style>
     </head>
     <body>
@@ -116,14 +133,21 @@
             </div>
         </div>
 
+        <a class="version-badge" id="version-badge" href="#" target="_blank">v...</a>
+
         <script>
-            fetch('/api/v1/health')
+            fetch('/health')
                 .then(res => res.json())
                 .then(data => {
                     const box = document.getElementById('status-box');
                     const text = document.getElementById('status-text');
                     box.classList.add('online');
                     text.innerText = 'Server Online';
+                    if (data.version) {
+                        const badge = document.getElementById('version-badge');
+                        badge.textContent = 'v' + data.version;
+                        badge.href = 'https://github.com/JakeShirley/minecarta/releases/tag/v' + data.version;
+                    }
                 })
                 .catch(() => {
                     const box = document.getElementById('status-box');
