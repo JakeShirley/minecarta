@@ -34,8 +34,8 @@ npm install -g pnpm
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/JakeShirley/map.git
-cd map
+git clone https://github.com/JakeShirley/minecarta.git
+cd minecarta
 ```
 
 ### 2. Install Dependencies

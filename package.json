@@ -4,6 +4,14 @@
     "version": "0.0.0-semantically-versioned",
     "description": "MineCarta - Real-time map visualization for Minecraft worlds",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JakeShirley/minecarta.git"
+    },
+    "homepage": "https://github.com/JakeShirley/minecarta",
+    "bugs": {
+        "url": "https://github.com/JakeShirley/minecarta/issues"
+    },
     "scripts": {
         "build": "pnpm -r build",
         "build:pack": "pnpm --filter @minecarta/behavior-pack build",

@@ -4,6 +4,12 @@
   <img src="packages/server/public/logo.png" alt="MineCarta Logo" width="200">
 </p>
 
+<p align="center">
+  <a href="https://github.com/JakeShirley/minecarta"><img src="https://img.shields.io/github/stars/JakeShirley/minecarta?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/JakeShirley/minecarta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/JakeShirley/minecarta" alt="License"></a>
+  <a href="https://github.com/JakeShirley/minecarta/releases"><img src="https://img.shields.io/github/v/release/JakeShirley/minecarta" alt="Latest Release"></a>
+</p>
+
 > ⚠️ **Work in Progress** - This project is under active development. Most features are not yet implemented.
 
 > 🔓 **Security Notice** - The web server component of this project does not implement authentication or authorization mechanisms. It is intended for use in trusted local network environments only. Please do not expose this server directly to the public internet, as doing so may result in unauthorized access to your world data.

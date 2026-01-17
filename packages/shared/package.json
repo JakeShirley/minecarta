@@ -3,6 +3,12 @@
     "version": "1.0.0",
     "description": "Shared types and constants for MineCarta project",
     "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JakeShirley/minecarta.git",
+        "directory": "packages/shared"
+    },
+    "homepage": "https://github.com/JakeShirley/minecarta#readme",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {

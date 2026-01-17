@@ -3,6 +3,12 @@
     "version": "1.0.0",
     "description": "Minecraft behavior pack that syncs world state to map server",
     "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JakeShirley/minecarta.git",
+        "directory": "packages/behavior-pack"
+    },
+    "homepage": "https://github.com/JakeShirley/minecarta#readme",
     "scripts": {
         "build": "just-scripts build",
         "build:watch": "just-scripts watch",

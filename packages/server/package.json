@@ -3,6 +3,12 @@
     "version": "1.0.0",
     "description": "MineCarta Web Server",
     "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/JakeShirley/minecarta.git",
+        "directory": "packages/server"
+    },
+    "homepage": "https://github.com/JakeShirley/minecarta#readme",
     "main": "./dist/index.js",
     "scripts": {
         "build": "tsc",
