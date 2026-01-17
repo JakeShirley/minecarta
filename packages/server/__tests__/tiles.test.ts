@@ -486,4 +486,117 @@ describe('TileGeneratorService', () => {
             expect(data[2]).toBe(255);
         });
     });
+
+    describe('compositeChildTiles (pyramid generation)', () => {
+        it('should composite 4 child tiles into a parent tile', async () => {
+            const service = new TileGeneratorService();
+
+            // Create 4 solid-color child tiles (256x256 each)
+            const redTile = await sharp({
+                create: { width: 256, height: 256, channels: 4, background: { r: 255, g: 0, b: 0, alpha: 255 } },
+            })
+                .png()
+                .toBuffer();
+
+            const greenTile = await sharp({
+                create: { width: 256, height: 256, channels: 4, background: { r: 0, g: 255, b: 0, alpha: 255 } },
+            })
+                .png()
+                .toBuffer();
+
+            const blueTile = await sharp({
+                create: { width: 256, height: 256, channels: 4, background: { r: 0, g: 0, b: 255, alpha: 255 } },
+            })
+                .png()
+                .toBuffer();
+
+            const yellowTile = await sharp({
+                create: { width: 256, height: 256, channels: 4, background: { r: 255, g: 255, b: 0, alpha: 255 } },
+            })
+                .png()
+                .toBuffer();
+
+            // Composite: [topLeft=red, topRight=green, bottomLeft=blue, bottomRight=yellow]
+            const result = await service.compositeChildTiles([redTile, greenTile, blueTile, yellowTile]);
+
+            expect(result).toBeDefined();
+            expect(Buffer.isBuffer(result)).toBe(true);
+
+            // Verify the output is 256x256
+            const metadata = await sharp(result).metadata();
+            expect(metadata.width).toBe(256);
+            expect(metadata.height).toBe(256);
+
+            // Read pixel data to verify quadrants
+            const { data } = await sharp(result).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // Top-left (0,0) should be red
+            const topLeftIdx = (0 * 256 + 0) * 4;
+            expect(data[topLeftIdx]).toBe(255); // R
+            expect(data[topLeftIdx + 1]).toBe(0); // G
+            expect(data[topLeftIdx + 2]).toBe(0); // B
+
+            // Top-right (128,0) should be green
+            const topRightIdx = (0 * 256 + 128) * 4;
+            expect(data[topRightIdx]).toBe(0); // R
+            expect(data[topRightIdx + 1]).toBe(255); // G
+            expect(data[topRightIdx + 2]).toBe(0); // B
+
+            // Bottom-left (0,128) should be blue
+            const bottomLeftIdx = (128 * 256 + 0) * 4;
+            expect(data[bottomLeftIdx]).toBe(0); // R
+            expect(data[bottomLeftIdx + 1]).toBe(0); // G
+            expect(data[bottomLeftIdx + 2]).toBe(255); // B
+
+            // Bottom-right (128,128) should be yellow
+            const bottomRightIdx = (128 * 256 + 128) * 4;
+            expect(data[bottomRightIdx]).toBe(255); // R
+            expect(data[bottomRightIdx + 1]).toBe(255); // G
+            expect(data[bottomRightIdx + 2]).toBe(0); // B
+        });
+
+        it('should handle missing child tiles gracefully', async () => {
+            const service = new TileGeneratorService();
+
+            // Create only one tile (red for top-left)
+            const redTile = await sharp({
+                create: { width: 256, height: 256, channels: 4, background: { r: 255, g: 0, b: 0, alpha: 255 } },
+            })
+                .png()
+                .toBuffer();
+
+            // Pass null for missing tiles
+            const result = await service.compositeChildTiles([redTile, null, null, null]);
+
+            expect(result).toBeDefined();
+            expect(Buffer.isBuffer(result)).toBe(true);
+
+            const { data } = await sharp(result).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // Top-left (0,0) should be red
+            const topLeftIdx = (0 * 256 + 0) * 4;
+            expect(data[topLeftIdx]).toBe(255); // R
+            expect(data[topLeftIdx + 1]).toBe(0); // G
+            expect(data[topLeftIdx + 2]).toBe(0); // B
+            expect(data[topLeftIdx + 3]).toBe(255); // A
+
+            // Top-right (128,0) should be transparent
+            const topRightIdx = (0 * 256 + 128) * 4;
+            expect(data[topRightIdx + 3]).toBe(0); // A should be 0
+        });
+
+        it('should return transparent tile when all children are null', async () => {
+            const service = new TileGeneratorService();
+
+            const result = await service.compositeChildTiles([null, null, null, null]);
+
+            expect(result).toBeDefined();
+            expect(Buffer.isBuffer(result)).toBe(true);
+
+            const { data } = await sharp(result).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            // All pixels should be transparent
+            expect(data[3]).toBe(0); // Alpha of first pixel
+        });
+    });
 });

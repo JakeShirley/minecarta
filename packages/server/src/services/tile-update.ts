@@ -1,4 +1,12 @@
-import type { ChunkData, ChunkBlock, BlockChange, Dimension, ZoomLevel, TileCoordinates } from '@minecarta/shared';
+import type {
+    ChunkData,
+    ChunkBlock,
+    BlockChange,
+    Dimension,
+    ZoomLevel,
+    TileCoordinates,
+    MapType,
+} from '@minecarta/shared';
 import { ZOOM_LEVELS, MAP_TYPES } from '@minecarta/shared';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { getTileGeneratorService } from '../tiles/tile-generator.js';
@@ -48,40 +56,46 @@ export class TileUpdateService {
      */
     private tileLocks = new Map<string, Promise<void>>();
     /**
-     * Process a batch of chunks and update tiles
+     * Process a batch of chunks and update tiles.
+     *
+     * This uses a pyramid approach:
+     * 1. Generate/update zoom level 0 tiles from block data
+     * 2. Regenerate parent tiles (zoom 1+) by compositing child tiles
      */
     async processChunks(chunks: ChunkData[]): Promise<void> {
         const storage = getTileStorageService();
-        // Group updates by tile to minimize IO
-        // Key: "dim:zoom:x:z"
+        // Group updates by tile at ZOOM LEVEL 0 ONLY
+        // Key: "dim:0:x:z"
         const tasks = new Map<string, TileUpdateTask>();
 
         for (const chunk of chunks) {
-            for (const zoom of ZOOM_LEVELS) {
-                // Find which tile this chunk belongs to at this zoom level
-                const { x: tileX, z: tileZ } = storage.blockToTile(chunk.chunkX * 16, chunk.chunkZ * 16, zoom);
+            // Only process at zoom level 0 - parent tiles will be composited
+            const zoom = 0 as ZoomLevel;
+            const { x: tileX, z: tileZ } = storage.blockToTile(chunk.chunkX * 16, chunk.chunkZ * 16, zoom);
 
-                const key = `${chunk.dimension}:${zoom}:${tileX}:${tileZ}`;
+            const key = `${chunk.dimension}:${zoom}:${tileX}:${tileZ}`;
 
-                let task = tasks.get(key);
-                if (!task) {
-                    task = {
-                        dimension: chunk.dimension,
-                        zoom,
-                        x: tileX,
-                        z: tileZ,
-                        blocks: [],
-                    };
-                    tasks.set(key, task);
-                }
-
-                // Add blocks to task
-                task.blocks.push(...chunk.blocks);
+            let task = tasks.get(key);
+            if (!task) {
+                task = {
+                    dimension: chunk.dimension,
+                    zoom,
+                    x: tileX,
+                    z: tileZ,
+                    blocks: [],
+                };
+                tasks.set(key, task);
             }
+
+            // Add blocks to task
+            task.blocks.push(...chunk.blocks);
         }
 
-        // execute tasks
-        await this.processTasks(Array.from(tasks.values()));
+        // Execute zoom 0 tasks and collect affected tiles for pyramid regeneration
+        const updatedZoom0Tiles = await this.processZoom0Tasks(Array.from(tasks.values()));
+
+        // Regenerate parent tiles (zoom 1+) using pyramid compositing
+        await this.regenerateParentTiles(updatedZoom0Tiles);
     }
 
     /**
@@ -211,10 +225,8 @@ export class TileUpdateService {
         }
     }
 
-    private async processTasks(tasks: TileUpdateTask[]): Promise<void> {
-        const wsService = getWebSocketService();
-
-        // Track updated tiles to emit WebSocket events
+    private async processZoom0Tasks(tasks: TileUpdateTask[]): Promise<TileCoordinates[]> {
+        // Track updated tiles for pyramid regeneration
         const updatedTiles: TileCoordinates[] = [];
 
         // Process all tile updates with per-tile locking
@@ -235,9 +247,99 @@ export class TileUpdateService {
         const results = await Promise.all(updatePromises);
         updatedTiles.push(...results);
 
+        return updatedTiles;
+    }
+
+    /**
+     * Regenerate parent tiles (zoom 1+) using pyramid compositing.
+     * For each updated zoom 0 tile, regenerates all ancestor tiles up the pyramid.
+     */
+    private async regenerateParentTiles(updatedZoom0Tiles: TileCoordinates[]): Promise<void> {
+        const storage = getTileStorageService();
+        const generator = getTileGeneratorService();
+        const wsService = getWebSocketService();
+
+        // Track all updated tiles for WebSocket notification
+        const allUpdatedTiles: TileCoordinates[] = [...updatedZoom0Tiles];
+
+        // Group by dimension and map type to process efficiently
+        const tilesByDimAndType = new Map<string, Set<string>>();
+
+        for (const tile of updatedZoom0Tiles) {
+            const key = `${tile.dimension}:${tile.mapType}`;
+            if (!tilesByDimAndType.has(key)) {
+                tilesByDimAndType.set(key, new Set());
+            }
+            tilesByDimAndType.get(key)!.add(`${tile.x}:${tile.z}`);
+        }
+
+        // For each dimension/mapType combination
+        for (const [dimTypeKey, zoom0TileSet] of tilesByDimAndType) {
+            const [dimension, mapType] = dimTypeKey.split(':') as [Dimension, MapType];
+
+            // Track which parent tiles need regeneration at each zoom level
+            let currentLevelTiles = new Set<string>();
+
+            // Convert zoom 0 tiles to their parent coordinates at zoom 1
+            for (const tileKey of zoom0TileSet) {
+                const [x, z] = tileKey.split(':').map(Number);
+                // Parent tile coordinates: divide by 2 and floor
+                const parentX = Math.floor(x / 2);
+                const parentZ = Math.floor(z / 2);
+                currentLevelTiles.add(`${parentX}:${parentZ}`);
+            }
+
+            // Iterate through zoom levels 1 to 7
+            for (let zoom = 1; zoom <= 7; zoom++) {
+                const nextLevelTiles = new Set<string>();
+
+                // Process each tile that needs regeneration at this level
+                for (const tileKey of currentLevelTiles) {
+                    const [x, z] = tileKey.split(':').map(Number);
+
+                    // Get the 4 child tiles from the previous zoom level
+                    const childZoom = (zoom - 1) as ZoomLevel;
+                    const childTiles: (Buffer | null)[] = [
+                        storage.readTile(dimension, childZoom, x * 2, z * 2, mapType), // Top-left
+                        storage.readTile(dimension, childZoom, x * 2 + 1, z * 2, mapType), // Top-right
+                        storage.readTile(dimension, childZoom, x * 2, z * 2 + 1, mapType), // Bottom-left
+                        storage.readTile(dimension, childZoom, x * 2 + 1, z * 2 + 1, mapType), // Bottom-right
+                    ];
+
+                    // Only regenerate if at least one child exists
+                    if (childTiles.some(t => t !== null)) {
+                        const lockKey = createTileLockKey(dimension, mapType, zoom as ZoomLevel, x, z);
+                        const releaseLock = await this.acquireTileLock(lockKey);
+
+                        try {
+                            const compositedTile = await generator.compositeChildTiles(childTiles);
+                            storage.writeTile(dimension, zoom as ZoomLevel, x, z, compositedTile, mapType);
+
+                            allUpdatedTiles.push({
+                                dimension,
+                                zoom: zoom as ZoomLevel,
+                                x,
+                                z,
+                                mapType,
+                            });
+                        } finally {
+                            releaseLock();
+                        }
+                    }
+
+                    // Add this tile's parent to the next level
+                    const parentX = Math.floor(x / 2);
+                    const parentZ = Math.floor(z / 2);
+                    nextLevelTiles.add(`${parentX}:${parentZ}`);
+                }
+
+                currentLevelTiles = nextLevelTiles;
+            }
+        }
+
         // Emit tile update events to WebSocket clients
-        if (updatedTiles.length > 0) {
-            wsService.emitTileUpdate(updatedTiles);
+        if (allUpdatedTiles.length > 0) {
+            wsService.emitTileUpdate(allUpdatedTiles);
         }
     }
 }

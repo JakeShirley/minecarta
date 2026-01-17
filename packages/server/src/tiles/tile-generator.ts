@@ -441,6 +441,66 @@ export class TileGeneratorService {
             .png()
             .toBuffer();
     }
+
+    /**
+     * Generate a parent tile by compositing 4 child tiles (pyramid generation).
+     * The parent tile at (x, z) in zoom level N is composed of children at zoom level N-1:
+     *   - Top-left:     (2*x,   2*z)
+     *   - Top-right:    (2*x+1, 2*z)
+     *   - Bottom-left:  (2*x,   2*z+1)
+     *   - Bottom-right: (2*x+1, 2*z+1)
+     *
+     * Each child tile is scaled to half size (128x128) and placed in the corresponding quadrant.
+     *
+     * @param childTiles Array of 4 child tile buffers [topLeft, topRight, bottomLeft, bottomRight]
+     *                   Can contain null for missing tiles (those quadrants will be transparent)
+     * @returns The composited parent tile as a PNG buffer
+     */
+    async compositeChildTiles(childTiles: (Buffer | null)[]): Promise<Buffer> {
+        const halfSize = TILE_SIZE / 2; // 128
+
+        // Create base transparent image
+        let composite = sharp({
+            create: {
+                width: TILE_SIZE,
+                height: TILE_SIZE,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+        });
+
+        // Build composite inputs for each quadrant
+        const compositeInputs: sharp.OverlayOptions[] = [];
+
+        // Positions for each quadrant: [topLeft, topRight, bottomLeft, bottomRight]
+        const positions: Array<{ left: number; top: number }> = [
+            { left: 0, top: 0 }, // Top-left
+            { left: halfSize, top: 0 }, // Top-right
+            { left: 0, top: halfSize }, // Bottom-left
+            { left: halfSize, top: halfSize }, // Bottom-right
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const childBuffer = childTiles[i];
+            if (childBuffer) {
+                // Resize child tile to half size
+                const resized = await sharp(childBuffer).resize(halfSize, halfSize).toBuffer();
+
+                compositeInputs.push({
+                    input: resized,
+                    left: positions[i].left,
+                    top: positions[i].top,
+                });
+            }
+        }
+
+        // If we have any tiles to composite, do it
+        if (compositeInputs.length > 0) {
+            composite = composite.composite(compositeInputs);
+        }
+
+        return composite.png().toBuffer();
+    }
 }
 
 // Singleton instance
