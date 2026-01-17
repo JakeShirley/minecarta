@@ -80,15 +80,6 @@ The map UI will be available at `http://localhost:3000/map.html`.
     ```
     <BDS>/behavior_packs/minecarta-sync/
     ```
-3. Add the behavior pack to your world's `world_behavior_packs.json`:
-    ```json
-    [
-        {
-            "pack_id": "8b78eb38-7c61-4c53-811f-39c11e11bd72",
-            "version": [1, 0, 0]
-        }
-    ]
-    ```
 
 ### Step 3: Configure the Behavior Pack
 
