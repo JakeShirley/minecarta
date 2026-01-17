@@ -5,16 +5,10 @@
  * and chunk scanning operations used throughout the behavior pack.
  */
 
-import { BlockMapColorComponent, TintMethod } from '@minecraft/server';
 import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/server';
 import type { Dimension } from '@minecarta/shared';
 import type { MinecraftChunkBlock, MinecraftChunkData } from '../types';
 import { logDebug } from '../logging';
-
-/**
- * Default color returned when block color cannot be determined
- */
-const DEFAULT_BLOCK_COLOR: RGBA = { red: 0, green: 0, blue: 0, alpha: 0 };
 
 /**
  * Logging tag for this module
@@ -158,6 +152,51 @@ export function getScanStrategy(dimensionId: string): ScanStartStrategy {
 function isAirBlock(typeId: string | undefined): boolean {
     if (!typeId) return true;
     return typeId.includes('air');
+}
+
+/**
+ * Calculate density contribution for a single block.
+ * Air counts as 0, liquids count as 0.2, everything else counts as 1.
+ */
+function getDensityContribution(block: Block | undefined): number {
+    if (!block?.typeId) {
+        return 0;
+    }
+
+    if (isAirBlock(block.typeId)) {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ * Calculate normalized density for a full Y column in the current dimension.
+ * The density is normalized by the total height range for the dimension.
+ */
+function calculateColumnDensity(dimension: MinecraftDimension, worldX: number, worldZ: number): number {
+    const minHeight = getMinHeight(dimension.id);
+    const maxHeight = getMaxHeight(dimension.id);
+    const totalBlocks = maxHeight - minHeight + 1;
+
+    if (totalBlocks <= 0) {
+        return 0;
+    }
+
+    let sum = 0;
+
+    for (let y = maxHeight; y >= minHeight; y--) {
+        try {
+            const block = dimension.getBlock({ x: worldX, y, z: worldZ });
+            sum += getDensityContribution(block ?? undefined);
+        } catch {
+            // Block in unloaded chunk, treat as air
+            continue;
+        }
+    }
+
+    const normalized = sum / totalBlocks;
+    return Math.max(0, Math.min(1, normalized));
 }
 
 /**
@@ -359,7 +398,7 @@ export function getSurfaceBlock(
 /**
  * Convert a surface block result to chunk block format
  */
-function toChunkBlock(result: SurfaceBlockResult): MinecraftChunkBlock {
+function toChunkBlock(result: SurfaceBlockResult, density: number): MinecraftChunkBlock {
     const block: MinecraftChunkBlock = {
         x: result.x,
         y: result.y,
@@ -367,6 +406,7 @@ function toChunkBlock(result: SurfaceBlockResult): MinecraftChunkBlock {
         type: result.type,
         mapColor: result.mapColor,
         waterDepth: result.waterDepth,
+        density,
     };
     return block;
 }
@@ -392,9 +432,10 @@ export function scanChunk(dimension: MinecraftDimension, chunkX: number, chunkZ:
             const worldZ = startZ + dz;
 
             try {
+                const density = calculateColumnDensity(dimension, worldX, worldZ);
                 const result = getSurfaceBlock(dimension, worldX, worldZ);
                 if (result) {
-                    blocks.push(toChunkBlock(result));
+                    blocks.push(toChunkBlock(result, density));
                 }
             } catch {
                 // Block might be in unloaded chunk, skip silently
@@ -436,9 +477,10 @@ export function scanArea(
             const worldZ = centerZ + dz;
 
             try {
+                const density = calculateColumnDensity(dimension, worldX, worldZ);
                 const result = getSurfaceBlock(dimension, worldX, worldZ);
                 if (result) {
-                    blocks.push(toChunkBlock(result));
+                    blocks.push(toChunkBlock(result, density));
                 }
             } catch {
                 // Block might be in unloaded chunk, skip silently

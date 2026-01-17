@@ -8,6 +8,7 @@ Fastify-based web server for the MineCarta project. Receives world data from the
 - **In-memory state management** for real-time player/entity tracking
 - **File-based tile storage** for map tiles
 - **Minecraft-style map shading** - Height-based color shading that replicates the look of vanilla Minecraft maps
+- **Density map tiles** - Grayscale density view based on normalized Y-column occupancy
 - **Authentication** via shared secret token
 - **CORS support** for cross-origin requests
 
@@ -305,7 +306,7 @@ Get a map tile image.
 **Parameters:**
 
 - `dimension`: `overworld`, `nether`, or `the_end`
-- `mapType`: `block` (standard colored map) or `height` (grayscale height map)
+- `mapType`: `block` (standard colored map), `height` (grayscale height map), or `density` (grayscale density map)
 - `zoom`: `0` through `7` (0 = highest detail, 7 = most zoomed out)
 - `x`: Tile X coordinate
 - `z`: Tile Z coordinate
@@ -316,6 +317,7 @@ Get a map tile image.
 
 - **block**: Standard block-color map similar to Minecraft's in-game map item, with height-based shading for terrain and checkerboard patterns for water depth.
 - **height**: Grayscale height map where pixel brightness represents the Y coordinate of the topmost block. Darker = lower elevation, brighter = higher elevation.
+- **density**: Grayscale density map where pixel brightness represents the normalized occupancy of the full Y column. Darker = more air/liquid, brighter = more solid blocks.
 
 ## Project Structure
 
@@ -358,23 +360,18 @@ data/tiles/
 ├── overworld/
 │   ├── block/       # Standard block-color map tiles
 │   │   ├── 0/       # Zoom level 0 (highest detail)
-│   │   │   ├── 0/
-│   │   │   │   ├── 0.png
-│   │   │   │   └── 1.png
-│   │   │   └── ...
+│   │   └── ...
+│   ├── density/     # Grayscale density map tiles
+│   │   ├── 0/
 │   │   └── ...
 │   └── height/      # Grayscale height map tiles
 │       ├── 0/
 │       └── ...
-│   │   └── 1/
-│   ├── 1/           # Zoom level 1
-│   ├── 2/           # Zoom level 2
-│   └── 3/           # Zoom level 3 (overview)
 ├── nether/
 └── the_end/
 ```
 
-**Path format:** `data/tiles/{dimension}/{zoom}/{x}/{z}.png`
+**Path format:** `data/tiles/{dimension}/{mapType}/{zoom}/{x}/{z}.png`
 
 ### Height-Based Shading
 

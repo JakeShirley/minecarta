@@ -7,8 +7,9 @@ export type Dimension = 'overworld' | 'nether' | 'the_end';
  * Map rendering types
  * - 'block': Standard block-color map (similar to Minecraft's map item)
  * - 'height': Grayscale height map based on Y values
+ * - 'density': Grayscale density map based on Y column occupancy
  */
-export type MapType = 'block' | 'height';
+export type MapType = 'block' | 'height' | 'density';
 
 /**
  * RGBA color for map rendering
@@ -128,6 +129,11 @@ export interface ChunkBlock {
      * Undefined for non-water blocks.
      */
     readonly waterDepth?: number;
+    /**
+     * Normalized density of the Y column at this X/Z coordinate.
+     * Range: 0 (empty/air) to 1 (fully solid), normalized per dimension height.
+     */
+    readonly density?: number;
 }
 
 /**

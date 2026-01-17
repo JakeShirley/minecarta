@@ -183,13 +183,21 @@ export class TileGeneratorService {
     }
 
     /**
+     * Convert a normalized density value (0-1) to a grayscale value.
+     */
+    private densityToGrayscale(density: number | undefined): number {
+        const normalized = Math.max(0, Math.min(1, density ?? 0));
+        return Math.floor(normalized * 255);
+    }
+
+    /**
      * Generate a PNG tile from block data.
      * Dispatches to the appropriate generator based on map type.
      *
      * @param blocks Array of blocks that fall within this tile's area
      * @param coords The coordinates of the tile being generated
      * @param baseImage Optional buffer of the existing tile image to update
-     * @param mapType The type of map to generate ('block' or 'height')
+     * @param mapType The type of map to generate ('block', 'height', or 'density')
      */
     async generateTile(
         blocks: ChunkBlock[],
@@ -199,6 +207,9 @@ export class TileGeneratorService {
     ): Promise<Buffer> {
         if (mapType === 'height') {
             return this.generateHeightTile(blocks, coords, baseImage);
+        }
+        if (mapType === 'density') {
+            return this.generateDensityTile(blocks, coords, baseImage);
         }
         return this.generateBlockTile(blocks, coords, baseImage);
     }
@@ -265,6 +276,107 @@ export class TileGeneratorService {
 
             // Convert Y to grayscale
             const gray = this.yToGrayscale(block.y);
+
+            if (scale >= 1) {
+                const px = Math.floor(relX / scale);
+                const py = Math.floor(relZ / scale);
+                const idx = (py * TILE_SIZE + px) * 4;
+
+                pixelData[idx] = gray;
+                pixelData[idx + 1] = gray;
+                pixelData[idx + 2] = gray;
+                pixelData[idx + 3] = 255;
+            } else {
+                const startPx = relX * pixelsPerBlock;
+                const startPy = relZ * pixelsPerBlock;
+
+                for (let dy = 0; dy < pixelsPerBlock; dy++) {
+                    for (let dx = 0; dx < pixelsPerBlock; dx++) {
+                        const px = startPx + dx;
+                        const py = startPy + dy;
+
+                        if (px >= TILE_SIZE || py >= TILE_SIZE) continue;
+
+                        const idx = (py * TILE_SIZE + px) * 4;
+
+                        pixelData[idx] = gray;
+                        pixelData[idx + 1] = gray;
+                        pixelData[idx + 2] = gray;
+                        pixelData[idx + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        return sharp(pixelData, {
+            raw: {
+                width: TILE_SIZE,
+                height: TILE_SIZE,
+                channels: 4,
+            },
+        })
+            .png()
+            .toBuffer();
+    }
+
+    /**
+     * Generate a grayscale density map tile from normalized Y-column density values.
+     *
+     * @param blocks Array of blocks that fall within this tile's area
+     * @param coords The coordinates of the tile being generated
+     * @param baseImage Optional buffer of the existing tile image to update
+     */
+    private async generateDensityTile(
+        blocks: ChunkBlock[],
+        coords: TileCoordinates,
+        baseImage?: Buffer
+    ): Promise<Buffer> {
+        const { zoom, x: tileX, z: tileZ } = coords;
+
+        let pixelData: Uint8ClampedArray;
+
+        if (baseImage) {
+            const { data, info } = await sharp(baseImage).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            if (info.width !== TILE_SIZE || info.height !== TILE_SIZE) {
+                pixelData = new Uint8ClampedArray(TILE_SIZE * TILE_SIZE * 4);
+                pixelData.fill(0);
+            } else {
+                pixelData = new Uint8ClampedArray(data);
+            }
+        } else {
+            pixelData = new Uint8ClampedArray(TILE_SIZE * TILE_SIZE * 4);
+            pixelData.fill(0);
+        }
+
+        const blockStartX = tileX * BLOCKS_PER_TILE[zoom as ZoomLevel];
+        const blockStartZ = tileZ * BLOCKS_PER_TILE[zoom as ZoomLevel];
+
+        const scale = BLOCKS_PER_TILE[zoom as ZoomLevel] / TILE_SIZE;
+        const pixelsPerBlock = scale < 1 ? Math.round(1 / scale) : 1;
+
+        const heightMap = this.buildHeightMap(blocks);
+
+        for (const block of blocks) {
+            const relX = block.x - blockStartX;
+            const relZ = block.z - blockStartZ;
+
+            if (
+                relX < 0 ||
+                relZ < 0 ||
+                relX >= BLOCKS_PER_TILE[zoom as ZoomLevel] ||
+                relZ >= BLOCKS_PER_TILE[zoom as ZoomLevel]
+            ) {
+                continue;
+            }
+
+            const key = `${block.x},${block.z}`;
+            const highestY = heightMap.get(key);
+            if (highestY !== block.y) {
+                continue;
+            }
+
+            const gray = this.densityToGrayscale(block.density);
 
             if (scale >= 1) {
                 const px = Math.floor(relX / scale);

@@ -66,7 +66,7 @@ export const DIMENSIONS = ['overworld', 'nether', 'the_end'] as const;
 /**
  * Map types for tile rendering
  */
-export const MAP_TYPES = ['block', 'height'] as const;
+export const MAP_TYPES = ['block', 'height', 'density'] as const;
 
 /**
  * Authentication header name

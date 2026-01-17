@@ -44,7 +44,7 @@ interface TileInvalidationTask {
  * Creates a unique key for a tile to be used for locking.
  * Format: "dimension:mapType:zoom:x:z"
  */
-function createTileLockKey(dimension: Dimension, mapType: string, zoom: ZoomLevel, x: number, z: number): string {
+function createTileLockKey(dimension: Dimension, mapType: MapType, zoom: ZoomLevel, x: number, z: number): string {
     return `${dimension}:${mapType}:${zoom}:${x}:${z}`;
 }
 
@@ -195,7 +195,7 @@ export class TileUpdateService {
         zoom: ZoomLevel,
         x: number,
         z: number,
-        mapType: string,
+        mapType: MapType,
         blocks: ChunkBlock[]
     ): Promise<TileCoordinates> {
         const storage = getTileStorageService();
@@ -206,20 +206,20 @@ export class TileUpdateService {
 
         try {
             // Read existing tile for this map type
-            const existingBuffer = storage.readTile(dimension, zoom, x, z, mapType as 'block' | 'height');
+            const existingBuffer = storage.readTile(dimension, zoom, x, z, mapType);
 
             // Generate updated tile
             const newTileBuffer = await generator.generateTile(
                 blocks,
-                { dimension, zoom, x, z, mapType: mapType as 'block' | 'height' },
+                { dimension, zoom, x, z, mapType },
                 existingBuffer ?? undefined,
-                mapType as 'block' | 'height'
+                mapType
             );
 
             // Save tile
-            storage.writeTile(dimension, zoom, x, z, newTileBuffer, mapType as 'block' | 'height');
+            storage.writeTile(dimension, zoom, x, z, newTileBuffer, mapType);
 
-            return { dimension, zoom, x, z, mapType: mapType as 'block' | 'height' };
+            return { dimension, zoom, x, z, mapType };
         } finally {
             releaseLock();
         }

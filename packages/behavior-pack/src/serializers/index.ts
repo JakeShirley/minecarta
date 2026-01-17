@@ -151,6 +151,7 @@ export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
             a: Math.round(block.mapColor.alpha * 255),
         },
         waterDepth: block.waterDepth,
+        density: block.density,
     };
     return result;
 }

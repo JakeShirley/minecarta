@@ -487,6 +487,52 @@ describe('TileGeneratorService', () => {
         });
     });
 
+    describe('Density map generation', () => {
+        it('should generate a grayscale tile based on normalized density', async () => {
+            const service = new TileGeneratorService();
+
+            const blocks: ChunkBlock[] = [
+                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR, density: 0.5 },
+            ];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'density'
+            );
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            const expectedGray = Math.floor(0.5 * 255);
+            expect(data[0]).toBe(expectedGray);
+            expect(data[1]).toBe(expectedGray);
+            expect(data[2]).toBe(expectedGray);
+            expect(data[3]).toBe(255);
+        });
+
+        it('should clamp density values outside the 0-1 range', async () => {
+            const service = new TileGeneratorService();
+
+            const blocks: ChunkBlock[] = [
+                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR, density: 2 },
+            ];
+
+            const buffer = await service.generateTile(
+                blocks,
+                { dimension: 'overworld', zoom: 0, x: 0, z: 0 },
+                undefined,
+                'density'
+            );
+
+            const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+            expect(data[0]).toBe(255);
+            expect(data[1]).toBe(255);
+            expect(data[2]).toBe(255);
+        });
+    });
+
     describe('compositeChildTiles (pyramid generation)', () => {
         it('should composite 4 child tiles into a parent tile', async () => {
             const service = new TileGeneratorService();

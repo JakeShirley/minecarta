@@ -1088,11 +1088,16 @@
                             <span class="type-icon">⛰️</span>
                             <span class="type-label">Height Map</span>
                         </button>
+                        <button class="map-type-btn" data-type="density" onclick="selectMapType('density')">
+                            <span class="type-icon">🌫️</span>
+                            <span class="type-label">Density Map</span>
+                        </button>
                     </div>
                     <!-- Hidden select for compatibility -->
                     <select id="tile-map-type" style="display: none">
                         <option value="block">Block Colors</option>
                         <option value="height">Height Map</option>
+                        <option value="density">Density Map</option>
                     </select>
                 </div>
 

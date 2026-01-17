@@ -66,6 +66,11 @@ export interface MinecraftChunkBlock {
      * Undefined for non-water blocks.
      */
     readonly waterDepth?: number;
+    /**
+     * Normalized density of the Y column at this X/Z coordinate.
+     * Range: 0 (empty/air) to 1 (fully solid), normalized per dimension height.
+     */
+    readonly density?: number;
 }
 
 /**
