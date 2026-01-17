@@ -9,6 +9,10 @@
     The script determines the BDS root by navigating up from its location
     (inside the behavior pack) to find the parent of behavior_packs or
     development_behavior_packs.
+    
+    It also registers the behavior pack in the world_behavior_packs.json file
+    for all worlds in the BDS worlds directory, using the pack UUID and version
+    from manifest.json.
 
 .PARAMETER ServerUrl
     The URL of the MineCarta map server. Required.
@@ -34,7 +38,7 @@
 
 .EXAMPLE
     .\Setup-BdsConfig.ps1 -ServerUrl "http://myserver:3000" -AuthToken "my-secret-token"
-    Creates config files with the specified server URL and auth token.
+    Creates config files and registers the pack for all worlds.
 
 .EXAMPLE
     .\Setup-BdsConfig.ps1 -ServerUrl "http://myserver:3000" -AuthToken "my-secret-token" -Force
@@ -81,6 +85,13 @@ if (-not $ScriptModule) {
     exit 1
 }
 $ModuleUUID = $ScriptModule.uuid
+
+# Get pack UUID and version from manifest header
+$PackUUID = $Manifest.header.uuid
+$PackVersionString = $Manifest.header.version
+
+# Parse version string to array (e.g., "1.0.0" -> [1, 0, 0])
+$PackVersion = $PackVersionString -split '\.' | ForEach-Object { [int]$_ }
 
 # Get allowed modules from manifest dependencies
 $AllowedModules = @($Manifest.dependencies | ForEach-Object { $_.module_name })
@@ -188,6 +199,71 @@ Write-ConfigFile -Path $VariablesPath -Content $Variables -Description "Variable
 Write-ConfigFile -Path $SecretsPath -Content $Secrets -Description "Secrets"
 Write-ConfigFile -Path $PermissionsPath -Content $Permissions -Description "Permissions"
 
+# Update world_behavior_packs.json for all worlds
+$WorldsDir = Join-Path $BdsRoot "worlds"
+$UpdatedWorlds = [System.Collections.ArrayList]@()
+
+if (Test-Path $WorldsDir) {
+    $WorldFolders = Get-ChildItem -Path $WorldsDir -Directory
+    
+    if ($WorldFolders.Count -eq 0) {
+        Write-Host "No worlds found in: $WorldsDir" -ForegroundColor Yellow
+    } else {
+        Write-Host "Found $($WorldFolders.Count) world(s) in worlds directory" -ForegroundColor Cyan
+        
+        foreach ($WorldFolder in $WorldFolders) {
+            $WorldBehaviorPacksPath = Join-Path $WorldFolder.FullName "world_behavior_packs.json"
+            
+            # Read existing world_behavior_packs.json or create empty array
+            $BehaviorPacks = [System.Collections.ArrayList]@()
+            if (Test-Path $WorldBehaviorPacksPath) {
+                $ExistingContent = Get-Content $WorldBehaviorPacksPath -Raw | ConvertFrom-Json
+                if ($null -ne $ExistingContent) {
+                    # Handle both single object and array cases from JSON
+                    if ($ExistingContent -is [Array]) {
+                        foreach ($pack in $ExistingContent) {
+                            [void]$BehaviorPacks.Add($pack)
+                        }
+                    } else {
+                        [void]$BehaviorPacks.Add($ExistingContent)
+                    }
+                }
+            }
+            
+            # Check if pack already exists in the list
+            $ExistingPackIndex = -1
+            for ($i = 0; $i -lt $BehaviorPacks.Count; $i++) {
+                if ($BehaviorPacks[$i].pack_id -eq $PackUUID) {
+                    $ExistingPackIndex = $i
+                    break
+                }
+            }
+            
+            $PackEntry = [PSCustomObject]@{
+                pack_id = $PackUUID
+                version = $PackVersion
+            }
+            
+            if ($ExistingPackIndex -ge 0) {
+                # Update existing entry in place
+                $BehaviorPacks[$ExistingPackIndex] = $PackEntry
+                Write-Host "  Updated pack in world '$($WorldFolder.Name)'" -ForegroundColor Green
+            } else {
+                # Add new entry
+                [void]$BehaviorPacks.Add($PackEntry)
+                Write-Host "  Added pack to world '$($WorldFolder.Name)'" -ForegroundColor Green
+            }
+            
+            # Write updated world_behavior_packs.json
+            $BehaviorPacksJson = ConvertTo-Json -InputObject @($BehaviorPacks) -Depth 10
+            Set-Content -Path $WorldBehaviorPacksPath -Value $BehaviorPacksJson -Encoding UTF8
+            [void]$UpdatedWorlds.Add($WorldFolder.Name)
+        }
+    }
+} else {
+    Write-Host "Worlds directory not found: $WorldsDir" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "Configuration complete!" -ForegroundColor Green
 Write-Host ""
@@ -198,9 +274,19 @@ Write-Host "  Time Sync Interval:     $TimeSyncInterval ticks"
 Write-Host "  Log Level:              $LogLevel"
 Write-Host "  Send Player Stats:      $SendPlayerStats"
 Write-Host ""
-Write-Host "Files created:" -ForegroundColor Cyan
-Write-Host "  Variables:    $VariablesPath"
-Write-Host "  Secrets:      $SecretsPath"
-Write-Host "  Permissions:  $PermissionsPath"
+Write-Host "Pack registration:" -ForegroundColor Cyan
+Write-Host "  Pack UUID:    $PackUUID"
+Write-Host "  Pack Version: $($PackVersion -join '.')"
+Write-Host "  Worlds updated: $($UpdatedWorlds.Count)"
+if ($UpdatedWorlds.Count -gt 0) {
+    foreach ($world in $UpdatedWorlds) {
+        Write-Host "    - $world"
+    }
+}
+Write-Host ""
+Write-Host "Files created/updated:" -ForegroundColor Cyan
+Write-Host "  Variables:   $VariablesPath"
+Write-Host "  Secrets:     $SecretsPath"
+Write-Host "  Permissions: $PermissionsPath"
 Write-Host ""
 Write-Host "Remember to restart BDS for changes to take effect." -ForegroundColor Yellow

@@ -98,27 +98,27 @@ Create a `secrets.json` file in your BDS `config` directory for sensitive values
 
 #### Quick Setup Script
 
-The behavior pack includes a PowerShell utility script to quickly set up the configuration files. After deploying the pack to BDS, run:
+The behavior pack includes a PowerShell utility script to quickly set up the configuration files and register the pack with all worlds. After deploying the pack to BDS, run:
 
 ```powershell
 # From within the deployed behavior pack directory:
-.\utilities\Setup-BdsConfig.ps1
-
-# With custom values:
 .\utilities\Setup-BdsConfig.ps1 -ServerUrl "http://myserver:3000" -AuthToken "my-secret-token"
 
 # Overwrite existing files without prompting:
-.\utilities\Setup-BdsConfig.ps1 -Force
+.\utilities\Setup-BdsConfig.ps1 -ServerUrl "http://myserver:3000" -AuthToken "my-secret-token" -Force
 ```
 
-The script automatically detects the BDS root directory and creates the config files in the correct location (`config/<pack-uuid>/`).
+The script automatically:
+- Detects the BDS root directory
+- Creates the config files in the correct location (`config/<pack-uuid>/`)
+- Registers the behavior pack in `world_behavior_packs.json` for all worlds in the BDS worlds directory
 
 **Script Parameters:**
 
 | Parameter               | Required | Description                                       | Default   |
 | ----------------------- | -------- | ------------------------------------------------- | --------- |
 | `-ServerUrl`            | **Yes**  | URL of the MineCarta map server                   | -         |
-| `-AuthToken`            | **Yes**  | Authentication token for server communication     | -         |
+| `-AuthToken`            | **Yes**  | Authentication token for server communication    | -         |
 | `-PlayerUpdateInterval` | No       | Interval in ticks between player position updates | `20`      |
 | `-TimeSyncInterval`     | No       | Interval in ticks between world time syncs        | `1200`    |
 | `-LogLevel`             | No       | Log level (debug, info, warning, error, none)     | `warning` |
