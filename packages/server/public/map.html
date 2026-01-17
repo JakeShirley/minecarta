@@ -1256,6 +1256,7 @@
         </main>
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://unpkg.com/leaflet-edgebuffer@1.0.7/src/Leaflet.EdgeBuffer.js"></script>
         <script>
             const API_BASE = '/api/v1';
 
@@ -2070,6 +2071,8 @@
                         maxNativeZoom: MAX_ZOOM,
                         tileSize: 256,
                         noWrap: true,
+                        // Buffer tiles beyond the edge of the viewport for smoother panning
+                        edgeBufferTiles: 2,
                     },
 
                     initialize: function (options) {
