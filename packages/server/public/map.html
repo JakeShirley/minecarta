@@ -83,16 +83,21 @@
                 image-rendering: crisp-edges;
             }
 
-            /* Disable Leaflet's default tile fade animation to prevent flashing */
+            /* Keep old zoom tiles visible behind new ones during transitions */
             .leaflet-tile-container {
-                opacity: 1 !important;
+                /* Don't hide - let tiles stack */
             }
             .leaflet-tile {
+                /* Tiles start visible, no fade needed */
                 opacity: 1 !important;
-                transition: none !important;
             }
-            .leaflet-fade-anim .leaflet-tile {
-                transition: none !important;
+            /* Keep previous zoom level tiles visible until new ones load */
+            .leaflet-zoom-animated .leaflet-tile-container {
+                will-change: transform;
+            }
+            .leaflet-tile-loaded {
+                /* Loaded tiles stay visible */
+                visibility: visible !important;
             }
 
             /* Coordinate display */
@@ -2071,9 +2076,11 @@
                         L.TileLayer.prototype.initialize.call(this, '', options);
                         this._currentDim = dim;
                         this._currentMapType = mapType;
+                        this._pendingRemoval = new Map(); // Track tiles pending removal
 
                         // Store reference to original _tileOnLoad
                         const originalTileOnLoad = this._tileOnLoad;
+                        const self = this;
 
                         // Override _tileOnLoad to skip animation for refreshed tiles
                         this._tileOnLoad = function (done, tile) {
@@ -2086,7 +2093,66 @@
                                 // Normal tile load - use original behavior
                                 originalTileOnLoad.call(this, done, tile);
                             }
+                            // When new tiles load, process any pending removals
+                            self._processPendingRemovals();
                         };
+                    },
+
+                    // Delay tile removal until we have tiles at the new zoom level
+                    _removeTile: function (key) {
+                        const tile = this._tiles[key];
+                        if (!tile) return;
+
+                        // If this tile is from a different zoom than current, delay removal
+                        const currentZoom = this._tileZoom;
+                        if (tile.coords && tile.coords.z !== currentZoom) {
+                            // Queue for delayed removal
+                            this._pendingRemoval.set(key, {
+                                tile: tile,
+                                timestamp: Date.now(),
+                            });
+                            // Schedule cleanup after a delay
+                            setTimeout(() => this._processPendingRemovals(), 500);
+                        } else {
+                            // Same zoom level - remove immediately
+                            L.TileLayer.prototype._removeTile.call(this, key);
+                        }
+                    },
+
+                    // Process pending tile removals once new tiles are loaded
+                    _processPendingRemovals: function () {
+                        const now = Date.now();
+                        const currentZoom = this._tileZoom;
+                        const toRemove = [];
+
+                        this._pendingRemoval.forEach((data, key) => {
+                            // Remove if tile is old enough (500ms) or we have loaded tiles at current zoom
+                            const hasNewTiles = this._hasLoadedTilesAtZoom(currentZoom);
+                            const isOldEnough = now - data.timestamp > 1000;
+
+                            if (hasNewTiles || isOldEnough) {
+                                toRemove.push(key);
+                            }
+                        });
+
+                        toRemove.forEach(key => {
+                            const data = this._pendingRemoval.get(key);
+                            this._pendingRemoval.delete(key);
+                            if (data && data.tile && this._tiles[key] === data.tile) {
+                                L.TileLayer.prototype._removeTile.call(this, key);
+                            }
+                        });
+                    },
+
+                    // Check if we have any loaded tiles at the specified zoom
+                    _hasLoadedTilesAtZoom: function (zoom) {
+                        for (const key in this._tiles) {
+                            const tile = this._tiles[key];
+                            if (tile && tile.coords && tile.coords.z === zoom && tile.loaded) {
+                                return true;
+                            }
+                        }
+                        return false;
                     },
 
                     getTileUrl: function (coords) {
