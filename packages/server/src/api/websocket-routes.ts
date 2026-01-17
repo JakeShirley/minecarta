@@ -18,6 +18,8 @@ import { getWebSocketService } from '../services/index.js';
  * - time:state - Current world time (sent on connection)
  * - weather:update - World weather updated
  * - weather:state - Current world weather (sent on connection)
+ * - structure:update - A new structure was discovered
+ * - structure:state - All discovered structures (sent on connection)
  */
 export async function registerWebSocketRoutes(app: FastifyInstance): Promise<void> {
     app.get('/ws', { websocket: true }, (socket, _request) => {
@@ -50,5 +52,8 @@ export async function registerWebSocketRoutes(app: FastifyInstance): Promise<voi
 
         // Send weather state to the new client
         wsService.sendWeatherState(socket);
+
+        // Send structures state to the new client
+        wsService.sendStructuresState(socket);
     });
 }

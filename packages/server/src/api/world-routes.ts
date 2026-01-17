@@ -7,6 +7,7 @@ import {
     getSpawnStateService,
     getTimeStateService,
     getWeatherStateService,
+    getStructureStateService,
 } from '../services/index.js';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { registerAuth } from './auth.js';
@@ -25,9 +26,10 @@ import {
     worldWeatherSchema,
     clientConnectSchema,
     queueStatusSchema,
+    structuresBatchUpdateSchema,
 } from './schemas.js';
 import { PROTOCOL_VERSION } from '@minecarta/shared';
-import type { Dimension, ZoomLevel, Player } from '@minecarta/shared';
+import type { Dimension, ZoomLevel, Player, Structure } from '@minecarta/shared';
 
 /**
  * Register world data ingestion routes
@@ -510,6 +512,52 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({
             success: true,
             data: { weather },
+        });
+    });
+
+    /**
+     * POST /world/structures - Receive discovered structures from chunk scanning
+     *
+     * The behavior pack sends structures discovered during chunk scanning.
+     * Structures are deduplicated based on position and type.
+     */
+    app.post('/world/structures', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = structuresBatchUpdateSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const { structures } = parseResult.data;
+        const structureService = getStructureStateService();
+        const wsService = getWebSocketService();
+
+        // Add structures and get back results (newly added or merged)
+        const results = structureService.addStructures(structures as Structure[]);
+
+        // Emit appropriate events for each result
+        for (const result of results) {
+            if (result.merged && result.replacedStructure) {
+                wsService.emitStructureMerged(result.structure, result.replacedStructure);
+            } else {
+                wsService.emitStructureUpdate(result.structure);
+            }
+        }
+
+        if (results.length > 0) {
+            request.log.info({ added: results.length, total: structures.length }, 'Added new structures');
+        }
+
+        return reply.send({
+            success: true,
+            data: {
+                received: structures.length,
+                added: results.length,
+            },
         });
     });
 }

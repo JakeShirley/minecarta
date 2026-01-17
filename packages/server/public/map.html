@@ -902,6 +902,42 @@
                 border-color: #f87171;
                 color: #000;
             }
+
+            /* Structure marker styles */
+            .structure-marker {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                pointer-events: auto;
+            }
+            .structure-icon {
+                font-size: 20px;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+            }
+            .structure-label {
+                margin-top: 2px;
+                background: rgba(192, 132, 252, 0.9);
+                color: #000;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 9px;
+                white-space: nowrap;
+                border: 1px solid #c084fc;
+                max-width: 100px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            /* Structure outline styles */
+            .structure-outline {
+                stroke: #c084fc;
+                stroke-width: 3;
+                stroke-dasharray: 8, 4;
+                fill: rgba(192, 132, 252, 0.15);
+                pointer-events: none;
+            }
+
             .version-badge {
                 color: #6dd5ed;
                 font-size: 11px;
@@ -1068,6 +1104,9 @@
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px">
                         <input type="checkbox" id="show-spawns" style="width: auto" /> Show Spawn Points
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px">
+                        <input type="checkbox" id="show-structures" style="width: auto" /> Show Structures
                     </label>
                 </div>
 
@@ -1241,6 +1280,39 @@
             let currentWorldSpawn = null; // Current world spawn data
             let currentPlayerSpawns = []; // Current player spawns data
             let spawnsVisible = false;
+
+            // Structure state
+            let structureMarkers = new Map(); // Map of structure key -> marker
+            let structureOutlines = new Map(); // Map of structure key -> outline rectangle
+            let activeStructureOutline = null; // Currently displayed outline key
+            let currentStructures = []; // Current structure data
+            let structuresVisible = false;
+
+            // Structure icons mapping - maps structure types to emoji icons
+            const STRUCTURE_ICONS = {
+                'minecraft:village': '🏘️',
+                'minecraft:pillager_outpost': '🏴',
+                'minecraft:desert_pyramid': '🏛️',
+                'minecraft:jungle_temple': '🗿',
+                'minecraft:swamp_hut': '🛖',
+                'minecraft:igloo': '🏠',
+                'minecraft:ocean_ruin_warm': '🏚️',
+                'minecraft:ocean_ruin_cold': '🏚️',
+                'minecraft:shipwreck': '🚢',
+                'minecraft:buried_treasure': '💎',
+                'minecraft:mineshaft': '⛏️',
+                'minecraft:stronghold': '🏰',
+                'minecraft:fortress': '🏯',
+                'minecraft:bastion_remnant': '🧱',
+                'minecraft:nether_fossil': '🦴',
+                'minecraft:end_city': '🗼',
+                'minecraft:woodland_mansion': '🏚️',
+                'minecraft:monument': '🔱',
+                'minecraft:ruined_portal': '🌀',
+                'minecraft:ancient_city': '🌑',
+                'minecraft:trail_ruins': '🏺',
+                'minecraft:trial_chambers': '⚔️',
+            };
 
             // World clock state
             let worldTimeData = null; // { timeOfDay, absoluteTime, day }
@@ -2717,6 +2789,315 @@
             // Refresh spawn markers when dimension changes
             document.getElementById('tile-dim').addEventListener('change', () => {
                 refreshSpawnMarkers();
+                refreshStructureMarkers();
+            });
+
+            // ==========================================
+            // Structures
+            // ==========================================
+
+            /**
+             * Get an icon for a structure type
+             */
+            function getStructureIcon(structureType) {
+                return STRUCTURE_ICONS[structureType] || '🏗️';
+            }
+
+            /**
+             * Get a friendly display name for a structure type
+             */
+            function getStructureDisplayName(structureType) {
+                // Remove minecraft: prefix and convert to title case
+                const name = structureType.replace('minecraft:', '').replace(/_/g, ' ');
+                return name
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
+
+            /**
+             * Generate a unique key for a structure based on center position and extents
+             */
+            function getStructureKey(structure) {
+                // Use center position and extents for stable keying
+                if (structure.extents) {
+                    return `${structure.dimension}:${structure.structureType}:${structure.extents.minX}:${structure.extents.minZ}:${structure.extents.maxX}:${structure.extents.maxZ}`;
+                }
+                // Fallback for structures without extents (legacy data)
+                const roundedX = Math.floor(structure.x / 16) * 16;
+                const roundedZ = Math.floor(structure.z / 16) * 16;
+                return `${structure.dimension}:${structure.structureType}:${roundedX}:${roundedZ}`;
+            }
+
+            /**
+             * Create HTML for a structure marker
+             */
+            function createStructureMarkerHtml(structureType) {
+                const icon = getStructureIcon(structureType);
+                const name = getStructureDisplayName(structureType);
+                return `
+                    <div class="structure-marker">
+                        <span class="structure-icon">${icon}</span>
+                        <span class="structure-label">${name}</span>
+                    </div>
+                `;
+            }
+
+            /**
+             * Get the size of a structure in blocks
+             */
+            function getStructureSize(structure) {
+                if (!structure.extents) return null;
+                const width = structure.extents.maxX - structure.extents.minX + 1;
+                const length = structure.extents.maxZ - structure.extents.minZ + 1;
+                return { width, length };
+            }
+
+            /**
+             * Update structure markers on the map
+             */
+            function updateStructureMarkers(structures) {
+                currentStructures = structures;
+                const currentDimension = document.getElementById('tile-dim').value;
+
+                // Filter structures by current dimension
+                const dimensionStructures = structures.filter(s => s.dimension === currentDimension);
+
+                // Track which structures we've seen
+                const seenKeys = new Set();
+
+                dimensionStructures.forEach(structure => {
+                    const key = getStructureKey(structure);
+                    seenKeys.add(key);
+
+                    const latLng = minecraftToLeaflet(structure.x, structure.z);
+
+                    if (structureMarkers.has(key)) {
+                        // Update existing marker position (unlikely to change, but just in case)
+                        const marker = structureMarkers.get(key);
+                        marker.setLatLng(latLng);
+                    } else {
+                        // Create new marker
+                        const icon = L.divIcon({
+                            html: createStructureMarkerHtml(structure.structureType),
+                            className: '',
+                            iconSize: [100, 40],
+                            iconAnchor: [50, 20],
+                        });
+
+                        const displayName = getStructureDisplayName(structure.structureType);
+                        const size = getStructureSize(structure);
+                        let popupContent = `<b>${displayName}</b><br>Center: X: ${Math.floor(structure.x)}, Y: ${Math.floor(structure.y)}, Z: ${Math.floor(structure.z)}`;
+                        if (size) {
+                            popupContent += `<br>Size: ${size.width}×${size.length} blocks`;
+                        }
+                        if (structure.extents) {
+                            popupContent += `<br>Bounds: (${structure.extents.minX}, ${structure.extents.minZ}) to (${structure.extents.maxX}, ${structure.extents.maxZ})`;
+                        }
+
+                        const marker = L.marker(latLng, { icon, interactive: true }).bindPopup(popupContent);
+
+                        // Store structure data on the marker for click handler
+                        marker.structureData = structure;
+                        marker.structureKey = key;
+
+                        // Add click handler to show outline (always show, don't toggle)
+                        marker.on('click', function (e) {
+                            // Only show if not already showing this structure's outline
+                            if (activeStructureOutline !== this.structureKey) {
+                                toggleStructureOutline(this.structureKey, this.structureData);
+                            }
+                        });
+
+                        // Hide outline when popup is closed (clicking away from marker)
+                        marker.on('popupclose', function (e) {
+                            hideStructureOutline();
+                        });
+
+                        if (structuresVisible) {
+                            marker.addTo(map);
+                        }
+
+                        structureMarkers.set(key, marker);
+                    }
+                });
+
+                // Remove markers for structures no longer in this dimension
+                for (const [key, marker] of structureMarkers) {
+                    if (!seenKeys.has(key)) {
+                        map.removeLayer(marker);
+                        structureMarkers.delete(key);
+                    }
+                }
+            }
+
+            /**
+             * Add a single structure (from WebSocket update)
+             */
+            function addStructure(structure) {
+                // Check if already exists
+                const existing = currentStructures.find(s => getStructureKey(s) === getStructureKey(structure));
+                if (!existing) {
+                    currentStructures.push(structure);
+                }
+                updateStructureMarkers(currentStructures);
+            }
+
+            /**
+             * Merge a structure with an existing one (from WebSocket merge event)
+             * Removes the old structure and adds the merged one
+             */
+            function mergeStructure(mergedStructure, replacedStructure) {
+                const replacedKey = getStructureKey(replacedStructure);
+
+                // Remove the old structure from our array
+                const index = currentStructures.findIndex(s => getStructureKey(s) === replacedKey);
+                if (index !== -1) {
+                    currentStructures.splice(index, 1);
+                }
+
+                // Remove the old marker if it exists
+                if (structureMarkers.has(replacedKey)) {
+                    const oldMarker = structureMarkers.get(replacedKey);
+                    map.removeLayer(oldMarker);
+                    structureMarkers.delete(replacedKey);
+                }
+
+                // Hide outline if it was showing the replaced structure
+                if (activeStructureOutline === replacedKey) {
+                    hideStructureOutline();
+                }
+
+                // Add the merged structure
+                currentStructures.push(mergedStructure);
+                updateStructureMarkers(currentStructures);
+            }
+
+            /**
+             * Toggle structure marker visibility
+             */
+            function setStructuresVisible(visible) {
+                structuresVisible = visible;
+
+                for (const marker of structureMarkers.values()) {
+                    if (visible) {
+                        marker.addTo(map);
+                    } else {
+                        map.removeLayer(marker);
+                    }
+                }
+
+                // Hide outline when structures are hidden
+                if (!visible) {
+                    hideStructureOutline();
+                }
+            }
+
+            /**
+             * Create a rectangle outline for a structure's extents
+             */
+            function createStructureOutline(structure) {
+                if (!structure.extents) return null;
+
+                const { minX, maxX, minZ, maxZ } = structure.extents;
+
+                // Convert block coordinates to Leaflet coordinates
+                // Note: maxX/maxZ are block coords, we add 1 to get the outer edge
+                const southWest = minecraftToLeaflet(minX, maxZ + 1);
+                const northEast = minecraftToLeaflet(maxX + 1, minZ);
+
+                const bounds = L.latLngBounds(southWest, northEast);
+
+                const rectangle = L.rectangle(bounds, {
+                    color: '#c084fc',
+                    weight: 3,
+                    dashArray: '8, 4',
+                    fillColor: '#c084fc',
+                    fillOpacity: 0.15,
+                    interactive: false,
+                });
+
+                return rectangle;
+            }
+
+            /**
+             * Toggle the outline for a structure
+             */
+            function toggleStructureOutline(key, structure) {
+                // If clicking the same structure, hide the outline
+                if (activeStructureOutline === key) {
+                    hideStructureOutline();
+                    return;
+                }
+
+                // Hide any existing outline
+                hideStructureOutline();
+
+                // Create and show new outline
+                if (structure.extents) {
+                    const outline = createStructureOutline(structure);
+                    if (outline) {
+                        outline.addTo(map);
+                        structureOutlines.set(key, outline);
+                        activeStructureOutline = key;
+                    }
+                }
+            }
+
+            /**
+             * Hide the currently active structure outline
+             */
+            function hideStructureOutline() {
+                if (activeStructureOutline && structureOutlines.has(activeStructureOutline)) {
+                    const outline = structureOutlines.get(activeStructureOutline);
+                    map.removeLayer(outline);
+                    structureOutlines.delete(activeStructureOutline);
+                }
+                activeStructureOutline = null;
+            }
+
+            /**
+             * Refresh structure markers when dimension changes
+             */
+            function refreshStructureMarkers() {
+                // Clear current markers
+                for (const marker of structureMarkers.values()) {
+                    map.removeLayer(marker);
+                }
+                structureMarkers.clear();
+
+                // Clear outlines
+                hideStructureOutline();
+                for (const outline of structureOutlines.values()) {
+                    map.removeLayer(outline);
+                }
+                structureOutlines.clear();
+
+                // Re-render with current data
+                updateStructureMarkers(currentStructures);
+            }
+
+            /**
+             * Fetch structures from the API
+             */
+            async function fetchStructures() {
+                try {
+                    const response = await fetch(`${API_BASE}/structures`);
+                    if (!response.ok) throw new Error('Failed to fetch structures');
+
+                    const data = await response.json();
+                    if (data.success && data.data && data.data.structures) {
+                        updateStructureMarkers(data.data.structures);
+                        console.log('[Structures] Loaded', data.data.structures.length, 'structures');
+                    }
+                } catch (error) {
+                    console.error('Error fetching structures:', error);
+                }
+            }
+
+            // Event listener for structure visibility toggle
+            document.getElementById('show-structures').addEventListener('change', function () {
+                setStructuresVisible(this.checked);
             });
 
             // ==========================================
@@ -3074,6 +3455,31 @@
                         }
                         break;
 
+                    case 'structure:update':
+                        // Handle new structure discovered
+                        if (event.structure) {
+                            addStructure(event.structure);
+                            console.log('[WebSocket] Structure discovered:', event.structure.structureType);
+                        }
+                        break;
+
+                    case 'structure:merged':
+                        // Handle structure merged with existing one
+                        if (event.structure && event.replacedStructure) {
+                            mergeStructure(event.structure, event.replacedStructure);
+                            console.log('[WebSocket] Structure merged:', event.structure.structureType);
+                        }
+                        break;
+
+                    case 'structure:state':
+                        // Handle full structure state (sent on connection)
+                        if (event.structures && Array.isArray(event.structures)) {
+                            currentStructures = event.structures;
+                            updateStructureMarkers(event.structures);
+                            console.log('[WebSocket] Loaded', event.structures.length, 'structures');
+                        }
+                        break;
+
                     default:
                         console.log('[WebSocket] Unknown event type:', type);
                 }
@@ -3154,6 +3560,7 @@
             // Initial fetch (before WebSocket connects)
             fetchPlayers();
             fetchSpawns();
+            fetchStructures();
 
             // Initialize the clock display
             updateClockDisplay();
@@ -3170,6 +3577,7 @@
                 if (!wsConnected) {
                     fetchPlayers();
                     fetchSpawns();
+                    fetchStructures();
                 }
             }, PLAYER_REFRESH_INTERVAL * 2);
         </script>

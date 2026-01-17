@@ -265,3 +265,39 @@ export const queueStatusSchema = z.object({
 });
 
 export type QueueStatusRequest = z.infer<typeof queueStatusSchema>;
+
+/**
+ * Structure extents schema - bounding box of a structure
+ */
+export const structureExtentsSchema = z.object({
+    minX: z.number().int(),
+    maxX: z.number().int(),
+    minZ: z.number().int(),
+    maxZ: z.number().int(),
+});
+
+export type StructureExtentsRequest = z.infer<typeof structureExtentsSchema>;
+
+/**
+ * Structure update request schema
+ */
+export const structureSchema = z.object({
+    structureType: z.string().min(1),
+    x: z.number().int(),
+    y: z.number().int(),
+    z: z.number().int(),
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+    extents: structureExtentsSchema,
+    discoveredAt: z.number().default(() => Date.now()),
+});
+
+export type StructureRequest = z.infer<typeof structureSchema>;
+
+/**
+ * Structures batch update request schema
+ */
+export const structuresBatchUpdateSchema = z.object({
+    structures: z.array(structureSchema),
+});
+
+export type StructuresBatchUpdateRequest = z.infer<typeof structuresBatchUpdateSchema>;

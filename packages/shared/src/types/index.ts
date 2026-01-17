@@ -441,6 +441,88 @@ export interface ChunkQueueStatusEvent extends WebSocketEventBase {
     readonly status: ChunkQueueStatus;
 }
 
+// ==========================================
+// Structure Types
+// ==========================================
+
+/**
+ * Bounding box for a structure's extent in the world.
+ */
+export interface StructureExtents {
+    /** Minimum X coordinate (block) */
+    readonly minX: number;
+    /** Maximum X coordinate (block) */
+    readonly maxX: number;
+    /** Minimum Z coordinate (block) */
+    readonly minZ: number;
+    /** Maximum Z coordinate (block) */
+    readonly maxZ: number;
+}
+
+/**
+ * A discovered structure in the world.
+ * Structures are found using Dimension.getGeneratedStructures() during chunk scanning.
+ * The extents are determined by flood-filling to find all chunks containing the structure.
+ */
+export interface Structure {
+    /**
+     * The structure type identifier from MinecraftFeatureTypes.
+     * Examples: 'minecraft:village', 'minecraft:fortress', 'minecraft:stronghold'
+     */
+    readonly structureType: string;
+    /**
+     * The calculated center X coordinate of the structure.
+     */
+    readonly x: number;
+    /**
+     * The Y coordinate where the structure was detected.
+     */
+    readonly y: number;
+    /**
+     * The calculated center Z coordinate of the structure.
+     */
+    readonly z: number;
+    /**
+     * The dimension this structure is in.
+     */
+    readonly dimension: Dimension;
+    /**
+     * The bounding box of the structure's extent.
+     */
+    readonly extents: StructureExtents;
+    /**
+     * Timestamp when this structure was first discovered.
+     */
+    readonly discoveredAt: number;
+}
+
+/**
+ * Structure update event - sent when a new structure is discovered
+ */
+export interface StructureUpdateEvent extends WebSocketEventBase {
+    readonly type: 'structure:update';
+    readonly structure: Structure;
+}
+
+/**
+ * Structure merged event - sent when a structure is merged with an existing one
+ */
+export interface StructureMergedEvent extends WebSocketEventBase {
+    readonly type: 'structure:merged';
+    /** The resulting merged structure */
+    readonly structure: Structure;
+    /** The original structure that was replaced/absorbed */
+    readonly replacedStructure: Structure;
+}
+
+/**
+ * Structures state event - sent when a client connects
+ */
+export interface StructuresStateEvent extends WebSocketEventBase {
+    readonly type: 'structure:state';
+    readonly structures: readonly Structure[];
+}
+
 /**
  * Union of all WebSocket event types
  */
@@ -459,4 +541,7 @@ export type WebSocketEvent =
     | WorldTimeStateEvent
     | WorldWeatherUpdateEvent
     | WorldWeatherStateEvent
-    | ChunkQueueStatusEvent;
+    | ChunkQueueStatusEvent
+    | StructureUpdateEvent
+    | StructureMergedEvent
+    | StructuresStateEvent;

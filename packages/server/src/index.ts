@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { getConfig } from './config/index.js';
 import { getTileStorageService } from './tiles/index.js';
+import { getStructureStateService } from './services/index.js';
 
 async function main(): Promise<void> {
     const config = getConfig();
@@ -8,6 +9,10 @@ async function main(): Promise<void> {
     // Initialize tile storage directory structure
     const tileStorage = getTileStorageService();
     tileStorage.initialize();
+
+    // Initialize structure state service (loads persisted structures)
+    const structureService = getStructureStateService();
+    await structureService.initialize();
 
     // Create and start the server
     const app = await createApp(config);

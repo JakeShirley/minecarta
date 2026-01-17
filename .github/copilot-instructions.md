@@ -28,6 +28,12 @@ If the project/directory you are working in contains a README.md file, ensure th
 - Prefer enum types instead of union of string literals when appropriate
 - Don't use in-line imports, use top-level imports instead
 
+#### Organization
+
+- Try to limit files to a single responsibility
+- Group related functions/types into modules
+- Use barrel files (`index.ts`) for public APIs of modules
+
 ### Naming Conventions
 
 - **Files**: `kebab-case.ts` for modules, `PascalCase.ts` for classes/components

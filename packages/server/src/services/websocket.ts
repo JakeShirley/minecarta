@@ -23,12 +23,17 @@ import type {
     WorldWeatherStateEvent,
     ChunkQueueStatus,
     ChunkQueueStatusEvent,
+    Structure,
+    StructureUpdateEvent,
+    StructureMergedEvent,
+    StructuresStateEvent,
 } from '@minecarta/shared';
 import { WS_EVENTS } from '@minecarta/shared';
 import { getChatHistoryService } from './chat-history.js';
 import { getSpawnStateService } from './spawn-state.js';
 import { getTimeStateService } from './time-state.js';
 import { getWeatherStateService } from './weather-state.js';
+import { getStructureStateService } from './structure-state.js';
 import { logDebug } from '../logging/index.js';
 
 /**
@@ -315,6 +320,60 @@ export class WebSocketService {
             status,
         };
         this.broadcast(event);
+    }
+
+    /**
+     * Emit a structure update event
+     */
+    emitStructureUpdate(structure: Structure): void {
+        logDebug(
+            'WebSocketService',
+            `Emitting structure:update for ${structure.structureType} to ${this.clients.size} clients`
+        );
+
+        const event: StructureUpdateEvent = {
+            type: WS_EVENTS.STRUCTURE_UPDATE,
+            timestamp: Date.now(),
+            structure,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Emit a structure merged event when a structure is merged with an existing one
+     */
+    emitStructureMerged(structure: Structure, replacedStructure: Structure): void {
+        logDebug(
+            'WebSocketService',
+            `Emitting structure:merged for ${structure.structureType} to ${this.clients.size} clients`
+        );
+
+        const event: StructureMergedEvent = {
+            type: WS_EVENTS.STRUCTURE_MERGED,
+            timestamp: Date.now(),
+            structure,
+            replacedStructure,
+        };
+        this.broadcast(event);
+    }
+
+    /**
+     * Send current structures state to a specific client
+     */
+    sendStructuresState(socket: WebSocket): void {
+        const structureStateService = getStructureStateService();
+        const structures = structureStateService.getAllStructures();
+
+        const event: StructuresStateEvent = {
+            type: WS_EVENTS.STRUCTURE_STATE,
+            timestamp: Date.now(),
+            structures,
+        };
+
+        if (socket.readyState === 1) {
+            socket.send(JSON.stringify(event));
+            logDebug('WebSocketService', `Sent ${structures.length} structures to client`);
+        }
     }
 
     /**

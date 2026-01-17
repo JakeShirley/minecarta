@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Dimension } from '@minecarta/shared';
-import { getPlayerStateService, getSpawnStateService } from '../services/index.js';
+import { getPlayerStateService, getSpawnStateService, getStructureStateService } from '../services/index.js';
 
 interface DimensionQuery {
     dimension?: Dimension;
@@ -100,6 +100,26 @@ export async function registerPlayerRoutes(app: FastifyInstance): Promise<void> 
                 worldSpawn,
                 playerSpawns,
                 playerSpawnCount: playerSpawns.length,
+            },
+        });
+    });
+
+    /**
+     * GET /structures - Get all discovered structures
+     */
+    app.get('/structures', async (request: FastifyRequest<{ Querystring: DimensionQuery }>, reply: FastifyReply) => {
+        const structureService = getStructureStateService();
+        const { dimension } = request.query;
+
+        const structures = dimension
+            ? structureService.getStructuresByDimension(dimension)
+            : structureService.getAllStructures();
+
+        return reply.send({
+            success: true,
+            data: {
+                structures,
+                count: structures.length,
             },
         });
     });

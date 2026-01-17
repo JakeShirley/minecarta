@@ -31,6 +31,12 @@ export type {
     // Chunk queue status types
     ChunkQueueStatus,
     ChunkQueueStatusEvent,
+    // Structure types
+    Structure,
+    StructureExtents,
+    StructureUpdateEvent,
+    StructureMergedEvent,
+    StructuresStateEvent,
     // WebSocket event types
     WebSocketEventBase,
     PlayerJoinEvent,

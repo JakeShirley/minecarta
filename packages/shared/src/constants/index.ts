@@ -92,4 +92,7 @@ export const WS_EVENTS = {
     WEATHER_UPDATE: 'weather:update',
     WEATHER_STATE: 'weather:state',
     QUEUE_STATUS: 'queue:status',
+    STRUCTURE_UPDATE: 'structure:update',
+    STRUCTURE_MERGED: 'structure:merged',
+    STRUCTURE_STATE: 'structure:state',
 } as const;

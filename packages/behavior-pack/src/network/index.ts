@@ -303,6 +303,41 @@ export async function sendWorldWeather(weather: { weather: string; dimension: Di
 }
 
 /**
+ * Bounding box for a structure's extent in the world.
+ */
+export interface StructureExtents {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+}
+
+/**
+ * Structure data to send to the server
+ */
+export interface StructureData {
+    structureType: string;
+    x: number;
+    y: number;
+    z: number;
+    dimension: Dimension;
+    extents: StructureExtents;
+    discoveredAt: number;
+}
+
+/**
+ * Send discovered structures to the server
+ *
+ * @param structures - Array of structure data to send
+ */
+export async function sendStructures(structures: StructureData[]): Promise<ApiResponse> {
+    if (structures.length === 0) {
+        return { success: true };
+    }
+    return postToServer('/api/v1/world/structures', { structures });
+}
+
+/**
  * Test connection to the map server
  *
  * @returns Promise resolving to true if server is reachable
