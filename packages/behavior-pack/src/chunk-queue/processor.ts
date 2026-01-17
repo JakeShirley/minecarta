@@ -76,7 +76,6 @@ async function processQueue(): Promise<void> {
 
         // Detect structures for full chunk jobs (after chunk is loaded)
         if (result && job.type === ChunkJobType.FullChunk) {
-            logWarning(LOG_TAG, `Detecting structures for chunk (${job.chunkX}, ${job.chunkZ})`);
             const dimension = getMinecraftDimension(job.dimension);
             const structures = detectStructures(dimension, job as FullChunkJob);
             structuresBatch.push(...structures);
