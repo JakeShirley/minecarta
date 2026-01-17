@@ -23,7 +23,9 @@ import {
     playerSpawnSchema,
     worldTimeSchema,
     worldWeatherSchema,
+    clientConnectSchema,
 } from './schemas.js';
+import { PROTOCOL_VERSION } from '@minecarta/shared';
 import type { Dimension, ZoomLevel, Player } from '@minecarta/shared';
 
 /**
@@ -34,6 +36,45 @@ import type { Dimension, ZoomLevel, Player } from '@minecarta/shared';
 export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
     // Apply authentication to all routes in this plugin
     registerAuth(app);
+
+    /**
+     * POST /world/connect - Client connection handshake with version check
+     *
+     * Called by the behavior pack on startup to verify protocol version compatibility.
+     * If versions don't match, a warning is logged but the connection proceeds.
+     */
+    app.post('/world/connect', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = clientConnectSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const { protocolVersion: behaviorPackVersion } = parseResult.data;
+        const serverVersion = PROTOCOL_VERSION;
+        const versionsMatch = behaviorPackVersion === serverVersion;
+
+        if (!versionsMatch) {
+            request.log.warn(
+                { behaviorPackVersion, serverVersion },
+                'Protocol version mismatch with connecting game server. Compatibility is not guaranteed.'
+            );
+        } else {
+            request.log.info({ version: serverVersion }, 'Game server connected with matching protocol version');
+        }
+
+        return reply.send({
+            success: true,
+            data: {
+                protocolVersion: serverVersion,
+                compatible: versionsMatch,
+            },
+        });
+    });
 
     /**
      * POST /world/players - Receive player positions

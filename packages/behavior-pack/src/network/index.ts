@@ -4,8 +4,8 @@
 
 import { http, HttpRequest, HttpRequestMethod, HttpHeader } from '@minecraft/server-net';
 import { config, getApiUrl } from '../config';
-import { logDebug, logError } from '../logging';
-import { AUTH_HEADER } from '@minecarta/shared';
+import { logDebug, logError, logWarning } from '../logging';
+import { AUTH_HEADER, PROTOCOL_VERSION } from '@minecarta/shared';
 import type { ChunkData, Dimension } from '@minecarta/shared';
 import type { ApiResponse, BlockChange, Entity, Player } from '../types';
 
@@ -315,6 +315,66 @@ export async function testConnection(): Promise<boolean> {
         return isConnected;
     } catch (error) {
         logError(LOG_TAG, 'Connection test failed', error);
+        return false;
+    }
+}
+
+/**
+ * Response from the connect endpoint
+ */
+interface ConnectResponse {
+    success: boolean;
+    data?: {
+        protocolVersion: string;
+        compatible: boolean;
+    };
+    error?: string;
+}
+
+/**
+ * Connect to the map server and verify protocol version compatibility.
+ * Logs a warning if there is a version mismatch.
+ *
+ * @returns Promise resolving to true if connection was successful
+ */
+export async function connectToServer(): Promise<boolean> {
+    try {
+        const url = getApiUrl('/api/v1/world/connect');
+        const request = new HttpRequest(url);
+        request.method = HttpRequestMethod.Post;
+        request.body = JSON.stringify({ protocolVersion: PROTOCOL_VERSION });
+        request.headers = createHeaders();
+
+        const response = await http.request(request);
+
+        if (response.status >= 200 && response.status < 300) {
+            try {
+                const data = JSON.parse(response.body) as ConnectResponse;
+
+                if (data.success && data.data) {
+                    const serverVersion = data.data.protocolVersion;
+                    const compatible = data.data.compatible;
+
+                    if (!compatible) {
+                        logWarning(
+                            LOG_TAG,
+                            `Protocol version mismatch! Client: ${PROTOCOL_VERSION}, Server: ${serverVersion}. Compatibility is not guaranteed.`
+                        );
+                    } else {
+                        logDebug(LOG_TAG, `Connected with matching protocol version: ${PROTOCOL_VERSION}`);
+                    }
+
+                    return true;
+                }
+            } catch {
+                logError(LOG_TAG, 'Failed to parse connect response', response.body);
+            }
+        }
+
+        logError(LOG_TAG, `Connect failed with status ${response.status}`, response.body);
+        return false;
+    } catch (error) {
+        logError(LOG_TAG, 'Connect request failed', error);
         return false;
     }
 }

@@ -1,4 +1,11 @@
 /**
+ * Protocol version for client-server communication.
+ * Increment this when making breaking changes to the API or data formats.
+ * Both the behavior pack and server should use the same protocol version.
+ */
+export const PROTOCOL_VERSION = '1.0.0';
+
+/**
  * API version for endpoints
  */
 export const API_VERSION = 'v1';

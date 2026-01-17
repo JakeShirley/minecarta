@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptRoot)
 $behaviorPackPath = Join-Path $repoRoot "packages/behavior-pack"
+$sharedConstantsPath = Join-Path $repoRoot "packages/shared/src/constants/index.ts"
 $outputDir = Join-Path $repoRoot $OutputPath
 $manifestPath = Join-Path $behaviorPackPath "manifest.json"
 
@@ -36,6 +37,29 @@ if ($Version -and $Version -ne "") {
         # Write back with proper formatting
         $manifest | ConvertTo-Json -Depth 10 | Set-Content $manifestPath -Encoding UTF8
         Write-Host "  Updated manifest.json version to `"$cleanVersion`""
+
+        # Update PROTOCOL_VERSION in shared constants
+        if (Test-Path $sharedConstantsPath) {
+            $constantsContent = Get-Content $sharedConstantsPath -Raw
+            $updatedContent = $constantsContent -replace "export const PROTOCOL_VERSION = '[^']+';", "export const PROTOCOL_VERSION = '$cleanVersion';"
+            Set-Content $sharedConstantsPath -Value $updatedContent -Encoding UTF8 -NoNewline
+            Write-Host "  Updated PROTOCOL_VERSION to `"$cleanVersion`""
+            
+            # Rebuild all packages so changes propagate
+            # This is necessary because the initial build happened before version was known
+            Write-Host "  Rebuilding packages with updated version..."
+            Push-Location $repoRoot
+            try {
+                pnpm build
+                Write-Host "  All packages rebuilt successfully"
+            }
+            finally {
+                Pop-Location
+            }
+        }
+        else {
+            Write-Warning "Shared constants file not found: $sharedConstantsPath"
+        }
     }
     else {
         Write-Warning "Invalid version format: $Version (expected x.y.z)"

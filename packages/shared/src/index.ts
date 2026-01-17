@@ -42,6 +42,7 @@ export type {
 
 // Constants
 export {
+    PROTOCOL_VERSION,
     API_VERSION,
     API_BASE_PATH,
     DEFAULT_PORT,

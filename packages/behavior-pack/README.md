@@ -109,6 +109,7 @@ The behavior pack includes a PowerShell utility script to quickly set up the con
 ```
 
 The script automatically:
+
 - Detects the BDS root directory
 - Creates the config files in the correct location (`config/<pack-uuid>/`)
 - Registers the behavior pack in `world_behavior_packs.json` for all worlds in the BDS worlds directory
@@ -118,7 +119,7 @@ The script automatically:
 | Parameter               | Required | Description                                       | Default   |
 | ----------------------- | -------- | ------------------------------------------------- | --------- |
 | `-ServerUrl`            | **Yes**  | URL of the MineCarta map server                   | -         |
-| `-AuthToken`            | **Yes**  | Authentication token for server communication    | -         |
+| `-AuthToken`            | **Yes**  | Authentication token for server communication     | -         |
 | `-PlayerUpdateInterval` | No       | Interval in ticks between player position updates | `20`      |
 | `-TimeSyncInterval`     | No       | Interval in ticks between world time syncs        | `1200`    |
 | `-LogLevel`             | No       | Log level (debug, info, warning, error, none)     | `warning` |

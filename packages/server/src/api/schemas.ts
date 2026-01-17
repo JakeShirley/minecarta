@@ -236,3 +236,15 @@ export const worldWeatherSchema = z.object({
 });
 
 export type WorldWeatherRequest = z.infer<typeof worldWeatherSchema>;
+
+/**
+ * Client connect request schema
+ *
+ * Sent by the behavior pack when it first connects to establish
+ * version compatibility and log any version mismatches.
+ */
+export const clientConnectSchema = z.object({
+    protocolVersion: z.string().min(1),
+});
+
+export type ClientConnectRequest = z.infer<typeof clientConnectSchema>;

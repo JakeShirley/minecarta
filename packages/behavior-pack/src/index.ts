@@ -14,7 +14,7 @@ import {
     checkWorldTimeChange,
 } from './events';
 import { registerCustomCommands } from './commands';
-import { testConnection } from './network';
+import { connectToServer } from './network';
 import { config } from './config';
 import { startQueueProcessor, resortQueue } from './chunk-queue';
 import { logInfo, logWarning, logError, LogLevel, logDebug } from './logging';
@@ -55,8 +55,8 @@ async function initialize(): Promise<void> {
     logInfo(LOG_TAG, `Server URL: ${config.serverUrl}`);
     logInfo(LOG_TAG, `Log level: ${getLogLevelName(config.logLevel)}`);
 
-    // Test connection to the server
-    const connected = await testConnection();
+    // Connect to the server (with version check)
+    const connected = await connectToServer();
     if (connected) {
         logInfo(LOG_TAG, 'Successfully connected to map server!');
 

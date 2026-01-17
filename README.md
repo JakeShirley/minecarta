@@ -71,18 +71,18 @@ The map UI will be available at `http://localhost:3000/map.html`.
 
 1. Download the latest behavior pack release from the [Releases](https://github.com/JakeShirley/minecarta/releases) page
 2. Extract the behavior pack to your BDS `behavior_packs` directory:
-   ```
-   <BDS>/behavior_packs/minecarta-sync/
-   ```
+    ```
+    <BDS>/behavior_packs/minecarta-sync/
+    ```
 3. Add the behavior pack to your world's `world_behavior_packs.json`:
-   ```json
-   [
-       {
-           "pack_id": "8b78eb38-7c61-4c53-811f-39c11e11bd72",
-           "version": [1, 0, 0]
-       }
-   ]
-   ```
+    ```json
+    [
+        {
+            "pack_id": "8b78eb38-7c61-4c53-811f-39c11e11bd72",
+            "version": [1, 0, 0]
+        }
+    ]
+    ```
 
 ### Step 3: Configure the Behavior Pack
 
@@ -113,11 +113,11 @@ Open `http://localhost:3000/map.html` in your browser to view the live map!
 
 #### Map Server Environment Variables
 
-| Variable     | Default     | Description                          |
-| ------------ | ----------- | ------------------------------------ |
-| `PORT`       | `3000`      | Server port                          |
-| `AUTH_TOKEN` | `dev-token` | Authentication token                 |
-| `DATA_DIR`   | `/data`     | Directory for tile storage           |
+| Variable     | Default     | Description                                   |
+| ------------ | ----------- | --------------------------------------------- |
+| `PORT`       | `3000`      | Server port                                   |
+| `AUTH_TOKEN` | `dev-token` | Authentication token                          |
+| `DATA_DIR`   | `/data`     | Directory for tile storage                    |
 | `LOG_LEVEL`  | `info`      | Log level (fatal/error/warn/info/debug/trace) |
 
 #### Behavior Pack Configuration
