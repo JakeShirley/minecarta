@@ -913,6 +913,82 @@
             .version-badge:hover {
                 text-decoration: underline;
             }
+
+            /* Queue Status Panel */
+            .queue-status-panel {
+                /* Styling handled by collapsible-section */
+            }
+            .queue-stats {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                padding: 10px;
+                background: #0f3460;
+                border-radius: 4px;
+            }
+            .queue-stat-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.85rem;
+            }
+            .queue-stat-label {
+                color: #888;
+            }
+            .queue-stat-value {
+                color: #6dd5ed;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-weight: bold;
+            }
+            .queue-progress-container {
+                width: 100%;
+            }
+            .queue-progress-bar {
+                height: 8px;
+                background: #1a1a2e;
+                border-radius: 4px;
+                overflow: hidden;
+                margin-top: 4px;
+            }
+            .queue-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #4ade80, #6dd5ed);
+                border-radius: 4px;
+                transition: width 0.3s ease;
+            }
+            .queue-idle {
+                text-align: center;
+                color: #4ade80;
+                font-size: 0.85rem;
+                padding: 15px;
+            }
+            .queue-idle-icon {
+                font-size: 1.5rem;
+                margin-bottom: 5px;
+            }
+            .queue-status-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-right: 6px;
+            }
+            .queue-status-indicator.active {
+                background: #f59e0b;
+                animation: pulse 1s infinite;
+            }
+            .queue-status-indicator.idle {
+                background: #4ade80;
+            }
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
         </style>
     </head>
     <body>
@@ -1018,6 +1094,51 @@
                     <div class="collapsible-content">
                         <div class="chat-messages" id="chat-messages">
                             <div class="chat-empty">No messages yet...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="queue-status-panel collapsible-section" id="queue-section">
+                    <div class="collapsible-header" onclick="toggleSection('queue-section')">
+                        <label>
+                            <span class="queue-status-indicator idle" id="queue-indicator"></span>
+                            📊 Map Generation
+                        </label>
+                        <span class="collapsible-toggle">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="queue-stats" id="queue-stats">
+                            <div class="queue-idle" id="queue-idle">
+                                <div class="queue-idle-icon">✓</div>
+                                <div>No active tile generation jobs</div>
+                            </div>
+                            <div id="queue-active-stats" style="display: none">
+                                <div class="queue-stat-row">
+                                    <span class="queue-stat-label">Queue Size</span>
+                                    <span class="queue-stat-value" id="queue-size">0</span>
+                                </div>
+                                <div class="queue-stat-row">
+                                    <span class="queue-stat-label">Completed</span>
+                                    <span class="queue-stat-value" id="queue-completed">0 / 0</span>
+                                </div>
+                                <div class="queue-progress-container">
+                                    <div class="queue-stat-row">
+                                        <span class="queue-stat-label">Progress</span>
+                                        <span class="queue-stat-value" id="queue-percent">0%</span>
+                                    </div>
+                                    <div class="queue-progress-bar">
+                                        <div class="queue-progress-fill" id="queue-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="queue-stat-row">
+                                    <span class="queue-stat-label">ETA</span>
+                                    <span class="queue-stat-value" id="queue-eta">Calculating...</span>
+                                </div>
+                                <div class="queue-stat-row">
+                                    <span class="queue-stat-label">Avg Time/Chunk</span>
+                                    <span class="queue-stat-value" id="queue-avg-time">--</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1360,6 +1481,79 @@
             }
 
             /**
+             * Format milliseconds to a human-readable time string
+             */
+            function formatEta(ms) {
+                if (ms === null || ms === undefined) {
+                    return 'Calculating...';
+                }
+                const seconds = Math.floor(ms / 1000);
+                if (seconds < 60) {
+                    return `${seconds}s`;
+                }
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                if (minutes < 60) {
+                    return `${minutes}m ${remainingSeconds}s`;
+                }
+                const hours = Math.floor(minutes / 60);
+                const remainingMinutes = minutes % 60;
+                return `${hours}h ${remainingMinutes}m`;
+            }
+
+            /**
+             * Format average job time
+             */
+            function formatAvgTime(ms) {
+                if (ms === null || ms === undefined) {
+                    return '--';
+                }
+                if (ms < 1000) {
+                    return `${ms}ms`;
+                }
+                return `${(ms / 1000).toFixed(1)}s`;
+            }
+
+            /**
+             * Update queue status display
+             */
+            function updateQueueStatus(status) {
+                const indicator = document.getElementById('queue-indicator');
+                const idleEl = document.getElementById('queue-idle');
+                const activeStatsEl = document.getElementById('queue-active-stats');
+                const queueSizeEl = document.getElementById('queue-size');
+                const completedEl = document.getElementById('queue-completed');
+                const percentEl = document.getElementById('queue-percent');
+                const progressEl = document.getElementById('queue-progress');
+                const etaEl = document.getElementById('queue-eta');
+                const avgTimeEl = document.getElementById('queue-avg-time');
+
+                const isActive = status.isProcessing && status.queueSize > 0;
+
+                // Update indicator
+                indicator.classList.toggle('active', isActive);
+                indicator.classList.toggle('idle', !isActive);
+
+                if (isActive) {
+                    // Show active stats
+                    idleEl.style.display = 'none';
+                    activeStatsEl.style.display = 'block';
+
+                    // Update values
+                    queueSizeEl.textContent = status.queueSize.toLocaleString();
+                    completedEl.textContent = `${status.completedCount.toLocaleString()} / ${status.totalCount.toLocaleString()}`;
+                    percentEl.textContent = `${status.completionPercent}%`;
+                    progressEl.style.width = `${status.completionPercent}%`;
+                    etaEl.textContent = formatEta(status.etaMs);
+                    avgTimeEl.textContent = formatAvgTime(status.avgJobTimeMs);
+                } else {
+                    // Show idle state
+                    idleEl.style.display = 'block';
+                    activeStatsEl.style.display = 'none';
+                }
+            }
+
+            /**
              * Toggle collapsible section
              */
             function toggleSection(sectionId) {
@@ -1379,6 +1573,7 @@
             function restoreCollapsibleStates() {
                 const defaults = {
                     'chat-section': 'expanded',
+                    'queue-section': 'collapsed',
                     'tile-inspector-section': 'collapsed',
                 };
 
@@ -2869,6 +3064,13 @@
                         if (event.weather) {
                             handleWeatherSync(event.weather);
                             console.log('[WebSocket] Loaded weather state:', event.weather.weather);
+                        }
+                        break;
+
+                    case 'queue:status':
+                        // Handle chunk queue status update
+                        if (event.status) {
+                            updateQueueStatus(event.status);
                         }
                         break;
 

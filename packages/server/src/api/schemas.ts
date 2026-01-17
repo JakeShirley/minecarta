@@ -248,3 +248,20 @@ export const clientConnectSchema = z.object({
 });
 
 export type ClientConnectRequest = z.infer<typeof clientConnectSchema>;
+
+/**
+ * Chunk queue status request schema
+ *
+ * Sent periodically by the behavior pack to report queue processing status.
+ */
+export const queueStatusSchema = z.object({
+    queueSize: z.number().int().min(0),
+    completedCount: z.number().int().min(0),
+    totalCount: z.number().int().min(0),
+    completionPercent: z.number().int().min(0).max(100),
+    etaMs: z.number().int().min(0).nullable(),
+    avgJobTimeMs: z.number().int().min(0).nullable(),
+    isProcessing: z.boolean(),
+});
+
+export type QueueStatusRequest = z.infer<typeof queueStatusSchema>;

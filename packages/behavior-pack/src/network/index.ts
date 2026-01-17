@@ -6,7 +6,7 @@ import { http, HttpRequest, HttpRequestMethod, HttpHeader } from '@minecraft/ser
 import { config, getApiUrl } from '../config';
 import { logDebug, logError, logWarning } from '../logging';
 import { AUTH_HEADER, PROTOCOL_VERSION } from '@minecarta/shared';
-import type { ChunkData, Dimension } from '@minecarta/shared';
+import type { ChunkData, ChunkQueueStatus, Dimension } from '@minecarta/shared';
 import type { ApiResponse, BlockChange, Entity, Player } from '../types';
 
 /**
@@ -190,6 +190,15 @@ export async function sendEntityUpdates(entities: Entity[]): Promise<ApiResponse
  */
 export async function sendChunkData(chunks: ChunkData[]): Promise<ApiResponse> {
     return postToServer('/api/v1/world/chunks', { chunks });
+}
+
+/**
+ * Send chunk queue status to the server
+ *
+ * @param status - The current queue status
+ */
+export async function sendQueueStatus(status: ChunkQueueStatus): Promise<ApiResponse> {
+    return postToServer('/api/v1/world/queue/status', status);
 }
 
 /**

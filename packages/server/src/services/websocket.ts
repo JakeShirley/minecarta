@@ -21,6 +21,8 @@ import type {
     WorldWeather,
     WorldWeatherUpdateEvent,
     WorldWeatherStateEvent,
+    ChunkQueueStatus,
+    ChunkQueueStatusEvent,
 } from '@minecarta/shared';
 import { WS_EVENTS } from '@minecarta/shared';
 import { getChatHistoryService } from './chat-history.js';
@@ -293,6 +295,26 @@ export class WebSocketService {
                 logDebug('WebSocketService', `Sent weather state to client (${weather.weather})`);
             }
         }
+    }
+
+    /**
+     * Emit a chunk queue status update event
+     */
+    emitQueueStatus(status: ChunkQueueStatus): void {
+        // Only log when there's activity to avoid spam
+        if (status.queueSize > 0 || status.completedCount > 0) {
+            logDebug(
+                'WebSocketService',
+                `Emitting queue:status to ${this.clients.size} clients: ${status.completedCount}/${status.totalCount} (${status.completionPercent}%)`
+            );
+        }
+
+        const event: ChunkQueueStatusEvent = {
+            type: WS_EVENTS.QUEUE_STATUS,
+            timestamp: Date.now(),
+            status,
+        };
+        this.broadcast(event);
     }
 
     /**

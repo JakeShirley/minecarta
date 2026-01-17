@@ -28,6 +28,9 @@ export type {
     WorldWeather,
     WorldWeatherUpdateEvent,
     WorldWeatherStateEvent,
+    // Chunk queue status types
+    ChunkQueueStatus,
+    ChunkQueueStatusEvent,
     // WebSocket event types
     WebSocketEventBase,
     PlayerJoinEvent,

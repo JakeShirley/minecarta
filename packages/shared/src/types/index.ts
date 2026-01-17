@@ -391,6 +391,56 @@ export interface WorldWeatherStateEvent extends WebSocketEventBase {
     readonly weather: WorldWeather | null;
 }
 
+// ==========================================
+// Chunk Queue Status Types
+// ==========================================
+
+/**
+ * Status of the chunk generation queue.
+ * Sent periodically while chunks are being processed.
+ */
+export interface ChunkQueueStatus {
+    /**
+     * Number of jobs currently in the queue.
+     */
+    readonly queueSize: number;
+    /**
+     * Total number of jobs completed since processing started.
+     */
+    readonly completedCount: number;
+    /**
+     * Total number of jobs (completed + queued) for this batch.
+     * Used to calculate completion percentage.
+     */
+    readonly totalCount: number;
+    /**
+     * Completion percentage (0-100).
+     */
+    readonly completionPercent: number;
+    /**
+     * Estimated time to completion in milliseconds.
+     * Null if not enough data to estimate.
+     */
+    readonly etaMs: number | null;
+    /**
+     * Average time per job in milliseconds (based on recent jobs).
+     * Null if not enough data to calculate.
+     */
+    readonly avgJobTimeMs: number | null;
+    /**
+     * Whether the queue processor is currently running.
+     */
+    readonly isProcessing: boolean;
+}
+
+/**
+ * Chunk queue status update event - sent while chunks are being processed
+ */
+export interface ChunkQueueStatusEvent extends WebSocketEventBase {
+    readonly type: 'queue:status';
+    readonly status: ChunkQueueStatus;
+}
+
 /**
  * Union of all WebSocket event types
  */
@@ -408,4 +458,5 @@ export type WebSocketEvent =
     | WorldTimeUpdateEvent
     | WorldTimeStateEvent
     | WorldWeatherUpdateEvent
-    | WorldWeatherStateEvent;
+    | WorldWeatherStateEvent
+    | ChunkQueueStatusEvent;

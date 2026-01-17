@@ -24,6 +24,7 @@ import {
     worldTimeSchema,
     worldWeatherSchema,
     clientConnectSchema,
+    queueStatusSchema,
 } from './schemas.js';
 import { PROTOCOL_VERSION } from '@minecarta/shared';
 import type { Dimension, ZoomLevel, Player } from '@minecarta/shared';
@@ -292,6 +293,40 @@ export async function registerWorldRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({
             success: true,
             data: { received: chunks.length },
+        });
+    });
+
+    /**
+     * POST /world/queue/status - Receive chunk queue status updates
+     *
+     * Called periodically by the behavior pack to report queue processing status.
+     * Broadcasts the status to all connected WebSocket clients.
+     */
+    app.post('/world/queue/status', async (request: FastifyRequest, reply: FastifyReply) => {
+        const parseResult = queueStatusSchema.safeParse(request.body);
+
+        if (!parseResult.success) {
+            return reply.code(400).send({
+                success: false,
+                error: 'Invalid request body',
+                details: parseResult.error.issues,
+            });
+        }
+
+        const status = parseResult.data;
+        const wsService = getWebSocketService();
+
+        // Broadcast queue status to all connected WebSocket clients
+        wsService.emitQueueStatus(status);
+
+        request.log.debug(
+            { queueSize: status.queueSize, completed: status.completedCount, percent: status.completionPercent },
+            'Queue status update'
+        );
+
+        return reply.send({
+            success: true,
+            data: { received: true },
         });
     });
 

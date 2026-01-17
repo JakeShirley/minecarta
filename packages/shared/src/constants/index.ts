@@ -91,4 +91,5 @@ export const WS_EVENTS = {
     TIME_STATE: 'time:state',
     WEATHER_UPDATE: 'weather:update',
     WEATHER_STATE: 'weather:state',
+    QUEUE_STATUS: 'queue:status',
 } as const;

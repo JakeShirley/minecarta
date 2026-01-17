@@ -10,9 +10,9 @@ import { system, world } from '@minecraft/server';
 import type { Dimension as MinecraftDimension } from '@minecraft/server';
 import { scanChunk, scanArea, toDimension } from '../blocks';
 import { serializeChunkData } from '../serializers';
-import { sendChunkData } from '../network';
+import { sendChunkData, sendQueueStatus } from '../network';
 import { logDebug, logWarning } from '../logging';
-import type { Dimension } from '@minecarta/shared';
+import type { ChunkQueueStatus, Dimension } from '@minecarta/shared';
 
 // ==========================================
 // Types
@@ -149,6 +149,51 @@ let totalJobsProcessed = 0;
  */
 let currentBatch: ChunkJob[] = [];
 
+// ==========================================
+// Job Timing History (for ETA calculation)
+// ==========================================
+
+/**
+ * Maximum number of job completion times to track for ETA calculation
+ */
+const MAX_TIMING_HISTORY = 50;
+
+/**
+ * History of job completion times in milliseconds
+ */
+const jobTimingHistory: number[] = [];
+
+/**
+ * Timestamp when the current job started processing
+ */
+let currentJobStartTime: number | null = null;
+
+/**
+ * Total jobs added to the current batch (for percentage calculation)
+ * Resets when queue becomes empty
+ */
+let batchTotalJobs = 0;
+
+/**
+ * Jobs completed in the current batch
+ */
+let batchCompletedJobs = 0;
+
+/**
+ * Interval in jobs between status updates (every N jobs)
+ */
+const STATUS_UPDATE_INTERVAL_JOBS = 5;
+
+/**
+ * Minimum interval between status updates in milliseconds
+ */
+const STATUS_UPDATE_MIN_INTERVAL_MS = 2000;
+
+/**
+ * Timestamp of the last status update
+ */
+let lastStatusUpdateTime = 0;
+
 /**
  * Maximum jobs to process per tick to avoid lag.
  * With ticking areas, we process one at a time to ensure proper loading.
@@ -173,6 +218,101 @@ const MAX_CHUNK_LOAD_ATTEMPTS = 10;
  * We use a threshold of 50% to account for areas that might be partially air (like oceans).
  */
 const MIN_BLOCKS_THRESHOLD = 128;
+
+// ==========================================
+// ETA and Status Calculation
+// ==========================================
+
+/**
+ * Record a job completion time
+ */
+function recordJobTiming(durationMs: number): void {
+    jobTimingHistory.push(durationMs);
+    if (jobTimingHistory.length > MAX_TIMING_HISTORY) {
+        jobTimingHistory.shift();
+    }
+}
+
+/**
+ * Calculate the average job time from recent history
+ */
+function calculateAverageJobTime(): number | null {
+    if (jobTimingHistory.length === 0) {
+        return null;
+    }
+    const sum = jobTimingHistory.reduce((a, b) => a + b, 0);
+    return sum / jobTimingHistory.length;
+}
+
+/**
+ * Calculate estimated time to completion in milliseconds
+ */
+function calculateEta(): number | null {
+    const avgTime = calculateAverageJobTime();
+    if (avgTime === null || jobQueue.length === 0) {
+        return null;
+    }
+    return Math.round(avgTime * jobQueue.length);
+}
+
+/**
+ * Get the current queue status for reporting
+ */
+export function getQueueStatus(): ChunkQueueStatus {
+    const avgJobTimeMs = calculateAverageJobTime();
+    const etaMs = calculateEta();
+    const totalCount = batchTotalJobs > 0 ? batchTotalJobs : batchCompletedJobs + jobQueue.length;
+    const completionPercent =
+        totalCount > 0 ? Math.round((batchCompletedJobs / totalCount) * 100) : isProcessing ? 0 : 100;
+
+    return {
+        queueSize: jobQueue.length,
+        completedCount: batchCompletedJobs,
+        totalCount,
+        completionPercent,
+        etaMs: etaMs !== null ? Math.round(etaMs) : null,
+        avgJobTimeMs: avgJobTimeMs !== null ? Math.round(avgJobTimeMs) : null,
+        isProcessing,
+    };
+}
+
+/**
+ * Check if we should send a status update
+ */
+function shouldSendStatusUpdate(): boolean {
+    const now = Date.now();
+    if (now - lastStatusUpdateTime < STATUS_UPDATE_MIN_INTERVAL_MS) {
+        return false;
+    }
+    // Send update every N jobs or when queue becomes empty
+    return batchCompletedJobs % STATUS_UPDATE_INTERVAL_JOBS === 0 || jobQueue.length === 0;
+}
+
+/**
+ * Send a status update to the server
+ */
+async function sendStatusUpdate(): Promise<void> {
+    const status = getQueueStatus();
+    lastStatusUpdateTime = Date.now();
+
+    try {
+        await sendQueueStatus(status);
+        logDebug(
+            LOG_TAG,
+            `Status update: ${status.completedCount}/${status.totalCount} (${status.completionPercent}%), ETA: ${status.etaMs !== null ? `${Math.round(status.etaMs / 1000)}s` : 'calculating...'}`
+        );
+    } catch (error) {
+        logWarning(LOG_TAG, 'Failed to send status update', error);
+    }
+}
+
+/**
+ * Reset batch tracking when queue becomes empty
+ */
+function resetBatchTracking(): void {
+    batchTotalJobs = 0;
+    batchCompletedJobs = 0;
+}
 
 /**
  * Current ticking area ID being used for chunk loading
@@ -249,6 +389,9 @@ function insertJob(job: ChunkJob): void {
 
     // Add to pending set
     pendingJobs.add(key);
+
+    // Track batch total for percentage calculation
+    batchTotalJobs++;
 
     // Binary search insertion to maintain sorted order
     let low = 0;
@@ -649,6 +792,11 @@ function processJobDirect(job: ChunkJob): ReturnType<typeof serializeChunkData> 
  */
 async function processQueue(): Promise<void> {
     if (jobQueue.length === 0) {
+        // If we just finished a batch, send a final status update
+        if (batchCompletedJobs > 0) {
+            await sendStatusUpdate();
+            resetBatchTracking();
+        }
         return;
     }
 
@@ -661,6 +809,9 @@ async function processQueue(): Promise<void> {
     for (const job of jobsToProcess) {
         let result: ReturnType<typeof serializeChunkData> | null = null;
 
+        // Start timing this job
+        currentJobStartTime = Date.now();
+
         // For immediate priority (player interactions), the chunk is already loaded
         // so we can process directly without a ticking area
         if (job.priority === ChunkJobPriority.Immediate) {
@@ -670,11 +821,24 @@ async function processQueue(): Promise<void> {
             result = await processJobWithTickingArea(job);
         }
 
+        // Record job timing
+        if (currentJobStartTime !== null) {
+            const jobDuration = Date.now() - currentJobStartTime;
+            recordJobTiming(jobDuration);
+            currentJobStartTime = null;
+        }
+
         if (result) {
             chunkDataBatch.push(result);
         }
         removeJobTracking(job);
         totalJobsProcessed++;
+        batchCompletedJobs++;
+
+        // Send status update periodically
+        if (shouldSendStatusUpdate()) {
+            await sendStatusUpdate();
+        }
     }
 
     currentBatch = [];
@@ -739,6 +903,7 @@ export function stopQueueProcessor(): void {
 export function clearQueue(): void {
     jobQueue = [];
     pendingJobs.clear();
+    resetBatchTracking();
     logDebug(LOG_TAG, 'Queue cleared');
 }
 
