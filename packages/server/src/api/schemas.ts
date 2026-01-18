@@ -118,28 +118,47 @@ export const rgbaSchema = z.object({
     a: z.number().int().min(0).max(255),
 });
 
-/**
- * Chunk block schema
- */
-export const chunkBlockSchema = z.object({
+const chunkBlockBaseSchema = z.object({
     x: z.number().int(),
     y: z.number().int(),
     z: z.number().int(),
+});
+
+/**
+ * Chunk block schema for color + height generation
+ */
+export const chunkBlockColorHeightSchema = chunkBlockBaseSchema.extend({
     type: z.string().min(1),
     mapColor: rgbaSchema,
     waterDepth: z.number().int().min(1).optional(),
-    density: z.number().min(0).max(1).optional(),
+});
+
+/**
+ * Chunk block schema for density generation
+ */
+export const chunkBlockDensitySchema = chunkBlockBaseSchema.extend({
+    density: z.number().min(0).max(1),
+});
+
+const chunkDataBaseSchema = z.object({
+    dimension: z.enum(['overworld', 'nether', 'the_end']),
+    chunkX: z.number().int(),
+    chunkZ: z.number().int(),
 });
 
 /**
  * Chunk data request schema
  */
-export const chunkDataSchema = z.object({
-    dimension: z.enum(['overworld', 'nether', 'the_end']),
-    chunkX: z.number().int(),
-    chunkZ: z.number().int(),
-    blocks: z.array(chunkBlockSchema),
-});
+export const chunkDataSchema = z.discriminatedUnion('kind', [
+    chunkDataBaseSchema.extend({
+        kind: z.literal('color-height'),
+        blocks: z.array(chunkBlockColorHeightSchema),
+    }),
+    chunkDataBaseSchema.extend({
+        kind: z.literal('density'),
+        blocks: z.array(chunkBlockDensitySchema),
+    }),
+]);
 
 export type ChunkDataRequest = z.infer<typeof chunkDataSchema>;
 

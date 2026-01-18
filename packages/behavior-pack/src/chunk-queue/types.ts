@@ -30,11 +30,21 @@ export enum ChunkJobType {
 }
 
 /**
+ * Data payload kind for chunk jobs
+ */
+export enum ChunkJobDataKind {
+    ColorHeight = 'color-height',
+    Density = 'density',
+}
+
+/**
  * Base interface for all chunk jobs
  */
 interface ChunkJobBase {
     /** Unique identifier for the job */
     readonly id: string;
+    /** Payload kind for this job */
+    readonly dataKind: ChunkJobDataKind;
     /** Priority level */
     priority: ChunkJobPriority;
     /** Timestamp when job was created */

@@ -30,7 +30,7 @@ import {
 import { config } from '../config';
 import { logDebug, logError, logInfo } from '../logging';
 import { toDimension, getChunkCoordinates } from '../blocks';
-import { queueAreaScan, queueChunk, ChunkJobPriority } from '../chunk-queue';
+import { queueAreaScan, queueAreaScanDensity, queueChunk, queueChunkDensity, ChunkJobPriority } from '../chunk-queue';
 
 /**
  * Dynamic property key for storing the player's PlayFab ID (PDIF).
@@ -301,6 +301,11 @@ export function registerBlockPlaceListener(): void {
             sourcePlayer: player.name,
         });
 
+        queueAreaScanDensity(dimension, block.location.x, block.location.z, 1, {
+            priority: ChunkJobPriority.Immediate,
+            sourcePlayer: player.name,
+        });
+
         logDebug(LOG_TAG, `Queued 3x3 area update around (${block.location.x}, ${block.location.z})`);
     });
 
@@ -333,6 +338,11 @@ export function registerBlockBreakListener(): void {
         // Queue a 3x3 area scan around the broken block with immediate priority
         const dimension = toDimension(block.dimension.id);
         queueAreaScan(dimension, block.location.x, block.location.z, 1, {
+            priority: ChunkJobPriority.Immediate,
+            sourcePlayer: player.name,
+        });
+
+        queueAreaScanDensity(dimension, block.location.x, block.location.z, 1, {
             priority: ChunkJobPriority.Immediate,
             sourcePlayer: player.name,
         });
@@ -503,6 +513,11 @@ async function checkAndGeneratePlayerChunk(player: MinecraftPlayer): Promise<voi
 
         // Queue the chunk with high priority since it's the player's current chunk
         queueChunk(player.dimension, chunkX, chunkZ, {
+            priority: ChunkJobPriority.High,
+            sourcePlayer: player.name,
+        });
+
+        queueChunkDensity(player.dimension, chunkX, chunkZ, {
             priority: ChunkJobPriority.High,
             sourcePlayer: player.name,
         });

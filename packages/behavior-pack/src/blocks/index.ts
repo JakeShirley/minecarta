@@ -9,6 +9,7 @@ import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/se
 import type { Dimension } from '@minecarta/shared';
 import type { MinecraftChunkBlock, MinecraftChunkData } from '../types';
 import { logDebug } from '../logging';
+import { ChunkJobDataKind } from '../chunk-queue/types';
 
 /**
  * Logging tag for this module
@@ -143,27 +144,11 @@ export function getScanStrategy(dimensionId: string): ScanStartStrategy {
 }
 
 /**
- * Check if a block is considered "air" or empty for scanning purposes.
- * This includes air, cave_air, and void_air.
- *
- * @param typeId - The block type ID
- * @returns True if the block is considered air
- */
-function isAirBlock(typeId: string | undefined): boolean {
-    if (!typeId) return true;
-    return typeId.includes('air');
-}
-
-/**
  * Calculate density contribution for a single block.
  * Air counts as 0, liquids count as 0.2, everything else counts as 1.
  */
 function getDensityContribution(block: Block | undefined): number {
-    if (!block?.typeId) {
-        return 0;
-    }
-
-    if (isAirBlock(block.typeId)) {
+    if (block === undefined || block.isAir) {
         return 0;
     }
 
@@ -395,20 +380,97 @@ export function getSurfaceBlock(
     return null;
 }
 
-/**
- * Convert a surface block result to chunk block format
- */
-function toChunkBlock(result: SurfaceBlockResult, density: number): MinecraftChunkBlock {
-    const block: MinecraftChunkBlock = {
+const ZERO_MAP_COLOR: RGBA = {
+    red: 0,
+    green: 0,
+    blue: 0,
+    alpha: 0,
+};
+
+interface SurfaceHeightResult {
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly type: string;
+}
+
+function getSurfaceHeight(
+    dimension: MinecraftDimension,
+    worldX: number,
+    worldZ: number,
+    options: RaycastOptions = {}
+): SurfaceHeightResult | null {
+    const { includeLiquidBlocks = true, includePassableBlocks = true } = options;
+    const maxHeight = getMaxHeight(dimension.id);
+    const minHeight = getMinHeight(dimension.id);
+    const scanStrategy = getScanStrategy(dimension.id);
+
+    let startY = maxHeight;
+
+    if (scanStrategy === ScanStartStrategy.FromFirstAir) {
+        const firstAirY = findFirstAirFromTop(dimension, worldX, worldZ, maxHeight, minHeight);
+        if (firstAirY === null) {
+            return null;
+        }
+        startY = firstAirY;
+    }
+
+    const raycastResult = dimension.getBlockFromRay(
+        { x: worldX + 0.5, y: startY, z: worldZ + 0.5 },
+        { x: 0, y: -1, z: 0 },
+        {
+            includeLiquidBlocks,
+            includePassableBlocks,
+            maxDistance: startY - minHeight + 1,
+        }
+    );
+
+    if (!raycastResult?.block?.typeId) {
+        return null;
+    }
+
+    let currentY = raycastResult.block.location.y;
+
+    while (currentY >= minHeight) {
+        try {
+            const block = dimension.getBlock({ x: worldX, y: currentY, z: worldZ });
+            if (block?.typeId && !isAirBlock(block.typeId)) {
+                return {
+                    x: worldX,
+                    y: currentY,
+                    z: worldZ,
+                    type: block.typeId,
+                };
+            }
+        } catch {
+            // Block might be in unloaded chunk, continue searching
+        }
+        currentY--;
+    }
+
+    return null;
+}
+
+function toChunkBlockColorHeight(result: SurfaceBlockResult): MinecraftChunkBlock {
+    return {
         x: result.x,
         y: result.y,
         z: result.z,
         type: result.type,
         mapColor: result.mapColor,
         waterDepth: result.waterDepth,
+    };
+}
+
+function toChunkBlockDensity(result: SurfaceHeightResult, density: number): MinecraftChunkBlock {
+    return {
+        x: result.x,
+        y: result.y,
+        z: result.z,
+        type: result.type,
+        mapColor: ZERO_MAP_COLOR,
         density,
     };
-    return block;
 }
 
 /**
@@ -420,7 +482,12 @@ function toChunkBlock(result: SurfaceBlockResult, density: number): MinecraftChu
  * @param chunkZ - Chunk Z coordinate
  * @returns Chunk data with all surface blocks
  */
-export function scanChunk(dimension: MinecraftDimension, chunkX: number, chunkZ: number): MinecraftChunkData {
+export function scanChunk(
+    dimension: MinecraftDimension,
+    chunkX: number,
+    chunkZ: number,
+    dataKind: ChunkJobDataKind
+): MinecraftChunkData {
     const blocks: MinecraftChunkBlock[] = [];
     const startX = chunkX * 16;
     const startZ = chunkZ * 16;
@@ -432,10 +499,17 @@ export function scanChunk(dimension: MinecraftDimension, chunkX: number, chunkZ:
             const worldZ = startZ + dz;
 
             try {
-                const density = calculateColumnDensity(dimension, worldX, worldZ);
-                const result = getSurfaceBlock(dimension, worldX, worldZ);
-                if (result) {
-                    blocks.push(toChunkBlock(result, density));
+                if (dataKind === ChunkJobDataKind.Density) {
+                    const density = calculateColumnDensity(dimension, worldX, worldZ);
+                    const result = getSurfaceHeight(dimension, worldX, worldZ);
+                    if (result) {
+                        blocks.push(toChunkBlockDensity(result, density));
+                    }
+                } else {
+                    const result = getSurfaceBlock(dimension, worldX, worldZ);
+                    if (result) {
+                        blocks.push(toChunkBlockColorHeight(result));
+                    }
                 }
             } catch {
                 // Block might be in unloaded chunk, skip silently
@@ -466,7 +540,8 @@ export function scanArea(
     dimension: MinecraftDimension,
     centerX: number,
     centerZ: number,
-    radius: number = 1
+    radius: number,
+    dataKind: ChunkJobDataKind
 ): MinecraftChunkData {
     const blocks: MinecraftChunkBlock[] = [];
     const { chunkX, chunkZ } = getChunkCoordinates(centerX, centerZ);
@@ -477,10 +552,17 @@ export function scanArea(
             const worldZ = centerZ + dz;
 
             try {
-                const density = calculateColumnDensity(dimension, worldX, worldZ);
-                const result = getSurfaceBlock(dimension, worldX, worldZ);
-                if (result) {
-                    blocks.push(toChunkBlock(result, density));
+                if (dataKind === ChunkJobDataKind.Density) {
+                    const density = calculateColumnDensity(dimension, worldX, worldZ);
+                    const result = getSurfaceHeight(dimension, worldX, worldZ);
+                    if (result) {
+                        blocks.push(toChunkBlockDensity(result, density));
+                    }
+                } else {
+                    const result = getSurfaceBlock(dimension, worldX, worldZ);
+                    if (result) {
+                        blocks.push(toChunkBlockColorHeight(result));
+                    }
                 }
             } catch {
                 // Block might be in unloaded chunk, skip silently

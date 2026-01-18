@@ -3,12 +3,12 @@
  */
 
 import { system } from '@minecraft/server';
-import type { serializeChunkData } from '../serializers';
+import type { ChunkColorHeightData, ChunkDensityData } from '@minecarta/shared';
 import { sendChunkData, sendStructures } from '../network';
 import type { StructureData } from '../network';
 import { logDebug, logWarning } from '../logging';
 import type { QueueStats } from './types';
-import { ChunkJobType, ChunkJobPriority } from './types';
+import { ChunkJobType, ChunkJobPriority, ChunkJobDataKind } from './types';
 import { LOG_TAG, MAX_JOBS_PER_TICK, PROCESS_INTERVAL_TICKS } from './constants';
 import { startJobTiming, completeJobTiming } from './timing';
 import { sendStatusUpdate, shouldSendStatusUpdate } from './status';
@@ -52,15 +52,18 @@ async function processQueue(): Promise<void> {
         return;
     }
 
-    // Take up to MAX_JOBS_PER_TICK jobs from the queue
-    const jobsToProcess = takeJobs(MAX_JOBS_PER_TICK);
+    const batchSize = Math.min(MAX_JOBS_PER_TICK, queueLength);
+
+    // Take up to MAX_JOBS_PER_TICK jobs from the queue, honoring priority order
+    const jobsToProcess = takeJobs(batchSize);
     setCurrentBatch(jobsToProcess);
 
-    const chunkDataBatch: Array<ReturnType<typeof serializeChunkData>> = [];
+    const colorHeightBatch: ChunkColorHeightData[] = [];
+    const densityBatch: ChunkDensityData[] = [];
     const structuresBatch: StructureData[] = [];
 
     for (const job of jobsToProcess) {
-        let result: ReturnType<typeof serializeChunkData> | null = null;
+        let result: ChunkColorHeightData | ChunkDensityData | null = null;
 
         // Start timing this job
         startJobTiming();
@@ -68,14 +71,14 @@ async function processQueue(): Promise<void> {
         // For immediate priority (player interactions), the chunk is already loaded
         // so we can process directly without a ticking area
         if (job.priority === ChunkJobPriority.Immediate) {
-            result = processJobDirect(job);
+            result = await processJobDirect(job);
         } else {
             // For other priorities, use a ticking area to ensure chunk is loaded
             result = await processJobWithTickingArea(job);
         }
 
         // Detect structures for full chunk jobs (after chunk is loaded)
-        if (result && job.type === ChunkJobType.FullChunk) {
+        if (result && job.type === ChunkJobType.FullChunk && job.dataKind === ChunkJobDataKind.ColorHeight) {
             const dimension = getMinecraftDimension(job.dimension);
             const structures = detectStructures(dimension, job as FullChunkJob);
             structuresBatch.push(...structures);
@@ -85,7 +88,11 @@ async function processQueue(): Promise<void> {
         completeJobTiming();
 
         if (result) {
-            chunkDataBatch.push(result);
+            if (result.kind === 'density') {
+                densityBatch.push(result);
+            } else {
+                colorHeightBatch.push(result);
+            }
         }
         removeJobTracking(job);
         incrementTotalJobsProcessed();
@@ -98,14 +105,22 @@ async function processQueue(): Promise<void> {
     }
 
     setCurrentBatch([]);
-
     // Send batch to server if we have data
-    if (chunkDataBatch.length > 0) {
+    if (colorHeightBatch.length > 0) {
         try {
-            await sendChunkData(chunkDataBatch);
-            logDebug(LOG_TAG, `Sent batch of ${chunkDataBatch.length} chunks`);
+            await sendChunkData(colorHeightBatch);
+            logDebug(LOG_TAG, `Sent batch of ${colorHeightBatch.length} color/height chunks`);
         } catch (error) {
-            logWarning(LOG_TAG, 'Failed to send chunk batch', error);
+            logWarning(LOG_TAG, 'Failed to send color/height chunk batch', error);
+        }
+    }
+
+    if (densityBatch.length > 0) {
+        try {
+            await sendChunkData(densityBatch);
+            logDebug(LOG_TAG, `Sent batch of ${densityBatch.length} density chunks`);
+        } catch (error) {
+            logWarning(LOG_TAG, 'Failed to send density chunk batch', error);
         }
     }
 
@@ -138,7 +153,7 @@ export function startQueueProcessor(): void {
     setIsProcessing(true);
     const runId = system.runInterval(() => {
         processQueue().catch(error => {
-            logWarning(LOG_TAG, 'Queue processor error', error);
+            logWarning(LOG_TAG, 'Queue processor error', error.message);
         });
     }, PROCESS_INTERVAL_TICKS);
     setProcessorRunId(runId);

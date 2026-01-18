@@ -105,22 +105,23 @@ export interface Entity {
 }
 
 /**
- * Chunk data for map generation
+ * Chunk data payload kind
  */
-export interface ChunkData {
-    readonly dimension: Dimension;
-    readonly chunkX: number;
-    readonly chunkZ: number;
-    readonly blocks: ChunkBlock[];
-}
+export type ChunkDataKind = 'color-height' | 'density';
 
 /**
- * Individual block within a chunk
+ * Base fields for chunk block data
  */
-export interface ChunkBlock {
+export interface ChunkBlockBase {
     readonly x: number;
     readonly y: number;
     readonly z: number;
+}
+
+/**
+ * Chunk block for color + height map generation
+ */
+export interface ChunkBlockColorHeight extends ChunkBlockBase {
     readonly type: string;
     readonly mapColor: RGBA;
     /**
@@ -129,12 +130,54 @@ export interface ChunkBlock {
      * Undefined for non-water blocks.
      */
     readonly waterDepth?: number;
+}
+
+/**
+ * Chunk block for density map generation
+ */
+export interface ChunkBlockDensity extends ChunkBlockBase {
     /**
      * Normalized density of the Y column at this X/Z coordinate.
      * Range: 0 (empty/air) to 1 (fully solid), normalized per dimension height.
      */
-    readonly density?: number;
+    readonly density: number;
 }
+
+/**
+ * Union type for all chunk block payloads
+ */
+export type ChunkBlock = ChunkBlockColorHeight | ChunkBlockDensity;
+
+/**
+ * Base chunk data fields
+ */
+interface ChunkDataBase {
+    readonly dimension: Dimension;
+    readonly chunkX: number;
+    readonly chunkZ: number;
+    readonly kind: ChunkDataKind;
+}
+
+/**
+ * Chunk data for color + height map generation
+ */
+export interface ChunkColorHeightData extends ChunkDataBase {
+    readonly kind: 'color-height';
+    readonly blocks: ChunkBlockColorHeight[];
+}
+
+/**
+ * Chunk data for density map generation
+ */
+export interface ChunkDensityData extends ChunkDataBase {
+    readonly kind: 'density';
+    readonly blocks: ChunkBlockDensity[];
+}
+
+/**
+ * Chunk data for map generation
+ */
+export type ChunkData = ChunkColorHeightData | ChunkDensityData;
 
 /**
  * Tile coordinates

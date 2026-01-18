@@ -5,7 +5,14 @@
 import { system, world, CommandPermissionLevel, CustomCommandParamType, CustomCommandStatus } from '@minecraft/server';
 import type { CustomCommandOrigin, CustomCommandResult, Player, Dimension } from '@minecraft/server';
 import { toDimension } from '../blocks';
-import { queueChunks, ChunkJobPriority, getQueueStats, resortQueue, clearQueue } from '../chunk-queue';
+import {
+    queueChunks,
+    queueChunksDensity,
+    ChunkJobPriority,
+    getQueueStats,
+    resortQueue,
+    clearQueue,
+} from '../chunk-queue';
 import { logDebug, logInfo } from '../logging';
 
 /**
@@ -56,6 +63,11 @@ async function scanAroundPlayer(player: Player, radiusBlocks: number): Promise<v
         // Queue all chunks with low priority (auto-gen background work)
         const dimensionType = toDimension(dimension.id);
         queueChunks(dimensionType, chunksToQueue, {
+            priority: ChunkJobPriority.Low,
+            sourcePlayer: player.name,
+        });
+
+        queueChunksDensity(dimensionType, chunksToQueue, {
             priority: ChunkJobPriority.Low,
             sourcePlayer: player.name,
         });
@@ -194,6 +206,14 @@ function forceScanRange(
     // Queue all chunks with normal priority (already sorted by distance)
     const dimensionType = toDimension(dimension.id);
     queueChunks(
+        dimensionType,
+        chunksToQueue.map(c => ({ chunkX: c.chunkX, chunkZ: c.chunkZ })),
+        {
+            priority: ChunkJobPriority.Normal,
+        }
+    );
+
+    queueChunksDensity(
         dimensionType,
         chunksToQueue.map(c => ({ chunkX: c.chunkX, chunkZ: c.chunkZ })),
         {

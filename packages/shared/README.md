@@ -14,17 +14,19 @@ import { Player, BlockChange, API_BASE_PATH } from '@minecarta/shared';
 
 ### Core Types
 
-| Type              | Description                                                  |
-| ----------------- | ------------------------------------------------------------ |
-| `Dimension`       | Minecraft dimension: `'overworld' \| 'nether' \| 'the_end'`  |
-| `Position`        | 3D coordinates: `{ x, y, z }`                                |
-| `Player`          | Player data with position, dimension, and lastSeen timestamp |
-| `Entity`          | Entity data with id, type, position, and dimension           |
-| `BlockChange`     | Block modification event data                                |
-| `ChunkData`       | Chunk terrain data for map generation                        |
-| `ChunkBlock`      | Individual block within a chunk                              |
-| `TileCoordinates` | Map tile coordinates: dimension, zoom, x, z                  |
-| `WorldState`      | Snapshot of current world state                              |
+| Type                    | Description                                                     |
+| ----------------------- | --------------------------------------------------------------- |
+| `Dimension`             | Minecraft dimension: `'overworld' \| 'nether' \| 'the_end'`     |
+| `Position`              | 3D coordinates: `{ x, y, z }`                                   |
+| `Player`                | Player data with position, dimension, and lastSeen timestamp    |
+| `Entity`                | Entity data with id, type, position, and dimension              |
+| `BlockChange`           | Block modification event data                                   |
+| `ChunkData`             | Chunk terrain data for map generation (color/height or density) |
+| `ChunkBlock`            | Union of chunk block payload variants                           |
+| `ChunkBlockColorHeight` | Block payload for color + height maps                           |
+| `ChunkBlockDensity`     | Block payload for density maps                                  |
+| `TileCoordinates`       | Map tile coordinates: dimension, zoom, x, z                     |
+| `WorldState`            | Snapshot of current world state                                 |
 
 ### Type Definitions
 

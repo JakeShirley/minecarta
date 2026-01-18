@@ -11,7 +11,15 @@ export type { ChunkJob, FullChunkJob, AreaScanJob, AddJobOptions, QueueStats } f
 export { ChunkJobPriority, ChunkJobType } from './types';
 
 // Re-export public queue API
-export { queueChunk, queueAreaScan, queueChunks, isChunkQueued } from './queue-api';
+export {
+    queueChunk,
+    queueChunkDensity,
+    queueAreaScan,
+    queueAreaScanDensity,
+    queueChunks,
+    queueChunksDensity,
+    isChunkQueued,
+} from './queue-api';
 
 // Re-export queue sorting
 export { resortQueue } from './queue-sorting';

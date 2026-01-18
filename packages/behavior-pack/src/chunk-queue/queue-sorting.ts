@@ -6,7 +6,7 @@ import { world } from '@minecraft/server';
 import type { Dimension } from '@minecarta/shared';
 import { toDimension } from '../blocks';
 import { logDebug } from '../logging';
-import { ChunkJobPriority } from './types';
+import { ChunkJobDataKind, ChunkJobPriority } from './types';
 import { LOG_TAG } from './constants';
 import { getJobQueue, sortQueue } from './queue-state';
 import { getJobChunkCoords } from './dimension-utils';
@@ -86,11 +86,13 @@ export function resortQueue(): void {
         const coords = getJobChunkCoords(job);
         const distance = distanceToNearestPlayer(coords.chunkX, coords.chunkZ, job.dimension, playerPositions);
 
-        // Upgrade priority for jobs within 2 chunks of a player
-        if (distance <= 2 && job.priority > ChunkJobPriority.High) {
-            job.priority = ChunkJobPriority.High;
-        } else if (distance <= 5 && job.priority > ChunkJobPriority.Normal) {
-            job.priority = ChunkJobPriority.Normal;
+        // Upgrade priority for color/height jobs within 2 chunks of a player
+        if (job.dataKind === ChunkJobDataKind.ColorHeight) {
+            if (distance <= 2 && job.priority > ChunkJobPriority.High) {
+                job.priority = ChunkJobPriority.High;
+            } else if (distance <= 5 && job.priority > ChunkJobPriority.Normal) {
+                job.priority = ChunkJobPriority.Normal;
+            }
         }
     }
 

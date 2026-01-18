@@ -4,14 +4,15 @@
 
 import { system, world } from '@minecraft/server';
 import { scanChunk, scanArea } from '../blocks';
-import { serializeChunkData } from '../serializers';
+import { serializeChunkColorHeightData, serializeChunkDensityData } from '../serializers';
 import { logDebug, logWarning } from '../logging';
 import type { ChunkJob } from './types';
-import { ChunkJobType, ChunkJobPriority } from './types';
+import type { ChunkColorHeightData, ChunkDensityData } from '@minecarta/shared';
+import { ChunkJobType, ChunkJobPriority, ChunkJobDataKind } from './types';
 import { LOG_TAG, MAX_CHUNK_LOAD_ATTEMPTS, MIN_BLOCKS_THRESHOLD } from './constants';
 import { getMinecraftDimension, getJobBlockBounds } from './dimension-utils';
 import { getCurrentTickingAreaId, setCurrentTickingAreaId, generateTickingAreaId } from './queue-state';
-import { queueChunk } from './queue-api';
+import { queueChunk, queueChunkDensity } from './queue-api';
 
 /**
  * Clean up the current ticking area if one exists
@@ -37,7 +38,9 @@ export function cleanupTickingArea(): void {
  * @param job - The chunk job to process
  * @returns Serialized chunk data or null if processing failed
  */
-export async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnType<typeof serializeChunkData> | null> {
+type ChunkJobResult = ChunkColorHeightData | ChunkDensityData;
+
+export async function processJobWithTickingArea(job: ChunkJob): Promise<ChunkJobResult | null> {
     const dimension = getMinecraftDimension(job.dimension);
     const bounds = getJobBlockBounds(job);
     const tickingAreaId = generateTickingAreaId();
@@ -81,10 +84,15 @@ export async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnTy
             );
             // Re-queue this job with low priority to try again later
             if (job.type === ChunkJobType.FullChunk) {
-                queueChunk(job.dimension, job.chunkX, job.chunkZ, {
+                const requeueOptions = {
                     priority: ChunkJobPriority.Low,
                     sourcePlayer: job.sourcePlayer,
-                });
+                };
+                if (job.dataKind === ChunkJobDataKind.Density) {
+                    queueChunkDensity(job.dimension, job.chunkX, job.chunkZ, requeueOptions);
+                } else {
+                    queueChunk(job.dimension, job.chunkX, job.chunkZ, requeueOptions);
+                }
             }
             return null;
         }
@@ -92,10 +100,10 @@ export async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnTy
         logDebug(LOG_TAG, `Chunk loaded after ${attempts} attempts`);
 
         // Now scan the chunk/area
-        let result: ReturnType<typeof serializeChunkData> | null = null;
+        let result: ChunkJobResult | null = null;
 
         if (job.type === ChunkJobType.FullChunk) {
-            const chunkData = scanChunk(dimension, job.chunkX, job.chunkZ);
+            const chunkData = scanChunk(dimension, job.chunkX, job.chunkZ, job.dataKind);
 
             // Validate that we got enough blocks - if not, the chunk wasn't fully loaded
             if (chunkData.blocks.length < MIN_BLOCKS_THRESHOLD) {
@@ -104,18 +112,29 @@ export async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnTy
                     `Chunk (${job.chunkX}, ${job.chunkZ}) only has ${chunkData.blocks.length} blocks (threshold: ${MIN_BLOCKS_THRESHOLD}), will retry`
                 );
                 // Re-queue this job to try again later
-                queueChunk(job.dimension, job.chunkX, job.chunkZ, {
+                const requeueOptions = {
                     priority: ChunkJobPriority.Low,
                     sourcePlayer: job.sourcePlayer,
-                });
+                };
+                if (job.dataKind === ChunkJobDataKind.Density) {
+                    queueChunkDensity(job.dimension, job.chunkX, job.chunkZ, requeueOptions);
+                } else {
+                    queueChunk(job.dimension, job.chunkX, job.chunkZ, requeueOptions);
+                }
                 return null;
             }
 
-            result = serializeChunkData(chunkData);
+            result =
+                job.dataKind === ChunkJobDataKind.Density
+                    ? serializeChunkDensityData(chunkData)
+                    : serializeChunkColorHeightData(chunkData);
             logDebug(LOG_TAG, `Scanned chunk (${job.chunkX}, ${job.chunkZ}) with ${chunkData.blocks.length} blocks`);
         } else {
-            const areaData = scanArea(dimension, job.centerX, job.centerZ, job.radius);
-            result = serializeChunkData(areaData);
+            const areaData = scanArea(dimension, job.centerX, job.centerZ, job.radius, job.dataKind);
+            result =
+                job.dataKind === ChunkJobDataKind.Density
+                    ? serializeChunkDensityData(areaData)
+                    : serializeChunkColorHeightData(areaData);
             logDebug(
                 LOG_TAG,
                 `Scanned area around (${job.centerX}, ${job.centerZ}) with ${areaData.blocks.length} blocks`
@@ -138,16 +157,20 @@ export async function processJobWithTickingArea(job: ChunkJob): Promise<ReturnTy
  * @param job - The chunk job to process
  * @returns Serialized chunk data or null if processing failed
  */
-export function processJobDirect(job: ChunkJob): ReturnType<typeof serializeChunkData> | null {
+export function processJobDirect(job: ChunkJob): ChunkJobResult | null {
     try {
         const dimension = getMinecraftDimension(job.dimension);
 
         if (job.type === ChunkJobType.FullChunk) {
-            const chunkData = scanChunk(dimension, job.chunkX, job.chunkZ);
-            return serializeChunkData(chunkData);
+            const chunkData = scanChunk(dimension, job.chunkX, job.chunkZ, job.dataKind);
+            return job.dataKind === ChunkJobDataKind.Density
+                ? serializeChunkDensityData(chunkData)
+                : serializeChunkColorHeightData(chunkData);
         } else {
-            const areaData = scanArea(dimension, job.centerX, job.centerZ, job.radius);
-            return serializeChunkData(areaData);
+            const areaData = scanArea(dimension, job.centerX, job.centerZ, job.radius, job.dataKind);
+            return job.dataKind === ChunkJobDataKind.Density
+                ? serializeChunkDensityData(areaData)
+                : serializeChunkColorHeightData(areaData);
         }
     } catch (error) {
         logWarning(LOG_TAG, `Failed to process job ${job.id} directly`, error);

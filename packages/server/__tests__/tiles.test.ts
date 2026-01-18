@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TileGeneratorService } from '../src/tiles/tile-generator.js';
 import { TileUpdateService } from '../src/services/tile-update.js'; // This assumes internal access or I should export it from tile-update directly
 import { TileStorageService } from '../src/tiles/tile-storage.js';
-import type { ChunkData, ChunkBlock, RGBA } from '@minecarta/shared';
+import type { ChunkBlockColorHeight, ChunkBlockDensity, RGBA } from '@minecarta/shared';
 import sharp from 'sharp';
 
 // Mocks
@@ -32,7 +32,7 @@ describe('TileGeneratorService', () => {
     it('should generate a tile buffer from blocks', async () => {
         const service = new TileGeneratorService();
         // At zoom 0, tile (0,0) covers blocks 0-15 (one chunk)
-        const blocks: ChunkBlock[] = [
+        const blocks: ChunkBlockColorHeight[] = [
             { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
             { x: 15, y: 64, z: 15, type: 'minecraft:grass_block', mapColor: GRASS_COLOR },
         ];
@@ -53,7 +53,7 @@ describe('TileGeneratorService', () => {
         const service = new TileGeneratorService();
 
         // Single block at z=0
-        const blocks: ChunkBlock[] = [{ x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR }];
+        const blocks: ChunkBlockColorHeight[] = [{ x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR }];
 
         const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
         const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -86,7 +86,7 @@ describe('TileGeneratorService', () => {
         const service = new TileGeneratorService();
 
         // Block at z=1 should render at pixel y=16
-        const blocks: ChunkBlock[] = [{ x: 0, y: 64, z: 1, type: 'minecraft:stone', mapColor: STONE_COLOR }];
+        const blocks: ChunkBlockColorHeight[] = [{ x: 0, y: 64, z: 1, type: 'minecraft:stone', mapColor: STONE_COLOR }];
 
         const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
         const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -123,7 +123,7 @@ describe('TileGeneratorService', () => {
         // At zoom 0: 16 blocks per 256 pixels = 16 pixels per block
         // So block (1, 1) renders to pixels (16, 16) through (31, 31)
         // With no block to the north, NORMAL shade (220/255) is applied
-        const blocks: ChunkBlock[] = [{ x: 1, y: 64, z: 1, type: 'minecraft:water', mapColor: WATER_COLOR }];
+        const blocks: ChunkBlockColorHeight[] = [{ x: 1, y: 64, z: 1, type: 'minecraft:water', mapColor: WATER_COLOR }];
 
         const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 }, baseImage);
 
@@ -148,7 +148,7 @@ describe('TileGeneratorService', () => {
 
             // Block at z=1 is higher (y=70) than block at z=0 (y=64)
             // The block at z=1 should be BRIGHTER (multiplier 255/255 = 1.0)
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
                 { x: 0, y: 70, z: 1, type: 'minecraft:stone', mapColor: STONE_COLOR },
             ];
@@ -170,7 +170,7 @@ describe('TileGeneratorService', () => {
 
             // Both blocks at same height (y=64)
             // The block at z=1 should have NORMAL shade (multiplier 220/255)
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
                 { x: 0, y: 64, z: 1, type: 'minecraft:stone', mapColor: STONE_COLOR },
             ];
@@ -192,7 +192,7 @@ describe('TileGeneratorService', () => {
 
             // Block at z=1 is lower (y=60) than block at z=0 (y=64)
             // The block at z=1 should be DARKER (multiplier 180/255)
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
                 { x: 0, y: 60, z: 1, type: 'minecraft:stone', mapColor: STONE_COLOR },
             ];
@@ -214,7 +214,9 @@ describe('TileGeneratorService', () => {
 
             // Single block with no block to the north
             // Should use NORMAL shade (multiplier 220/255)
-            const blocks: ChunkBlock[] = [{ x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR }];
+            const blocks: ChunkBlockColorHeight[] = [
+                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
+            ];
 
             const buffer = await service.generateTile(blocks, { dimension: 'overworld', zoom: 0, x: 0, z: 0 });
             const { data } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -233,7 +235,7 @@ describe('TileGeneratorService', () => {
 
             // Simulate a hill going from z=0 to z=3
             // Heights: 60 -> 64 -> 68 -> 64 (up then down)
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 60, z: 0, type: 'minecraft:grass_block', mapColor: GRASS_COLOR },
                 { x: 0, y: 64, z: 1, type: 'minecraft:grass_block', mapColor: GRASS_COLOR }, // Higher = BRIGHTER
                 { x: 0, y: 68, z: 2, type: 'minecraft:grass_block', mapColor: GRASS_COLOR }, // Higher = BRIGHTER
@@ -266,7 +268,7 @@ describe('TileGeneratorService', () => {
             const service = new TileGeneratorService();
 
             // Shallow water at depth 1
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 1 },
                 { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 2 },
             ];
@@ -287,7 +289,7 @@ describe('TileGeneratorService', () => {
 
             // Water at depth 3 - checkerboard pattern
             // (x + z) % 2 == 1 -> BRIGHTER, otherwise NORMAL
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 3 }, // (0+0)%2=0 -> NORMAL
                 { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 3 }, // (1+0)%2=1 -> BRIGHTER
                 { x: 0, y: 62, z: 1, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 4 }, // (0+1)%2=1 -> BRIGHTER
@@ -312,7 +314,7 @@ describe('TileGeneratorService', () => {
         it('should apply NORMAL shade for medium depth water (depth 5-7)', async () => {
             const service = new TileGeneratorService();
 
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 5 },
                 { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 7 },
             ];
@@ -333,7 +335,7 @@ describe('TileGeneratorService', () => {
 
             // Water at depth 8 - checkerboard pattern
             // (x + z) % 2 == 1 -> NORMAL, otherwise DARKER
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 8 }, // (0+0)%2=0 -> DARKER
                 { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 10 }, // (1+0)%2=1 -> NORMAL
             ];
@@ -351,7 +353,7 @@ describe('TileGeneratorService', () => {
         it('should apply DARKER shade for deep water (depth 12+)', async () => {
             const service = new TileGeneratorService();
 
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 12 },
                 { x: 1, y: 62, z: 0, type: 'minecraft:water', mapColor: WATER_COLOR, waterDepth: 20 },
             ];
@@ -376,7 +378,9 @@ describe('TileGeneratorService', () => {
             // Height range: -64 to 320 (384 total)
             // y=64 is at position (64 - (-64)) / 384 = 128/384 ≈ 0.333
             // Grayscale: 0.333 * 255 ≈ 85
-            const blocks: ChunkBlock[] = [{ x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR }];
+            const blocks: ChunkBlockColorHeight[] = [
+                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
+            ];
 
             const buffer = await service.generateTile(
                 blocks,
@@ -402,7 +406,9 @@ describe('TileGeneratorService', () => {
             const service = new TileGeneratorService();
 
             // Block at y=-64 (minimum) should be black
-            const blocks: ChunkBlock[] = [{ x: 0, y: -64, z: 0, type: 'minecraft:bedrock', mapColor: STONE_COLOR }];
+            const blocks: ChunkBlockColorHeight[] = [
+                { x: 0, y: -64, z: 0, type: 'minecraft:bedrock', mapColor: STONE_COLOR },
+            ];
 
             const buffer = await service.generateTile(
                 blocks,
@@ -424,7 +430,9 @@ describe('TileGeneratorService', () => {
             const service = new TileGeneratorService();
 
             // Block at y=320 (maximum) should be white
-            const blocks: ChunkBlock[] = [{ x: 0, y: 320, z: 0, type: 'minecraft:air', mapColor: STONE_COLOR }];
+            const blocks: ChunkBlockColorHeight[] = [
+                { x: 0, y: 320, z: 0, type: 'minecraft:air', mapColor: STONE_COLOR },
+            ];
 
             const buffer = await service.generateTile(
                 blocks,
@@ -446,7 +454,7 @@ describe('TileGeneratorService', () => {
             const service = new TileGeneratorService();
 
             // Two blocks at same x,z but different y - only highest should be used
-            const blocks: ChunkBlock[] = [
+            const blocks: ChunkBlockColorHeight[] = [
                 { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR },
                 { x: 0, y: 128, z: 0, type: 'minecraft:grass_block', mapColor: GRASS_COLOR },
             ];
@@ -469,7 +477,9 @@ describe('TileGeneratorService', () => {
             const service = new TileGeneratorService();
 
             // Block at y=500 (above max) should clamp to white
-            const blocks: ChunkBlock[] = [{ x: 0, y: 500, z: 0, type: 'minecraft:air', mapColor: STONE_COLOR }];
+            const blocks: ChunkBlockColorHeight[] = [
+                { x: 0, y: 500, z: 0, type: 'minecraft:air', mapColor: STONE_COLOR },
+            ];
 
             const buffer = await service.generateTile(
                 blocks,
@@ -491,9 +501,7 @@ describe('TileGeneratorService', () => {
         it('should generate a grayscale tile based on normalized density', async () => {
             const service = new TileGeneratorService();
 
-            const blocks: ChunkBlock[] = [
-                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR, density: 0.5 },
-            ];
+            const blocks: ChunkBlockDensity[] = [{ x: 0, y: 64, z: 0, density: 0.5 }];
 
             const buffer = await service.generateTile(
                 blocks,
@@ -514,9 +522,7 @@ describe('TileGeneratorService', () => {
         it('should clamp density values outside the 0-1 range', async () => {
             const service = new TileGeneratorService();
 
-            const blocks: ChunkBlock[] = [
-                { x: 0, y: 64, z: 0, type: 'minecraft:stone', mapColor: STONE_COLOR, density: 2 },
-            ];
+            const blocks: ChunkBlockDensity[] = [{ x: 0, y: 64, z: 0, density: 2 }];
 
             const buffer = await service.generateTile(
                 blocks,

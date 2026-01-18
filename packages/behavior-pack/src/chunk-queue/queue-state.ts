@@ -9,7 +9,7 @@ import { logDebug } from '../logging';
 import { LOG_TAG } from './constants';
 
 /**
- * The job queue, sorted by priority then by creation time
+ * The job queue. Order is maintained by resorting logic.
  */
 let jobQueue: ChunkJob[] = [];
 
@@ -177,9 +177,9 @@ export function generateJobId(): string {
  */
 export function getJobKey(job: ChunkJob): string {
     if (job.type === ChunkJobType.FullChunk) {
-        return `chunk:${job.dimension}:${job.chunkX}:${job.chunkZ}`;
+        return `chunk:${job.dataKind}:${job.dimension}:${job.chunkX}:${job.chunkZ}`;
     } else {
-        return `area:${job.dimension}:${job.centerX}:${job.centerZ}:${job.radius}`;
+        return `area:${job.dataKind}:${job.dimension}:${job.centerX}:${job.centerZ}:${job.radius}`;
     }
 }
 
@@ -200,19 +200,7 @@ export function resetBatchTracking(): void {
 // ==========================================
 
 /**
- * Compare function for sorting jobs by priority, then by creation time
- */
-export function compareJobs(a: ChunkJob, b: ChunkJob): number {
-    // Lower priority number = higher priority (should come first)
-    if (a.priority !== b.priority) {
-        return a.priority - b.priority;
-    }
-    // Earlier created = higher priority
-    return a.createdAt - b.createdAt;
-}
-
-/**
- * Insert a job into the queue maintaining sort order
+ * Insert a job into the queue
  */
 export function insertJob(job: ChunkJob): void {
     const key = getJobKey(job);
@@ -224,8 +212,6 @@ export function insertJob(job: ChunkJob): void {
         if (existingIndex !== -1 && job.priority < jobQueue[existingIndex].priority) {
             // Upgrade the existing job's priority
             jobQueue[existingIndex] = { ...jobQueue[existingIndex], priority: job.priority };
-            // Re-sort to maintain order
-            jobQueue.sort(compareJobs);
             logDebug(LOG_TAG, `Upgraded job priority: ${key} to ${ChunkJobPriority[job.priority]}`);
         }
         return;
@@ -237,24 +223,8 @@ export function insertJob(job: ChunkJob): void {
     // Track batch total for percentage calculation
     batchTotalJobs++;
 
-    // Binary search insertion to maintain sorted order
-    let low = 0;
-    let high = jobQueue.length;
-
-    while (low < high) {
-        const mid = Math.floor((low + high) / 2);
-        if (compareJobs(job, jobQueue[mid]) < 0) {
-            high = mid;
-        } else {
-            low = mid + 1;
-        }
-    }
-
-    jobQueue.splice(low, 0, job);
-    logDebug(
-        LOG_TAG,
-        `Added job: ${key} at position ${low}/${jobQueue.length}, priority=${ChunkJobPriority[job.priority]}`
-    );
+    jobQueue.push(job);
+    logDebug(LOG_TAG, `Added job: ${key}, priority=${ChunkJobPriority[job.priority]}`);
 }
 
 /**
@@ -286,5 +256,15 @@ export function clearQueue(): void {
  * Sort the queue
  */
 export function sortQueue(): void {
-    jobQueue.sort(compareJobs);
+    jobQueue.sort((a, b) => {
+        if (a.priority !== b.priority) {
+            return a.priority - b.priority;
+        }
+
+        if (a.dataKind !== b.dataKind) {
+            return a.dataKind === 'color-height' ? -1 : 1;
+        }
+
+        return a.createdAt - b.createdAt;
+    });
 }

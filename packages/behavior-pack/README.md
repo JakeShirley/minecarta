@@ -229,7 +229,7 @@ The behavior pack registers custom commands for map operations:
 
 ### `/mapsync:scan`
 
-Queue a block range for tile generation.
+Queue a block range for tile generation (block colors, height map, and density map).
 
 ```
 /mapsync:scan <min> <max>
@@ -242,7 +242,7 @@ Queue a block range for tile generation.
 
 ### `/mapsync:autogen`
 
-Toggle automatic tile generation around the player. When enabled, the pack will periodically queue chunks within the specified radius around the player for generation.
+Toggle automatic tile generation around the player. When enabled, the pack will periodically queue chunks within the specified radius around the player for generation (block colors, height map, and density map).
 
 ```
 /mapsync:autogen [radius] [interval]
@@ -337,6 +337,15 @@ For jobs with priority `High`, `Normal`, or `Low`, the queue processor creates a
 ### Rate Limiting
 
 The queue processor limits how many chunks are processed per game tick to avoid server lag, with configurable batch sizes for network requests.
+
+### Split Chunk Payloads
+
+Each chunk job produces two separate payloads and requests:
+
+- **Color + height** data for block and height maps
+- **Density** data for density maps
+
+This keeps map generation paths isolated and allows independent processing on the server.
 
 ## Automatic Chunk Generation
 

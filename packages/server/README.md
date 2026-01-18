@@ -174,7 +174,10 @@ Receive entity updates from Minecraft.
 POST /api/v1/world/chunks
 ```
 
-Receive chunk data for map generation.
+Receive chunk data for map generation. Payloads are separated by `kind`:
+
+- `color-height`: block color + height updates
+- `density`: density-only updates
 
 **Request:**
 
@@ -182,10 +185,26 @@ Receive chunk data for map generation.
 {
     "chunks": [
         {
+            "kind": "color-height",
             "dimension": "overworld",
             "chunkX": 6,
             "chunkZ": 12,
-            "blocks": [{ "x": 100, "y": 64, "z": 200, "type": "minecraft:grass_block" }]
+            "blocks": [
+                {
+                    "x": 100,
+                    "y": 64,
+                    "z": 200,
+                    "type": "minecraft:grass_block",
+                    "mapColor": { "r": 124, "g": 189, "b": 107, "a": 255 }
+                }
+            ]
+        },
+        {
+            "kind": "density",
+            "dimension": "overworld",
+            "chunkX": 6,
+            "chunkZ": 12,
+            "blocks": [{ "x": 100, "y": 64, "z": 200, "density": 0.42 }]
         }
     ]
 }

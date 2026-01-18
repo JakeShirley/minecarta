@@ -1,6 +1,14 @@
 import sharp from 'sharp';
 import { TILE_SIZE, BLOCKS_PER_TILE } from '@minecarta/shared';
-import type { ZoomLevel, TileCoordinates, ChunkBlock, RGBA, MapType } from '@minecarta/shared';
+import type {
+    ZoomLevel,
+    TileCoordinates,
+    ChunkBlockBase,
+    ChunkBlockColorHeight,
+    ChunkBlockDensity,
+    RGBA,
+    MapType,
+} from '@minecarta/shared';
 import { logWarning } from '../logging/index.js';
 
 /**
@@ -66,7 +74,7 @@ export class TileGeneratorService {
      * @param blocks Array of blocks
      * @returns Map with key "x,z" and value being the Y height
      */
-    private buildHeightMap(blocks: readonly ChunkBlock[]): Map<string, number> {
+    private buildHeightMap(blocks: readonly ChunkBlockBase[]): Map<string, number> {
         const heightMap = new Map<string, number>();
 
         for (const block of blocks) {
@@ -90,7 +98,7 @@ export class TileGeneratorService {
      * @param heightMap Height map for quick lookups
      * @returns Shade multiplier (0.71, 0.86, or 1.0)
      */
-    private calculateShadeMultiplier(block: ChunkBlock, heightMap: Map<string, number>): number {
+    private calculateShadeMultiplier(block: ChunkBlockColorHeight, heightMap: Map<string, number>): number {
         const currentHeight = block.y;
         const northKey = `${block.x},${block.z - 1}`;
         const northHeight = heightMap.get(northKey);
@@ -121,7 +129,7 @@ export class TileGeneratorService {
      * @param block The water block
      * @returns Shade multiplier based on water depth and position
      */
-    private calculateWaterShadeMultiplier(block: ChunkBlock): number {
+    private calculateWaterShadeMultiplier(block: ChunkBlockColorHeight): number {
         const depth = block.waterDepth ?? 1;
         const isCheckerOdd = (block.x + block.z) % 2 === 1;
 
@@ -146,7 +154,7 @@ export class TileGeneratorService {
     /**
      * Check if a block type is water
      */
-    private isWaterBlock(block: ChunkBlock): boolean {
+    private isWaterBlock(block: ChunkBlockColorHeight): boolean {
         return block.waterDepth !== undefined && block.waterDepth > 0;
     }
 
@@ -200,18 +208,30 @@ export class TileGeneratorService {
      * @param mapType The type of map to generate ('block', 'height', or 'density')
      */
     async generateTile(
-        blocks: ChunkBlock[],
+        blocks: ChunkBlockColorHeight[],
+        coords: TileCoordinates,
+        baseImage?: Buffer,
+        mapType?: 'block' | 'height'
+    ): Promise<Buffer>;
+    async generateTile(
+        blocks: ChunkBlockDensity[],
+        coords: TileCoordinates,
+        baseImage: Buffer | undefined,
+        mapType: 'density'
+    ): Promise<Buffer>;
+    async generateTile(
+        blocks: ChunkBlockColorHeight[] | ChunkBlockDensity[],
         coords: TileCoordinates,
         baseImage?: Buffer,
         mapType: MapType = 'block'
     ): Promise<Buffer> {
         if (mapType === 'height') {
-            return this.generateHeightTile(blocks, coords, baseImage);
+            return this.generateHeightTile(blocks as ChunkBlockColorHeight[], coords, baseImage);
         }
         if (mapType === 'density') {
-            return this.generateDensityTile(blocks, coords, baseImage);
+            return this.generateDensityTile(blocks as ChunkBlockDensity[], coords, baseImage);
         }
-        return this.generateBlockTile(blocks, coords, baseImage);
+        return this.generateBlockTile(blocks as ChunkBlockColorHeight[], coords, baseImage);
     }
 
     /**
@@ -222,7 +242,7 @@ export class TileGeneratorService {
      * @param baseImage Optional buffer of the existing tile image to update
      */
     private async generateHeightTile(
-        blocks: ChunkBlock[],
+        blocks: ChunkBlockColorHeight[],
         coords: TileCoordinates,
         baseImage?: Buffer
     ): Promise<Buffer> {
@@ -327,7 +347,7 @@ export class TileGeneratorService {
      * @param baseImage Optional buffer of the existing tile image to update
      */
     private async generateDensityTile(
-        blocks: ChunkBlock[],
+        blocks: ChunkBlockDensity[],
         coords: TileCoordinates,
         baseImage?: Buffer
     ): Promise<Buffer> {
@@ -428,7 +448,7 @@ export class TileGeneratorService {
      * @param baseImage Optional buffer of the existing tile image to update
      */
     private async generateBlockTile(
-        blocks: ChunkBlock[],
+        blocks: ChunkBlockColorHeight[],
         coords: TileCoordinates,
         baseImage?: Buffer
     ): Promise<Buffer> {

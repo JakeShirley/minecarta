@@ -2,7 +2,16 @@
  * Data serialization utilities for converting Minecraft data to API format
  */
 
-import type { BlockChange, Player, Entity, ChunkData, ChunkBlock, PlayerStats } from '@minecarta/shared';
+import type {
+    BlockChange,
+    Player,
+    Entity,
+    ChunkBlockColorHeight,
+    ChunkBlockDensity,
+    ChunkColorHeightData,
+    ChunkDensityData,
+    PlayerStats,
+} from '@minecarta/shared';
 import type {
     MinecraftBlockEvent,
     MinecraftPlayer,
@@ -137,9 +146,9 @@ export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
  * @param block - Minecraft chunk block data
  * @returns ChunkBlock object for API transmission
  */
-export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
+export function serializeChunkBlockColorHeight(block: MinecraftChunkBlock): ChunkBlockColorHeight {
     // Minecraft RGBA values are in 0-1 range, convert to 0-255 for rendering
-    const result: ChunkBlock = {
+    return {
         x: block.x,
         y: block.y,
         z: block.z,
@@ -151,22 +160,46 @@ export function serializeChunkBlock(block: MinecraftChunkBlock): ChunkBlock {
             a: Math.round(block.mapColor.alpha * 255),
         },
         waterDepth: block.waterDepth,
-        density: block.density,
     };
-    return result;
+}
+
+export function serializeChunkBlockDensity(block: MinecraftChunkBlock): ChunkBlockDensity {
+    return {
+        x: block.x,
+        y: block.y,
+        z: block.z,
+        density: block.density ?? 0,
+    };
 }
 
 /**
- * Serialize chunk data to the API format
+ * Serialize chunk data for color + height map generation
  *
  * @param chunk - Minecraft chunk data
- * @returns ChunkData object for API transmission
+ * @returns ChunkColorHeightData object for API transmission
  */
-export function serializeChunkData(chunk: MinecraftChunkData): ChunkData {
+export function serializeChunkColorHeightData(chunk: MinecraftChunkData): ChunkColorHeightData {
     return {
+        kind: 'color-height',
         dimension: chunk.dimension,
         chunkX: chunk.chunkX,
         chunkZ: chunk.chunkZ,
-        blocks: chunk.blocks.map(serializeChunkBlock),
+        blocks: chunk.blocks.map(serializeChunkBlockColorHeight),
+    };
+}
+
+/**
+ * Serialize chunk data for density map generation
+ *
+ * @param chunk - Minecraft chunk data
+ * @returns ChunkDensityData object for API transmission
+ */
+export function serializeChunkDensityData(chunk: MinecraftChunkData): ChunkDensityData {
+    return {
+        kind: 'density',
+        dimension: chunk.dimension,
+        chunkX: chunk.chunkX,
+        chunkZ: chunk.chunkZ,
+        blocks: chunk.blocks.map(serializeChunkBlockDensity),
     };
 }

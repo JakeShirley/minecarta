@@ -1,13 +1,14 @@
 import type {
     ChunkData,
-    ChunkBlock,
+    ChunkBlockColorHeight,
+    ChunkBlockDensity,
     BlockChange,
     Dimension,
     ZoomLevel,
     TileCoordinates,
     MapType,
 } from '@minecarta/shared';
-import { ZOOM_LEVELS, MAP_TYPES } from '@minecarta/shared';
+import { ZOOM_LEVELS } from '@minecarta/shared';
 import { getTileStorageService } from '../tiles/tile-storage.js';
 import { getTileGeneratorService } from '../tiles/tile-generator.js';
 import { getWebSocketService } from './websocket.js';
@@ -24,13 +25,16 @@ interface BlockUpdateData {
     type: string;
 }
 
-interface TileUpdateTask {
+interface TileUpdateTaskBase<TBlock> {
     dimension: Dimension;
     zoom: ZoomLevel;
     x: number;
     z: number;
-    blocks: ChunkBlock[];
+    blocks: TBlock[];
 }
+
+type ColorHeightTileUpdateTask = TileUpdateTaskBase<ChunkBlockColorHeight>;
+type DensityTileUpdateTask = TileUpdateTaskBase<ChunkBlockDensity>;
 
 interface TileInvalidationTask {
     dimension: Dimension;
@@ -66,7 +70,8 @@ export class TileUpdateService {
         const storage = getTileStorageService();
         // Group updates by tile at ZOOM LEVEL 0 ONLY
         // Key: "dim:0:x:z"
-        const tasks = new Map<string, TileUpdateTask>();
+        const colorHeightTasks = new Map<string, ColorHeightTileUpdateTask>();
+        const densityTasks = new Map<string, DensityTileUpdateTask>();
 
         for (const chunk of chunks) {
             // Only process at zoom level 0 - parent tiles will be composited
@@ -74,25 +79,44 @@ export class TileUpdateService {
             const { x: tileX, z: tileZ } = storage.blockToTile(chunk.chunkX * 16, chunk.chunkZ * 16, zoom);
 
             const key = `${chunk.dimension}:${zoom}:${tileX}:${tileZ}`;
+            if (chunk.kind === 'color-height') {
+                let task = colorHeightTasks.get(key);
+                if (!task) {
+                    task = {
+                        dimension: chunk.dimension,
+                        zoom,
+                        x: tileX,
+                        z: tileZ,
+                        blocks: [],
+                    };
+                    colorHeightTasks.set(key, task);
+                }
 
-            let task = tasks.get(key);
-            if (!task) {
-                task = {
-                    dimension: chunk.dimension,
-                    zoom,
-                    x: tileX,
-                    z: tileZ,
-                    blocks: [],
-                };
-                tasks.set(key, task);
+                task.blocks.push(...chunk.blocks);
+            } else {
+                let task = densityTasks.get(key);
+                if (!task) {
+                    task = {
+                        dimension: chunk.dimension,
+                        zoom,
+                        x: tileX,
+                        z: tileZ,
+                        blocks: [],
+                    };
+                    densityTasks.set(key, task);
+                }
+
+                task.blocks.push(...chunk.blocks);
             }
-
-            // Add blocks to task
-            task.blocks.push(...chunk.blocks);
         }
 
         // Execute zoom 0 tasks and collect affected tiles for pyramid regeneration
-        const updatedZoom0Tiles = await this.processZoom0Tasks(Array.from(tasks.values()));
+        const updatedColorHeightTiles = await this.processZoom0Tasks(Array.from(colorHeightTasks.values()), [
+            'block',
+            'height',
+        ]);
+        const updatedDensityTiles = await this.processZoom0Tasks(Array.from(densityTasks.values()), ['density']);
+        const updatedZoom0Tiles = [...updatedColorHeightTiles, ...updatedDensityTiles];
 
         // Regenerate parent tiles (zoom 1+) using pyramid compositing
         await this.regenerateParentTiles(updatedZoom0Tiles);
@@ -195,8 +219,24 @@ export class TileUpdateService {
         zoom: ZoomLevel,
         x: number,
         z: number,
+        mapType: 'density',
+        blocks: ChunkBlockDensity[]
+    ): Promise<TileCoordinates>;
+    private async processSingleTileUpdate(
+        dimension: Dimension,
+        zoom: ZoomLevel,
+        x: number,
+        z: number,
+        mapType: 'block' | 'height',
+        blocks: ChunkBlockColorHeight[]
+    ): Promise<TileCoordinates>;
+    private async processSingleTileUpdate(
+        dimension: Dimension,
+        zoom: ZoomLevel,
+        x: number,
+        z: number,
         mapType: MapType,
-        blocks: ChunkBlock[]
+        blocks: ChunkBlockColorHeight[] | ChunkBlockDensity[]
     ): Promise<TileCoordinates> {
         const storage = getTileStorageService();
         const generator = getTileGeneratorService();
@@ -209,12 +249,20 @@ export class TileUpdateService {
             const existingBuffer = storage.readTile(dimension, zoom, x, z, mapType);
 
             // Generate updated tile
-            const newTileBuffer = await generator.generateTile(
-                blocks,
-                { dimension, zoom, x, z, mapType },
-                existingBuffer ?? undefined,
-                mapType
-            );
+            const newTileBuffer =
+                mapType === 'density'
+                    ? await generator.generateTile(
+                          blocks as ChunkBlockDensity[],
+                          { dimension, zoom, x, z, mapType },
+                          existingBuffer ?? undefined,
+                          mapType
+                      )
+                    : await generator.generateTile(
+                          blocks as ChunkBlockColorHeight[],
+                          { dimension, zoom, x, z, mapType },
+                          existingBuffer ?? undefined,
+                          mapType
+                      );
 
             // Save tile
             storage.writeTile(dimension, zoom, x, z, newTileBuffer, mapType);
@@ -225,7 +273,10 @@ export class TileUpdateService {
         }
     }
 
-    private async processZoom0Tasks(tasks: TileUpdateTask[]): Promise<TileCoordinates[]> {
+    private async processZoom0Tasks<TBlock>(
+        tasks: TileUpdateTaskBase<TBlock>[],
+        mapTypes: readonly MapType[]
+    ): Promise<TileCoordinates[]> {
         // Track updated tiles for pyramid regeneration
         const updatedTiles: TileCoordinates[] = [];
 
@@ -237,9 +288,16 @@ export class TileUpdateService {
         for (const task of tasks) {
             const { dimension, zoom, x, z, blocks } = task;
 
-            // Generate and save tiles for both map types
-            for (const mapType of MAP_TYPES) {
-                updatePromises.push(this.processSingleTileUpdate(dimension, zoom, x, z, mapType, blocks));
+            for (const mapType of mapTypes) {
+                if (mapType === 'density') {
+                    updatePromises.push(
+                        this.processSingleTileUpdate(dimension, zoom, x, z, mapType, blocks as ChunkBlockDensity[])
+                    );
+                } else {
+                    updatePromises.push(
+                        this.processSingleTileUpdate(dimension, zoom, x, z, mapType, blocks as ChunkBlockColorHeight[])
+                    );
+                }
             }
         }
 
