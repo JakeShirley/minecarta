@@ -52,9 +52,9 @@ export interface MinecraftEntity {
 }
 
 /**
- * Minecraft chunk block data (internal representation)
+ * Minecraft chunk block data for color/height maps
  */
-export interface MinecraftChunkBlock {
+export interface MinecraftChunkBlockColor {
     readonly x: number;
     readonly y: number;
     readonly z: number;
@@ -66,12 +66,25 @@ export interface MinecraftChunkBlock {
      * Undefined for non-water blocks.
      */
     readonly waterDepth?: number;
+}
+
+/**
+ * Minecraft chunk block data for density maps
+ */
+export interface MinecraftChunkBlockDensity {
+    readonly x: number;
+    readonly z: number;
     /**
      * Normalized density of the Y column at this X/Z coordinate.
      * Range: 0 (empty/air) to 1 (fully solid), normalized per dimension height.
      */
-    readonly density?: number;
+    readonly density: number;
 }
+
+/**
+ * Union type for chunk blocks
+ */
+export type MinecraftChunkBlock = MinecraftChunkBlockColor | MinecraftChunkBlockDensity;
 
 /**
  * Minecraft chunk data (internal representation)

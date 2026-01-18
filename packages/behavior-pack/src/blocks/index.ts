@@ -7,7 +7,7 @@
 
 import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/server';
 import type { Dimension } from '@minecarta/shared';
-import type { MinecraftChunkBlock, MinecraftChunkData } from '../types';
+import type { MinecraftChunkBlock, MinecraftChunkData, MinecraftChunkBlockColor, MinecraftChunkBlockDensity } from '../types';
 import { logDebug, logWarning } from '../logging';
 import { ChunkJobDataKind } from '../chunk-queue/types';
 
@@ -206,7 +206,7 @@ function findFirstAirFromTop(
     for (let y = maxHeight; y >= minHeight; y--) {
         try {
             const block = dimension.getBlock({ x: worldX, y, z: worldZ });
-            if (isAirBlock(block?.typeId)) {
+            if (block === undefined || block?.isAir) {
                 return y;
             }
         } catch {
@@ -380,13 +380,6 @@ export function getSurfaceBlock(
     return null;
 }
 
-const ZERO_MAP_COLOR: RGBA = {
-    red: 0,
-    green: 0,
-    blue: 0,
-    alpha: 0,
-};
-
 interface SurfaceHeightResult {
     readonly x: number;
     readonly y: number;
@@ -434,7 +427,7 @@ function getSurfaceHeight(
     while (currentY >= minHeight) {
         try {
             const block = dimension.getBlock({ x: worldX, y: currentY, z: worldZ });
-            if (block?.typeId && !isAirBlock(block.typeId)) {
+            if (block && !block.isAir) {
                 return {
                     x: worldX,
                     y: currentY,
@@ -451,7 +444,7 @@ function getSurfaceHeight(
     return null;
 }
 
-function toChunkBlockColorHeight(result: SurfaceBlockResult): MinecraftChunkBlock {
+function toChunkBlockColorHeight(result: SurfaceBlockResult): MinecraftChunkBlockColor {
     return {
         x: result.x,
         y: result.y,
@@ -462,13 +455,10 @@ function toChunkBlockColorHeight(result: SurfaceBlockResult): MinecraftChunkBloc
     };
 }
 
-function toChunkBlockDensity(x: number, z: number, density: number): MinecraftChunkBlock {
+function toChunkBlockDensity(x: number, z: number, density: number): MinecraftChunkBlockDensity {
     return {
         x,
-        y: 0,
         z,
-        type: 'minecraft:air',
-        mapColor: ZERO_MAP_COLOR,
         density,
     };
 }
@@ -510,7 +500,7 @@ export function scanChunk(
                 }
             } catch(e) {
                 // Block might be in unloaded chunk, skip silently
-                logWarning("scanArea", `Failed to get block at (${worldX}, ${worldZ}): ${e.message}`);  
+                logWarning("scanArea", `Failed to get block at (${worldX}, ${worldZ}): ${e instanceof Error ? e.message : String(e)}`);  
                 continue;
             }
         }

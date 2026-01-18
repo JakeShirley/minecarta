@@ -18,6 +18,8 @@ import type {
     MinecraftEntity,
     MinecraftChunkData,
     MinecraftChunkBlock,
+    MinecraftChunkBlockColor,
+    MinecraftChunkBlockDensity,
 } from '../types';
 
 /**
@@ -146,7 +148,7 @@ export function serializeEntities(entities: MinecraftEntity[]): Entity[] {
  * @param block - Minecraft chunk block data
  * @returns ChunkBlock object for API transmission
  */
-export function serializeChunkBlockColorHeight(block: MinecraftChunkBlock): ChunkBlockColorHeight {
+export function serializeChunkBlockColorHeight(block: MinecraftChunkBlockColor): ChunkBlockColorHeight {
     // Minecraft RGBA values are in 0-1 range, convert to 0-255 for rendering
     return {
         x: block.x,
@@ -163,11 +165,11 @@ export function serializeChunkBlockColorHeight(block: MinecraftChunkBlock): Chun
     };
 }
 
-export function serializeChunkBlockDensity(block: MinecraftChunkBlock): ChunkBlockDensity {
+export function serializeChunkBlockDensity(block: MinecraftChunkBlockDensity): ChunkBlockDensity {
     return {
         x: block.x,
         z: block.z,
-        density: block.density ?? 0,
+        density: block.density,
     };
 }
 
@@ -183,7 +185,7 @@ export function serializeChunkColorHeightData(chunk: MinecraftChunkData): ChunkC
         dimension: chunk.dimension,
         chunkX: chunk.chunkX,
         chunkZ: chunk.chunkZ,
-        blocks: chunk.blocks.map(serializeChunkBlockColorHeight),
+        blocks: (chunk.blocks as MinecraftChunkBlockColor[]).map(serializeChunkBlockColorHeight),
     };
 }
 
@@ -199,6 +201,6 @@ export function serializeChunkDensityData(chunk: MinecraftChunkData): ChunkDensi
         dimension: chunk.dimension,
         chunkX: chunk.chunkX,
         chunkZ: chunk.chunkZ,
-        blocks: chunk.blocks.map(serializeChunkBlockDensity),
+        blocks: (chunk.blocks as MinecraftChunkBlockDensity[]).map(serializeChunkBlockDensity),
     };
 }
