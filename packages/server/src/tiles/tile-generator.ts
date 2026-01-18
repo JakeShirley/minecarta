@@ -375,8 +375,6 @@ export class TileGeneratorService {
         const scale = BLOCKS_PER_TILE[zoom as ZoomLevel] / TILE_SIZE;
         const pixelsPerBlock = scale < 1 ? Math.round(1 / scale) : 1;
 
-        const heightMap = this.buildHeightMap(blocks);
-
         for (const block of blocks) {
             const relX = block.x - blockStartX;
             const relZ = block.z - blockStartZ;
@@ -387,12 +385,6 @@ export class TileGeneratorService {
                 relX >= BLOCKS_PER_TILE[zoom as ZoomLevel] ||
                 relZ >= BLOCKS_PER_TILE[zoom as ZoomLevel]
             ) {
-                continue;
-            }
-
-            const key = `${block.x},${block.z}`;
-            const highestY = heightMap.get(key);
-            if (highestY !== block.y) {
                 continue;
             }
 

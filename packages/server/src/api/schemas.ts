@@ -136,7 +136,9 @@ export const chunkBlockColorHeightSchema = chunkBlockBaseSchema.extend({
 /**
  * Chunk block schema for density generation
  */
-export const chunkBlockDensitySchema = chunkBlockBaseSchema.extend({
+export const chunkBlockDensitySchema = z.object({
+    x: z.number().int(),
+    z: z.number().int(),
     density: z.number().min(0).max(1),
 });
 

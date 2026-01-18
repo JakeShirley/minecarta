@@ -166,7 +166,6 @@ export function serializeChunkBlockColorHeight(block: MinecraftChunkBlock): Chun
 export function serializeChunkBlockDensity(block: MinecraftChunkBlock): ChunkBlockDensity {
     return {
         x: block.x,
-        y: block.y,
         z: block.z,
         density: block.density ?? 0,
     };

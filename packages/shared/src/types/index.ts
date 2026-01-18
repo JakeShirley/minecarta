@@ -135,7 +135,9 @@ export interface ChunkBlockColorHeight extends ChunkBlockBase {
 /**
  * Chunk block for density map generation
  */
-export interface ChunkBlockDensity extends ChunkBlockBase {
+export interface ChunkBlockDensity {
+    readonly x: number;
+    readonly z: number;
     /**
      * Normalized density of the Y column at this X/Z coordinate.
      * Range: 0 (empty/air) to 1 (fully solid), normalized per dimension height.

@@ -8,7 +8,7 @@
 import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/server';
 import type { Dimension } from '@minecarta/shared';
 import type { MinecraftChunkBlock, MinecraftChunkData } from '../types';
-import { logDebug } from '../logging';
+import { logDebug, logWarning } from '../logging';
 import { ChunkJobDataKind } from '../chunk-queue/types';
 
 /**
@@ -462,12 +462,12 @@ function toChunkBlockColorHeight(result: SurfaceBlockResult): MinecraftChunkBloc
     };
 }
 
-function toChunkBlockDensity(result: SurfaceHeightResult, density: number): MinecraftChunkBlock {
+function toChunkBlockDensity(x: number, z: number, density: number): MinecraftChunkBlock {
     return {
-        x: result.x,
-        y: result.y,
-        z: result.z,
-        type: result.type,
+        x,
+        y: 0,
+        z,
+        type: 'minecraft:air',
         mapColor: ZERO_MAP_COLOR,
         density,
     };
@@ -501,18 +501,16 @@ export function scanChunk(
             try {
                 if (dataKind === ChunkJobDataKind.Density) {
                     const density = calculateColumnDensity(dimension, worldX, worldZ);
-                    const result = getSurfaceHeight(dimension, worldX, worldZ);
-                    if (result) {
-                        blocks.push(toChunkBlockDensity(result, density));
-                    }
+                    blocks.push(toChunkBlockDensity(worldX, worldZ, density));
                 } else {
                     const result = getSurfaceBlock(dimension, worldX, worldZ);
                     if (result) {
                         blocks.push(toChunkBlockColorHeight(result));
                     }
                 }
-            } catch {
+            } catch(e) {
                 // Block might be in unloaded chunk, skip silently
+                logWarning("scanArea", `Failed to get block at (${worldX}, ${worldZ}): ${e.message}`);  
                 continue;
             }
         }
@@ -554,10 +552,7 @@ export function scanArea(
             try {
                 if (dataKind === ChunkJobDataKind.Density) {
                     const density = calculateColumnDensity(dimension, worldX, worldZ);
-                    const result = getSurfaceHeight(dimension, worldX, worldZ);
-                    if (result) {
-                        blocks.push(toChunkBlockDensity(result, density));
-                    }
+                    blocks.push(toChunkBlockDensity(worldX, worldZ, density));
                 } else {
                     const result = getSurfaceBlock(dimension, worldX, worldZ);
                     if (result) {
