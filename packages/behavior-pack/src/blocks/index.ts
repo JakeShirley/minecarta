@@ -7,7 +7,12 @@
 
 import type { Dimension as MinecraftDimension, Block, RGBA } from '@minecraft/server';
 import type { Dimension } from '@minecarta/shared';
-import type { MinecraftChunkBlock, MinecraftChunkData, MinecraftChunkBlockColor, MinecraftChunkBlockDensity } from '../types';
+import type {
+    MinecraftChunkBlock,
+    MinecraftChunkData,
+    MinecraftChunkBlockColor,
+    MinecraftChunkBlockDensity,
+} from '../types';
 import { logDebug, logWarning } from '../logging';
 import { ChunkJobDataKind } from '../chunk-queue/types';
 
@@ -498,9 +503,12 @@ export function scanChunk(
                         blocks.push(toChunkBlockColorHeight(result));
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 // Block might be in unloaded chunk, skip silently
-                logWarning("scanArea", `Failed to get block at (${worldX}, ${worldZ}): ${e instanceof Error ? e.message : String(e)}`);  
+                logWarning(
+                    'scanArea',
+                    `Failed to get block at (${worldX}, ${worldZ}): ${e instanceof Error ? e.message : String(e)}`
+                );
                 continue;
             }
         }
