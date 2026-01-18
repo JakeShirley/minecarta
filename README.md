@@ -41,7 +41,11 @@ packages/
 
 ## Screenshots
 
-![MineCarta Map View](assets/docs/screenshot1.png)
+<p align="center">
+  <img src="assets/docs/screenshot_map_color.png" width="32%" alt="Color Map View" />
+  <img src="assets/docs/screenshot_map_density.png" width="32%" alt="Density Map View" />
+  <img src="assets/docs/screenshot_map_height.png" width="32%" alt="Height Map View" />
+</p>
 
 ## Setup Guide
 
