@@ -25,8 +25,8 @@ export function getQueueStatus(): ChunkQueueStatus {
     const batchCompletedJobs = getBatchCompletedJobs();
     const isProcessing = getIsProcessing();
     const totalCount = batchTotalJobs > 0 ? batchTotalJobs : batchCompletedJobs + queueLength;
-    const completionPercent =
-        totalCount > 0 ? Math.round((batchCompletedJobs / totalCount) * 100) : isProcessing ? 0 : 100;
+    const rawPercent = totalCount > 0 ? Math.round((batchCompletedJobs / totalCount) * 100) : isProcessing ? 0 : 100;
+    const completionPercent = Math.min(100, Math.max(0, rawPercent));
 
     return {
         queueSize: queueLength,
