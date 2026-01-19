@@ -10,9 +10,9 @@
   <a href="https://github.com/JakeShirley/minecarta/releases"><img src="https://img.shields.io/github/v/release/JakeShirley/minecarta" alt="Latest Release"></a>
 </p>
 
-> ⚠️ **Work in Progress** - This project is under active development. Most features are not yet implemented.
+> [!IMPORTANT] This project is under active development. Most features are not yet implemented.
 
-> 🔓 **Security Notice** - The web server component of this project does not implement authentication or authorization mechanisms. It is intended for use in trusted local network environments only. Please do not expose this server directly to the public internet, as doing so may result in unauthorized access to your world data.
+> [!WARNING] **Security Notice** - The web server component of this project does not implement authentication or authorization mechanisms. It is intended for use in trusted local network environments only. Please do not expose this server directly to the public internet, as doing so may result in unauthorized access to your world data.
 
 A real-time web-based map visualization for Minecraft Bedrock Edition worlds. This project captures world state data from a Minecraft behavior pack and displays it through an interactive Google Maps-like interface.
 
@@ -48,6 +48,8 @@ packages/
 </p>
 
 ## Setup Guide
+
+> [!NOTE] This behavior pack is designed to work with Minecraft Bedrock Dedicated Server (BDS) only. It is not compatible with Minecraft Bedrock Edition clients.  It has only been tested on 1.21.130.
 
 This guide walks you through setting up MineCarta to run with your Minecraft Bedrock Dedicated Server (BDS).
 
