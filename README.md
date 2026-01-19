@@ -52,7 +52,7 @@ packages/
 ## Setup Guide
 
 > [!NOTE]
-> This behavior pack is designed to work with Minecraft Bedrock Dedicated Server (BDS) only. It is not compatible with Minecraft Bedrock Edition clients.  It has only been tested on 1.21.130.
+> This behavior pack is designed to work with Minecraft Bedrock Dedicated Server (BDS) only. It is not compatible with Minecraft Bedrock Edition clients. It has only been tested on 1.21.130.
 
 This guide walks you through setting up MineCarta to run with your Minecraft Bedrock Dedicated Server (BDS).
 
